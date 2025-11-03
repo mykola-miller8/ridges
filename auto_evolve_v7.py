@@ -212,11 +212,12 @@ def _genericity_checks(code: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def _launch_initial_cursor_agent(client: CursorAPIClient, current_v7: str) -> str:
+def _launch_initial_cursor_agent(client: CursorAPIClient) -> str:
     """Launch the initial Cursor agent for v7 evolution.
     
     Returns the agent_id.
     """
+    agent_rel_path = os.path.relpath(AGENT_PATH, ROOT)
     initial_prompt = (
         "You are tasked with continuously improving my-agents/v7.py, a generic code-solving agent. "
         "Your goal is to make it more robust and effective at solving diverse programming problems.\n\n"
@@ -241,7 +242,7 @@ def _launch_initial_cursor_agent(client: CursorAPIClient, current_v7: str) -> st
         "- Small tweaks: prompt wording, parameter adjustments, retry logic, parsing improvements\n"
         "- Major changes: architecture redesign, new strategies, flow restructuring\n"
         "Choose the approach that best addresses the root cause while maintaining genericity.\n\n"
-        "Current my-agents/v7.py:\n```python\n" + current_v7[:15000] + "\n```\n\n"
+        f"The agent file to improve is located at: {agent_rel_path}\n\n"
         "Start by reviewing the current implementation. You'll receive follow-ups with specific failure cases to address."
     )
     
@@ -266,10 +267,8 @@ def _add_followup_with_failure_context(
     client: CursorAPIClient,
     agent_id: str,
     problem_name: str,
-    agent_logs: str,
-    eval_logs: str,
-    problem_statement: str,
-    tests_py: str,
+    problem_dir: str,
+    run_dir: str,
     metrics: Dict[str, Any],
     failures: List[Dict[str, Any]],
 ) -> str:
@@ -279,6 +278,11 @@ def _add_followup_with_failure_context(
     """
     cats = _categorize_failures(failures)
     
+    # Get relative paths
+    problem_dir_rel = os.path.relpath(problem_dir, ROOT) if problem_dir else ""
+    run_dir_rel = os.path.relpath(run_dir, ROOT) if run_dir else ""
+    agent_rel_path = os.path.relpath(AGENT_PATH, ROOT)
+    
     followup_text = (
         f"The v7 agent failed on problem '{problem_name}'. Here's the context:\n\n"
         f"METRICS:\n"
@@ -286,14 +290,12 @@ def _add_followup_with_failure_context(
         f"- Tests failed: {metrics['fail']}\n"
         f"- Tests skipped: {metrics['skip']}\n"
         f"- Failure categories: {json.dumps(cats, indent=2)}\n\n"
-        f"PROBLEM STATEMENT (instruction.md - this IS available at runtime):\n"
-        f"```\n{problem_statement[:8000]}\n```\n\n"
-        f"TESTS.PY (for context - this is NOT available at runtime, only during evaluation):\n"
-        f"```python\n{tests_py[:12000]}\n```\n\n"
-        f"AGENT LOGS (what v7 did during execution):\n"
-        f"```\n{agent_logs[-10000:]}\n```\n\n"
-        f"EVALUATION LOGS (which tests failed and why):\n"
-        f"```\n{eval_logs[-8000:]}\n```\n\n"
+        f"FILE PATHS:\n"
+        f"- Problem directory: {problem_dir_rel}\n"
+        f"  * Contains: instructions.md (problem statement - IS available at runtime), main.py (skeleton), tests.py (NOT available at runtime, only for evaluation context)\n"
+        f"- Evaluation run directory: {run_dir_rel}\n"
+        f"  * Contains: agent_logs.txt (what v7 did during execution), eval_logs.txt (which tests failed and why), evaluation_run.json\n"
+        f"- Agent file to improve: {agent_rel_path}\n\n"
         f"TASK:\n"
         f"Improve my-agents/v7.py to handle this failure case. Remember:\n"
         f"- The agent must remain GENERIC - no problem-specific logic\n"
@@ -305,7 +307,7 @@ def _add_followup_with_failure_context(
         f"- Apply the minimal change that fixes this while maintaining genericity\n"
         f"- ALWAYS clean up the agent code: remove unused imports, functions, and variables\n"
         f"- Make the code look professional: follow Python best practices, add proper docstrings, ensure consistent formatting, and improve readability\n\n"
-        f"Return the complete updated my-agents/v7.py file."
+        f"Review the files in the paths above to understand the failure context. Return the complete updated my-agents/v7.py file."
     )
     
     print(f"[BUILDER] Adding follow-up to agent {agent_id}...")
@@ -361,8 +363,7 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
         print(f"[WARN] Git operations failed: {e}")
     
     # Launch initial agent
-    current_v7 = _read(AGENT_PATH)
-    agent_id = _launch_initial_cursor_agent(client, current_v7)
+    agent_id = _launch_initial_cursor_agent(client)
     
     problem_names = _load_problem_set(PROBLEM_SET)
     if not problem_names:
@@ -371,11 +372,6 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
     
     for idx, name in enumerate(problem_names):
         print(f"\n=== Problem {idx+1}/{len(problem_names)}: {name} ===")
-        
-        # Get problem context (statement and tests.py for context)
-        problem_context = _get_problem_context(name)
-        problem_statement = problem_context.get("problem_statement", "")
-        tests_py = problem_context.get("tests_py", "")
         
         attempts = 0
         while attempts < max_attempts_per_problem:
@@ -396,18 +392,25 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
             # Failure - add follow-up to Cursor agent with full context
             print("[EVOLVE] Tests failed; adding follow-up to Cursor agent...")
             
-            agent_logs = _read_agent_logs_tail(run_dir, max_chars=10000)
-            eval_logs = _read_eval_logs_tail(run_dir, max_chars=8000)
+            # Get problem directory path
+            problem_dir_path = ""
+            polyglot_path = f"{ROOT}/evaluator/datasets/polyglot"
+            potential_dirs = [
+                os.path.join(polyglot_path, name),
+                os.path.join(polyglot_path, name, "repo"),
+            ]
+            for prob_dir in potential_dirs:
+                if os.path.exists(prob_dir):
+                    problem_dir_path = prob_dir
+                    break
             
             # Add follow-up and wait for completion
             _add_followup_with_failure_context(
                 client=client,
                 agent_id=agent_id,
                 problem_name=name,
-                agent_logs=agent_logs,
-                eval_logs=eval_logs,
-                problem_statement=problem_statement,
-                tests_py=tests_py,
+                problem_dir=problem_dir_path,
+                run_dir=run_dir,
                 metrics=metrics,
                 failures=failures,
             )
