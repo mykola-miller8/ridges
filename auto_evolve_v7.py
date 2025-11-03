@@ -17,7 +17,7 @@ TEST_AGENT_CLI = f"{ROOT}/test_agent.py"
 INFERENCE_URL = os.getenv("INFERENCE_URL", "http://172.17.0.1:1234")
 PROBLEM_SET = os.getenv("PROBLEM_SET", "all-polyglot")
 SOURCE_BRANCH = "cursor-work"
-TARGET_BRANCH = "cursor-work-11"
+TARGET_BRANCH = "cursor-work-12"
 
 # v7 solving uses the inference gateway (set in test_agent CLI). For rewriting v7 itself,
 # we use the Cursor API only (no public LLM).
@@ -283,6 +283,34 @@ def _add_followup_with_failure_context(
     run_dir_rel = os.path.relpath(run_dir, ROOT) if run_dir else ""
     agent_rel_path = os.path.relpath(AGENT_PATH, ROOT)
     
+    # Read full content of files
+    main_py_content = ""
+    agent_logs_content = ""
+    eval_logs_content = ""
+    
+    # Read main.py from problem directory
+    if problem_dir:
+        main_py_paths = [
+            os.path.join(problem_dir, "main.py"),
+            os.path.join(problem_dir, "repo", "main.py"),
+        ]
+        for main_path in main_py_paths:
+            if os.path.exists(main_path):
+                main_py_content = _read(main_path)
+                break
+    
+    # Read agent_logs.txt from run directory
+    if run_dir:
+        agent_logs_path = os.path.join(run_dir, "agent_logs.txt")
+        if os.path.exists(agent_logs_path):
+            agent_logs_content = _read(agent_logs_path)
+    
+    # Read eval_logs.txt from run directory
+    if run_dir:
+        eval_logs_path = os.path.join(run_dir, "eval_logs.txt")
+        if os.path.exists(eval_logs_path):
+            eval_logs_content = _read(eval_logs_path)
+    
     followup_text = (
         f"The v7 agent failed on problem '{problem_name}'. Here's the context:\n\n"
         f"METRICS:\n"
@@ -290,18 +318,24 @@ def _add_followup_with_failure_context(
         f"- Tests failed: {metrics['fail']}\n"
         f"- Tests skipped: {metrics['skip']}\n"
         f"- Failure categories: {json.dumps(cats, indent=2)}\n\n"
-        f"FILE PATHS:\n"
+        f"=== MAIN.PY (the code the agent generated) ===\n"
+        f"{main_py_content if main_py_content else '(main.py not found or empty)'}\n\n"
+        f"=== AGENT LOGS (what the agent did during execution) ===\n"
+        f"{agent_logs_content if agent_logs_content else '(agent_logs.txt not found or empty)'}\n\n"
+        f"=== EVAL LOGS (which tests failed and why) ===\n"
+        f"{eval_logs_content if eval_logs_content else '(eval_logs.txt not found or empty)'}\n\n"
+        f"=== ADDITIONAL CONTEXT ===\n"
         f"- Problem directory: {problem_dir_rel}\n"
-        f"  * Contains: instructions.md (problem statement - IS available at runtime), main.py (skeleton), tests.py (NOT available at runtime, only for evaluation context)\n"
         f"- Evaluation run directory: {run_dir_rel}\n"
-        f"  * Contains: agent_logs.txt (what v7 did during execution), eval_logs.txt (which tests failed and why), evaluation_run.json, check full test_agent_results directory for more context\n"
         f"- Agent file to improve: {agent_rel_path}\n\n"
         f"TASK:\n"
         f"Improve my-agents/v7.py to handle this failure case. Remember:\n"
-        f"- CRITICAL: The agent must remain GENERIC - no problem-specific logic, always  double check the code is generic before committing, remove any problem-specific logic\n"
+        f"- CRITICAL: The agent must remain GENERIC - no problem-specific logic, always double check the code is generic before committing, remove any problem-specific logic\n"
         f"- IMPORTANT: The agent code deals with Python ONLY - no other programming languages\n"
         f"- At runtime, only problem_statement (instruction.md) and main.py skeleton are available\n"
         f"- tests.py is NOT available at runtime, so don't rely on test specifics\n"
+        f"- The agent logs show exactly what happened during execution - use them to understand the failure\n"
+        f"- The eval logs show which tests failed and why - this helps identify what the agent got wrong\n"
         f"- Decide whether small tweaks (prompt/params) or major changes (architecture/flow) are needed\n"
         f"- Focus on the root cause: why did the agent fail on this problem?\n"
         f"- Apply the minimal change that fixes this while maintaining genericity\n"
@@ -309,7 +343,7 @@ def _add_followup_with_failure_context(
         f"- ALWAYS check the code is generic before committing\n"
         f"- ALWAYS try to add verbose logging to the code to help debug the issues\n"
         f"- Make the code look professional: follow Python best practices, add proper docstrings, ensure consistent formatting, and improve readability\n\n"
-        f"Review the files in the paths above to understand the failure context. Return the complete updated my-agents/v7.py file."
+        f"Return the complete updated my-agents/v7.py file."
     )
     
     print(f"[BUILDER] Adding follow-up to agent {agent_id}...")
