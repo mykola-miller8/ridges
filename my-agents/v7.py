@@ -185,16 +185,30 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 {repo_summary}
 
-# Implementation Guidelines
+# CRITICAL IMPLEMENTATION RULES
+
+?? **SPECIAL CASES ARE MANDATORY** ??
+Before writing ANY code, scan the entire specification for:
+- Words like "special", "exception", "except", "however", "note that", "but"  
+- Mentions of first/last items, final positions, boundaries
+- Different rules for specific indices, frames, rounds, or positions
+- Bonus/extra handling at the end
+
+If you find special cases, you MUST implement them DIFFERENTLY from the general pattern.
+**DO NOT use a simple uniform loop if special handling is required!**
+
+Example patterns:
+- "The 10th X is special" ? Use if/else for index 9 or separate logic after main loop
+- "Except for the last Y" ? Handle last item outside the main loop
+- "Bonus/fill" ? Extra processing beyond the standard pattern
 
 Write a complete, correct implementation following these critical rules:
 
-1. **Read the Specification Carefully**: Before coding, thoroughly understand ALL requirements!
-   - Identify the general pattern/algorithm
-   - Look for special cases, exceptions, and boundary conditions explicitly mentioned
-   - Note any rules that differ at the start, end, or specific positions
-   - Watch for phrases like "special case", "except", "however", "note that"
-   - Example: If a problem says "frame 10 is special", frame 10 needs different logic!
+1. **Identify Special Cases FIRST**: Before coding, scan for exceptions to the general rule!
+   - Read the ENTIRE specification
+   - Highlight any text about special/different handling
+   - Plan where your code will diverge from the standard pattern
+   - Common locations: last item, first item, specific indices, boundaries
 
 2. **Simplicity First**: Keep implementations as simple as possible. Avoid complex state tracking with multiple variables.
    - For stateful classes: Use minimal state variables. More state = more bugs.
