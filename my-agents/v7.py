@@ -194,6 +194,10 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 - Before coding, ask: "What's the SIMPLEST approach that could work?"
 - For stateful classes: Track only what you absolutely need
 - Avoid redundant or derived state (don't store what you can compute)
+- **Input parsing**: Don't over-engineer! Whitespace/formatting is often just visual
+  - Try the simplest approach: remove spaces, split lines, strip
+  - Complex parsing logic = more bugs
+  - If simple parsing works, don't build elaborate parsers
 
 ## 2. TRACE YOUR LOGIC BEFORE CODING
 **Test your approach mentally with concrete examples BEFORE writing code.**
@@ -244,6 +248,10 @@ For classes with mutable state (games, parsers, accumulators):
   - `len(item) < 2` catches empty AND single-element
   - `len(item) < 1` only catches empty
 - **Return types**: If returning `list[str]`, each element is ONE line (not multi-line with \\n)
+- **Grid/graph adjacency**: Don't over-complicate neighbor relationships
+  - For standard grids: use fixed direction lists (e.g., `[(0,1), (1,0), (0,-1), (-1,0)]`)
+  - Check bounds, not complex offset logic
+  - Simple adjacency rules are usually correct
 
 ## 6. EDGE CASES CHECKLIST
 Always handle:
