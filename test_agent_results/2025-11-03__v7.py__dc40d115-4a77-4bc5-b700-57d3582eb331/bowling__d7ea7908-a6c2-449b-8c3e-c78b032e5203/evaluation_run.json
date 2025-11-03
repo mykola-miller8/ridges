@@ -1,0 +1,172 @@
+{
+    "evaluation_run_id": "d7ea7908-a6c2-449b-8c3e-c78b032e5203",
+    "evaluation_id": "dc40d115-4a77-4bc5-b700-57d3582eb331",
+    "problem_name": "bowling",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,9 +1,143 @@\n-class BowlingGame:\n-    def __init__(self):\n-        pass\n-\n-    def roll(self, pins):\n-        pass\n-\n-    def score(self):\n-        pass\n+class BowlingGame:\n+    def __init__(self):\n+        self.rolls = []\n+        self.frame_scores = []\n+        self.current_frame = 0\n+        self.frame_rolls = []\n+        self.game_over = False\n+\n+    def roll(self, pins):\n+        if self.game_over:\n+            raise ValueError(\"game already finished\")\n+        \n+        if pins < 0:\n+            raise ValueError(\"negative roll is invalid\")\n+        \n+        if pins > 10:\n+            raise ValueError(\"pin count exceeds pins on the lane\")\n+        \n+        # Check if we're in the 10th frame\n+        if self.current_frame == 9:\n+            return self._handle_tenth_frame(pins)\n+        else:\n+            return self._handle_regular_frame(pins)\n+\n+    def _handle_regular_frame(self, pins):\n+        self.frame_rolls.append(pins)\n+        self.rolls.append(pins)\n+        \n+        # Strike\n+        if pins == 10 and len(self.frame_rolls) == 1:\n+            self.frame_scores.append((self.current_frame, self.frame_rolls[:]))\n+            self.frame_rolls = []\n+            self.current_frame += 1\n+        # Second roll of frame\n+        elif len(self.frame_rolls) == 2:\n+            if sum(self.frame_rolls) > 10:\n+                raise ValueError(\"pin count exceeds pins on the lane\")\n+            self.frame_scores.append((self.current_frame, self.frame_rolls[:]))\n+            self.frame_rolls = []\n+            self.current_frame += 1\n+\n+    def _handle_tenth_frame(self, pins):\n+        self.frame_rolls.append(pins)\n+        self.rolls.append(pins)\n+        \n+        # Handle the special rules for the 10th frame\n+        if len(self.frame_rolls) == 1:\n+            # First roll - if it's not a strike, continue\n+            if pins < 10:\n+                return\n+            # If it's a strike, we need two more rolls\n+            else:\n+                return\n+                \n+        elif len(self.frame_rolls) == 2:\n+            # Second roll\n+            # If first was strike or second completed a spare, we need one more roll\n+            if self.frame_rolls[0] == 10 or sum(self.frame_rolls) == 10:\n+                return\n+            # Otherwise, frame is complete\n+            else:\n+                if sum(self.frame_rolls) > 10 and self.frame_rolls[0] != 10:\n+                    raise ValueError(\"pin count exceeds pins on the lane\")\n+                self.frame_scores.append((self.current_frame, self.frame_rolls[:]))\n+                self.game_over = True\n+                return\n+                \n+        elif len(self.frame_rolls) == 3:\n+            # Third roll - this completes the game\n+            # Validate the rolls make sense\n+            if self.frame_rolls[0] == 10:  # First roll was strike\n+                # Second roll can be anything 0-10\n+                # Third roll depends on second\n+                if self.frame_rolls[1] == 10:  # Second was also strike\n+                    # Third can be anything 0-10\n+                    pass\n+                elif self.frame_rolls[1] < 10:\n+                    # Third roll must not exceed remaining pins\n+                    if self.frame_rolls[1] + self.frame_rolls[2] > 10:\n+                        raise ValueError(\"pin count exceeds pins on the lane\")\n+            elif self.frame_rolls[0] < 10 and self.frame_rolls[0] + self.frame_rolls[1] == 10:\n+                # First two rolls were a spare, third roll can be 0-10\n+                pass\n+            else:\n+                # This shouldn't happen based on previous logic\n+                raise ValueError(\"invalid fill balls\")\n+                \n+            self.frame_scores.append((self.current_frame, self.frame_rolls[:]))\n+            self.game_over = True\n+            return\n+            \n+        # If we get here with more than 3 rolls, that's an error\n+        if len(self.frame_rolls) > 3:\n+            raise ValueError(\"invalid fill balls\")\n+\n+    def score(self):\n+        if not self.game_over and (self.current_frame < 10 or (self.current_frame == 9 and self.frame_rolls)):\n+            raise ValueError(\"game not yet finished\")\n+        \n+        total_score = 0\n+        roll_index = 0\n+        \n+        for frame_num in range(10):\n+            # Find the rolls for this frame\n+            frame_data = None\n+            for f_num, f_rolls in self.frame_scores:\n+                if f_num == frame_num:\n+                    frame_data = f_rolls\n+                    break\n+            \n+            if frame_data is None:\n+                raise ValueError(\"game not yet finished\")\n+            \n+            # Calculate frame score\n+            if frame_num < 9:  # Frames 1-9\n+                if len(frame_data) == 1 and frame_data[0] == 10:  # Strike\n+                    # Add next two rolls\n+                    next_rolls = self._get_next_rolls(roll_index + 1, 2)\n+                    total_score += 10 + sum(next_rolls)\n+                    roll_index += 1\n+                elif len(frame_data) == 2 and sum(frame_data) == 10:  # Spare\n+                    # Add next one roll\n+                    next_rolls = self._get_next_rolls(roll_index + 2, 1)\n+                    total_score += 10 + sum(next_rolls)\n+                    roll_index += 2\n+                else:  # Open frame\n+                    total_score += sum(frame_data)\n+                    roll_index += len(frame_data)\n+            else:  # 10th frame\n+                total_score += sum(frame_data)\n+        \n+        return total_score\n+\n+    def _get_next_rolls(self, start_index, count):\n+        result = []\n+        index = start_index\n+        for _ in range(count):\n+            if index < len(self.rolls):\n+                result.append(self.rolls[index])\n+                index += 1\n+            else:\n+                break\n+        return result\n",
+    "test_results": [
+        {
+            "name": "test_a_roll_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_spare_followed_by_zeros_is_worth_ten_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_spare_in_the_last_frame_gets_a_one_roll_bonus_that_is_counted_once",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_strike_earns_ten_points_in_a_frame_with_a_single_roll",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_strike_in_the_last_frame_gets_a_two_roll_bonus_that_is_counted_once",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_strike_with_the_one_roll_bonus_after_a_spare_in_the_last_frame_does_not_get_a_bonus",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_all_strikes_is_a_perfect_game",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_an_incomplete_game_cannot_be_scored",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_an_unstarted_game_cannot_be_scored",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_bonus_roll_after_a_strike_in_the_last_frame_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_bonus_roll_for_a_spare_in_the_last_frame_must_be_rolled_before_score_can_be_calculated",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_bonus_rolls_for_a_strike_in_the_last_frame_must_be_rolled_before_score_can_be_calculated",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_bonus_rolls_for_a_strike_in_the_last_frame_must_be_rolled_before_score_can_be_calculated",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cannot_roll_after_bonus_roll_for_spare",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cannot_roll_after_bonus_rolls_for_strike",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cannot_roll_if_game_already_has_ten_frames",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_consecutive_spares_each_get_a_one_roll_bonus",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_consecutive_strikes_each_get_the_two_roll_bonus",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_last_two_strikes_followed_by_only_last_bonus_with_non_strike_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_points_scored_in_the_roll_after_a_spare_are_counted_twice",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_points_scored_in_the_two_rolls_after_a_strike_are_counted_twice_as_a_bonus",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_rolling_a_spare_with_the_two_roll_bonus_does_not_get_a_bonus_roll",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_rolls_cannot_score_negative_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_second_bonus_roll_after_a_strike_in_the_last_frame_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_should_be_able_to_score_a_game_with_all_zeros",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_should_be_able_to_score_a_game_with_no_strikes_or_spares",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_strikes_with_the_two_roll_bonus_do_not_get_bonus_rolls",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_the_second_bonus_rolls_after_a_strike_in_the_last_frame_cannot_be_a_strike_if_the_first_one_is_not_a_strike",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_bonus_rolls_after_a_strike_in_the_last_frame_can_score_more_than_10_points_if_one_is_a_strike",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_bonus_rolls_after_a_strike_in_the_last_frame_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_rolls_in_a_frame_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T14:45:09.579391",
+    "started_initializing_agent_at": "2025-11-03T14:45:09.579526",
+    "started_running_agent_at": "2025-11-03T14:45:09.953424",
+    "started_initializing_eval_at": "2025-11-03T14:45:28.329349",
+    "started_running_eval_at": "2025-11-03T14:45:28.759627",
+    "finished_or_errored_at": "2025-11-03T14:45:29.065352"
+}

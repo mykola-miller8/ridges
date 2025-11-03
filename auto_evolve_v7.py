@@ -17,7 +17,7 @@ TEST_AGENT_CLI = f"{ROOT}/test_agent.py"
 INFERENCE_URL = os.getenv("INFERENCE_URL", "http://172.17.0.1:1234")
 PROBLEM_SET = os.getenv("PROBLEM_SET", "all-polyglot")
 SOURCE_BRANCH = "cursor-work"
-TARGET_BRANCH = "cursor-work-8"
+TARGET_BRANCH = "cursor-work-9"
 
 # v7 solving uses the inference gateway (set in test_agent CLI). For rewriting v7 itself,
 # we use the Cursor API only (no public LLM).
@@ -380,6 +380,19 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
             
             # Run the problem
             eval_dir = _run_single_problem(INFERENCE_URL, name)
+            
+            # Commit test results so agent can have access
+            try:
+                subprocess.run(["git", "add", "."], cwd=ROOT, check=False)
+                subprocess.run(
+                    ["git", "commit", "-m", f"auto-evolve: test results for {name} attempt {attempts}"],
+                    cwd=ROOT,
+                    check=False,
+                )
+                subprocess.run(["git", "push"], cwd=ROOT, check=False)
+            except Exception as e:
+                print(f"[WARN] Git operations failed: {e}")
+            
             run_dir = _find_problem_run_dir(eval_dir, name)
             metrics, failures = _aggregate_results(run_dir)
             print(f"[METRICS] pass={metrics['pass']} fail={metrics['fail']} skip={metrics['skip']}")

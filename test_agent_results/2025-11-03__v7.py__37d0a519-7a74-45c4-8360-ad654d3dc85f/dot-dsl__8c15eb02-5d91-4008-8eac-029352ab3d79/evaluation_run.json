@@ -1,0 +1,77 @@
+{
+    "evaluation_run_id": "8c15eb02-5d91-4008-8eac-029352ab3d79",
+    "evaluation_id": "37d0a519-7a74-45c4-8360-ad654d3dc85f",
+    "problem_name": "dot-dsl",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,27 +1,65 @@\n-NODE, EDGE, ATTR = range(3)\n-\n-\n-class Node:\n-    def __init__(self, name: str, attrs: dict):\n-        self.name = name\n-        self.attrs = attrs\n-\n-    def __eq__(self, other):\n-        return self.name == other.name and self.attrs == other.attrs\n-\n-\n-class Edge:\n-    def __init__(self, src: str, dst: str, attrs: dict):\n-        self.src = src\n-        self.dst = dst\n-        self.attrs = attrs\n-\n-    def __eq__(self, other):\n-        return (self.src == other.src and\n-                self.dst == other.dst and\n-                self.attrs == other.attrs)\n-\n-\n-class Graph:\n-    def __init__(self, data: list | None = None):\n-        pass\n+NODE, EDGE, ATTR = range(3)\n+\n+\n+class Node:\n+    def __init__(self, name: str, attrs: dict):\n+        self.name = name\n+        self.attrs = attrs\n+\n+    def __eq__(self, other):\n+        return self.name == other.name and self.attrs == other.attrs\n+\n+\n+class Edge:\n+    def __init__(self, src: str, dst: str, attrs: dict):\n+        self.src = src\n+        self.dst = dst\n+        self.attrs = attrs\n+\n+    def __eq__(self, other):\n+        return (self.src == other.src and\n+                self.dst == other.dst and\n+                self.attrs == other.attrs)\n+\n+\n+class Graph:\n+    def __init__(self, data: list | None = None):\n+        self.nodes = []\n+        self.edges = []\n+        self.attrs = {}\n+        \n+        if data is None:\n+            return\n+            \n+        if not isinstance(data, list):\n+            raise TypeError(\"Graph data malformed\")\n+            \n+        for item in data:\n+            if not isinstance(item, tuple) or len(item) < 1:\n+                raise TypeError(\"Graph item incomplete\")\n+                \n+            item_type = item[0]\n+            \n+            if item_type == NODE:\n+                if len(item) != 3:\n+                    raise ValueError(\"Node is malformed\")\n+                name, attrs = item[1], item[2]\n+                if not isinstance(name, str) or not isinstance(attrs, dict):\n+                    raise ValueError(\"Node is malformed\")\n+                self.nodes.append(Node(name, attrs))\n+            elif item_type == EDGE:\n+                if len(item) != 4:\n+                    raise ValueError(\"Edge is malformed\")\n+                src, dst, attrs = item[1], item[2], item[3]\n+                if not isinstance(src, str) or not isinstance(dst, str) or not isinstance(attrs, dict):\n+                    raise ValueError(\"Edge is malformed\")\n+                self.edges.append(Edge(src, dst, attrs))\n+            elif item_type == ATTR:\n+                if len(item) != 3:\n+                    raise ValueError(\"Attribute is malformed\")\n+                key, value = item[1], item[2]\n+                if not isinstance(key, str) or not isinstance(value, str):\n+                    raise ValueError(\"Attribute is malformed\")\n+                self.attrs[key] = value\n+            else:\n+                raise ValueError(\"Unknown item\")\n",
+    "test_results": [
+        {
+            "name": "test_empty_graph",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_graph_with_attributes",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_graph_with_one_attribute",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_graph_with_one_edge",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_graph_with_one_node",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_graph_with_one_node_with_keywords",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_malformed_EDGE",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_malformed_attr",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_malformed_graph",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_malformed_graph_item",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_malformed_node",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_unknown_item",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T14:59:46.646804",
+    "started_initializing_agent_at": "2025-11-03T14:59:46.646992",
+    "started_running_agent_at": "2025-11-03T14:59:46.947170",
+    "started_initializing_eval_at": "2025-11-03T15:00:00.931322",
+    "started_running_eval_at": "2025-11-03T15:00:01.315650",
+    "finished_or_errored_at": "2025-11-03T15:00:01.660977"
+}

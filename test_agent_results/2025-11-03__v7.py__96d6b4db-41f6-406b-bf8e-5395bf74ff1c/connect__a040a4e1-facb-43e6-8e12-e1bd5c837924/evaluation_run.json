@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "a040a4e1-facb-43e6-8e12-e1bd5c837924",
+    "evaluation_id": "96d6b4db-41f6-406b-bf8e-5395bf74ff1c",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,113 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        # Parse the board into a 2D grid\n+        lines = board.strip().split('\\n')\n+        self.board = []\n+        for line in lines:\n+            # Remove leading/trailing spaces and split by space to get individual cells\n+            row = line.strip().split()\n+            self.board.append(row)\n+        \n+        self.rows = len(self.board)\n+        if self.rows > 0:\n+            self.cols = len(self.board[0])\n+        else:\n+            self.cols = 0\n+\n+    def get_winner(self) -> str:\n+        # Check if O has won (top to bottom)\n+        if self._is_connected('O', 0, self.rows - 1):\n+            return 'O'\n+        \n+        # Check if X has won (left to right)\n+        if self._is_connected('X', 0, self.cols - 1):\n+            return 'X'\n+        \n+        return ''\n+\n+    def _is_connected(self, player, start_index, end_index):\n+        if player == 'O':\n+            # For O: check connection from top row to bottom row\n+            # Start positions are all cells in the top row belonging to O\n+            visited = set()\n+            stack = []\n+            \n+            # Add all O cells in the top row to the stack\n+            for j in range(self.cols):\n+                if self.board[0][j] == player:\n+                    stack.append((0, j))\n+                    visited.add((0, j))\n+            \n+            # DFS to find a path to the bottom row\n+            while stack:\n+                row, col = stack.pop()\n+                \n+                # If we reached the bottom row, player O wins\n+                if row == self.rows - 1:\n+                    return True\n+                \n+                # Check all 6 neighbors in hex grid\n+                # Neighbor directions (row_delta, col_delta)\n+                directions = [\n+                    (-1, -1),  # up-left\n+                    (-1, 0),   # up\n+                    (0, -1),   # left\n+                    (0, 1),    # right\n+                    (1, 0),    # down\n+                    (1, 1)     # down-right\n+                ]\n+                \n+                for dr, dc in directions:\n+                    new_row, new_col = row + dr, col + dc\n+                    \n+                    # Check bounds\n+                    if 0 <= new_row < self.rows and 0 <= new_col < self.cols:\n+                        # Check if cell belongs to the player and not visited\n+                        if (new_row, new_col) not in visited and self.board[new_row][new_col] == player:\n+                            visited.add((new_row, new_col))\n+                            stack.append((new_row, new_col))\n+            \n+            return False\n+            \n+        else:  # player == 'X'\n+            # For X: check connection from left column to right column\n+            # Start positions are all cells in the left column belonging to X\n+            visited = set()\n+            stack = []\n+            \n+            # Add all X cells in the left column to the stack\n+            for i in range(self.rows):\n+                if self.board[i][0] == player:\n+                    stack.append((i, 0))\n+                    visited.add((i, 0))\n+            \n+            # DFS to find a path to the right column\n+            while stack:\n+                row, col = stack.pop()\n+                \n+                # If we reached the right column, player X wins\n+                if col == self.cols - 1:\n+                    return True\n+                \n+                # Check all 6 neighbors in hex grid\n+                # Neighbor directions (row_delta, col_delta)\n+                directions = [\n+                    (-1, -1),  # up-left\n+                    (-1, 0),   # up\n+                    (0, -1),   # left\n+                    (0, 1),    # right\n+                    (1, 0),    # down\n+                    (1, 1)     # down-right\n+                ]\n+                \n+                for dr, dc in directions:\n+                    new_row, new_col = row + dr, col + dc\n+                    \n+                    # Check bounds\n+                    if 0 <= new_row < self.rows and 0 <= new_col < self.cols:\n+                        # Check if cell belongs to the player and not visited\n+                        if (new_row, new_col) not in visited and self.board[new_row][new_col] == player:\n+                            visited.add((new_row, new_col))\n+                            stack.append((new_row, new_col))\n+            \n+            return False\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T14:48:14.316650",
+    "started_initializing_agent_at": "2025-11-03T14:48:14.316765",
+    "started_running_agent_at": "2025-11-03T14:48:14.625221",
+    "started_initializing_eval_at": "2025-11-03T14:51:44.431155",
+    "started_running_eval_at": "2025-11-03T14:51:44.786028",
+    "finished_or_errored_at": "2025-11-03T14:51:45.065475"
+}

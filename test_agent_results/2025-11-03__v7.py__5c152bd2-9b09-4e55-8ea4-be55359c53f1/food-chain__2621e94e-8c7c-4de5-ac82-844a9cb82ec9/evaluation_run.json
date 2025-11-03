@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "2621e94e-8c7c-4de5-ac82-844a9cb82ec9",
+    "evaluation_id": "5c152bd2-9b09-4e55-8ea4-be55359c53f1",
+    "problem_name": "food-chain",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,43 @@\n-def recite(start_verse: int, end_verse: int) -> list[str]:\n-    pass\n+def recite(start_verse: int, end_verse: int) -> list[str]:\n+    animals = [\n+        (\"fly\", \"\"),\n+        (\"spider\", \"It wriggled and jiggled and tickled inside her.\"),\n+        (\"bird\", \"How absurd to swallow a bird!\"),\n+        (\"cat\", \"Imagine that, to swallow a cat!\"),\n+        (\"dog\", \"What a hog, to swallow a dog!\"),\n+        (\"goat\", \"Just opened her throat and swallowed a goat!\"),\n+        (\"cow\", \"I don't know how she swallowed a cow!\"),\n+        (\"horse\", \"She's dead, of course!\")\n+    ]\n+    \n+    result = []\n+    \n+    for i in range(start_verse, end_verse + 1):\n+        animal, comment = animals[i - 1]\n+        verse = [f\"I know an old lady who swallowed a {animal}.\"]\n+        \n+        if comment:\n+            verse.append(comment)\n+        \n+        if i == 8:  # Horse verse is special\n+            verse.append(\"She's dead, of course!\")\n+        else:\n+            # Add the \"to catch\" lines\n+            for j in range(i - 1, 0, -1):\n+                predator, _ = animals[j]\n+                prey, _ = animals[j - 1]\n+                if j == 2:  # Special case for spider\n+                    verse.append(f\"She swallowed the {predator} to catch the {prey} that wriggled and jiggled and tickled inside her.\")\n+                else:\n+                    verse.append(f\"She swallowed the {predator} to catch the {prey}.\")\n+            \n+            # Add the final line\n+            verse.append(\"I don't know why she swallowed the fly. Perhaps she'll die.\")\n+        \n+        result.extend(verse)\n+        \n+        # Add empty line between verses (except after the last verse)\n+        if i < end_verse:\n+            result.append(\"\")\n+    \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_bird",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cat",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cow",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_dog",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_fly",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_full_song",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_goat",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_horse",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_multiple_verses",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_spider",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T15:13:13.331733",
+    "started_initializing_agent_at": "2025-11-03T15:13:13.331873",
+    "started_running_agent_at": "2025-11-03T15:13:13.761094",
+    "started_initializing_eval_at": "2025-11-03T15:13:27.921670",
+    "started_running_eval_at": "2025-11-03T15:13:28.232463",
+    "finished_or_errored_at": "2025-11-03T15:13:28.492892"
+}

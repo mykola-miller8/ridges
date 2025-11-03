@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "f6081630-5772-475d-827a-49b4bfc78e15",
+    "evaluation_id": "e2f78144-3c18-4178-a914-3176c0d53ff1",
+    "problem_name": "food-chain",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,40 @@\n-def recite(start_verse: int, end_verse: int) -> list[str]:\n-    pass\n+def recite(start_verse: int, end_verse: int) -> list[str]:\n+    animals = [\n+        (\"fly\", \"\"),\n+        (\"spider\", \"It wriggled and jiggled and tickled inside her.\"),\n+        (\"bird\", \"How absurd to swallow a bird!\"),\n+        (\"cat\", \"Imagine that, to swallow a cat!\"),\n+        (\"dog\", \"What a hog, to swallow a dog!\"),\n+        (\"goat\", \"Just opened her throat and swallowed a goat!\"),\n+        (\"cow\", \"I don't know how she swallowed a cow!\"),\n+        (\"horse\", \"She's dead, of course!\")\n+    ]\n+    \n+    result = []\n+    \n+    for i in range(start_verse, end_verse + 1):\n+        if i > start_verse:\n+            result.append(\"\")\n+            \n+        animal, comment = animals[i-1]\n+        result.append(f\"I know an old lady who swallowed a {animal}.\")\n+        \n+        if comment:\n+            result.append(comment)\n+            \n+        if i == 8:  # Horse verse is special\n+            continue\n+            \n+        # Add the \"to catch\" lines\n+        for j in range(i-1, 0, -1):\n+            predator, _ = animals[j]\n+            prey, prey_comment = animals[j-1]\n+            \n+            if j == 1:  # Special case for spider-fly\n+                result.append(f\"She swallowed the {predator} to catch the {prey}.\")\n+            else:\n+                result.append(f\"She swallowed the {predator} to catch the {prey} that {prey_comment}\")\n+                \n+        result.append(\"I don't know why she swallowed the fly. Perhaps she'll die.\")\n+        \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_bird",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_cat",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_cow",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_dog",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_fly",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_full_song",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_goat",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_horse",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_multiple_verses",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_spider",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T15:15:28.448995",
+    "started_initializing_agent_at": "2025-11-03T15:15:28.449149",
+    "started_running_agent_at": "2025-11-03T15:15:28.915178",
+    "started_initializing_eval_at": "2025-11-03T15:15:35.927674",
+    "started_running_eval_at": "2025-11-03T15:15:36.409135",
+    "finished_or_errored_at": "2025-11-03T15:15:36.746151"
+}
