@@ -8,21 +8,23 @@
 [POLYGLOT_TEST_RUNNER] [1/10] Running test_bird...
 [POLYGLOT_TEST_RUNNER] test_bird: PASSED
 [POLYGLOT_TEST_RUNNER] [2/10] Running test_cat...
-[POLYGLOT_TEST_RUNNER] test_cat: FAILED - Lists differ: ['I k[109 chars] bird that wriggled and jiggled and tickled in[211 chars]ie."] != ['I k[109 chars] bird.', 'She swallowed the bird to catch the [162 chars]ie."]
-
-First differing element 2:
-'She [23 chars]tch the bird that wriggled and jiggled and tickled inside her.'
-'She [23 chars]tch the bird.'
-
-  ['I know an old lady who swallowed a cat.',
-   'Imagine that, to swallow a cat!',
-+  'She swallowed the cat to catch the bird.',
--  'She swallowed the cat to catch the bird that wriggled and jiggled and '
--  'tickled inside her.',
-   'She swallowed the bird to catch the spider that wriggled and jiggled and '
-   'tickled inside her.',
-   'She swallowed the spider to catch the fly.',
-   "I don't know why she swallowed the fly. Perhaps she'll die."]
+[POLYGLOT_TEST_RUNNER] test_cat: PASSED
+[POLYGLOT_TEST_RUNNER] [3/10] Running test_cow...
+[POLYGLOT_TEST_RUNNER] test_cow: PASSED
+[POLYGLOT_TEST_RUNNER] [4/10] Running test_dog...
+[POLYGLOT_TEST_RUNNER] test_dog: PASSED
+[POLYGLOT_TEST_RUNNER] [5/10] Running test_fly...
+[POLYGLOT_TEST_RUNNER] test_fly: PASSED
+[POLYGLOT_TEST_RUNNER] [6/10] Running test_full_song...
+[POLYGLOT_TEST_RUNNER] test_full_song: PASSED
+[POLYGLOT_TEST_RUNNER] [7/10] Running test_goat...
+[POLYGLOT_TEST_RUNNER] test_goat: PASSED
+[POLYGLOT_TEST_RUNNER] [8/10] Running test_horse...
+[POLYGLOT_TEST_RUNNER] test_horse: PASSED
+[POLYGLOT_TEST_RUNNER] [9/10] Running test_multiple_verses...
+[POLYGLOT_TEST_RUNNER] test_multiple_verses: PASSED
+[POLYGLOT_TEST_RUNNER] [10/10] Running test_spider...
+[POLYGLOT_TEST_RUNNER] test_spider: PASSED
 [POLYGLOT_TEST_RUNNER] Test results:
 [
   {
@@ -33,50 +35,50 @@ First differing element 2:
   {
     "name": "test_cat",
     "category": "default",
-    "status": "fail"
+    "status": "pass"
   },
   {
     "name": "test_cow",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_dog",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_fly",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_full_song",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_goat",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_horse",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_multiple_verses",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_spider",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   }
 ]
-[POLYGLOT_TEST_RUNNER] Test summary: 1 passed, 1 failed, 8 skipped
+[POLYGLOT_TEST_RUNNER] Test summary: 10 passed, 0 failed, 0 skipped
 [POLYGLOT_TEST_RUNNER] Writing output.json
 [POLYGLOT_TEST_RUNNER] Wrote output.json
 [POLYGLOT_TEST_RUNNER] Exiting main()
