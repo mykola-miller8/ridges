@@ -365,6 +365,33 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 # IMPLEMENTATION GUIDELINES
 
+## 0. READ THE SPECIFICATION CAREFULLY - EXACT OUTPUT MATTERS
+**Many problems require EXACT string matching or specific output format.**
+
+### When the spec shows example output:
+1. **Study the examples CHARACTER BY CHARACTER**
+   - Exact punctuation: commas, periods, colons, quotes
+   - Exact capitalization: "Ten" not "ten", "The" not "the"
+   - Exact spacing: single spaces, no trailing spaces
+   - Line structure: where do lines break?
+
+2. **Identify patterns in the examples**
+   - Pluralization rules: "bottle" vs "bottles", "is" vs "are"
+   - Number representations: numeric (1, 2, 3) vs words ("one", "two", "three")
+   - Special cases in wording: "no items" vs "zero items", "a" vs "an"
+   - Formatting patterns: separators between items, empty lines between blocks
+
+3. **Match the return type format PRECISELY**
+   - `list[str]`: Each element is ONE complete line (no embedded \\n characters)
+   - `str`: May contain newlines (\\n) to separate lines
+   - Empty strings in a list often represent blank lines
+
+4. **For string generation tasks:**
+   - Build helper functions/dictionaries for conversions (numbers to words, etc.)
+   - Handle singular/plural forms explicitly
+   - Test edge cases: 0, 1, 2, boundary values
+   - Don't guess at formatting - use the examples as ground truth
+
 ## 1. SIMPLICITY IS CRITICAL
 **The #1 cause of bugs is unnecessary complexity.**
 - Use the MINIMUM state variables needed (each extra variable = exponentially more bugs)
@@ -426,6 +453,7 @@ For classes with mutable state (games, parsers, accumulators):
   - `len(item) < 2` catches empty AND single-element
   - `len(item) < 1` only catches empty
 - **Return types**: If returning `list[str]`, each element is ONE line (not multi-line with \\n)
+- **String formatting**: Don't add extra spaces, newlines, or punctuation not in the spec
 - **Grid/graph adjacency**: Don't over-complicate neighbor relationships
   - For standard grids: use fixed direction lists (e.g., `[(0,1), (1,0), (0,-1), (-1,0)]`)
   - Check bounds, not complex offset logic
@@ -434,21 +462,24 @@ For classes with mutable state (games, parsers, accumulators):
 ## 6. EDGE CASES CHECKLIST
 Always handle:
 - Empty inputs (empty strings, empty lists, zero values)
-- Single-element collections
+- Single-element collections (often requires singular forms)
 - First element in a sequence
 - Last element in a sequence  
 - Boundary values (min, max)
 - Initial state before any operations
+- **Zero vs "no"**: Check if 0 should be "zero", "no", or something else
 
 ## 7. FINAL VERIFICATION
 Before submitting, mentally trace through your code:
 1. Does it handle the basic/normal case?
 2. Does it handle ALL special cases mentioned in the spec?
-3. Did I use the minimum state needed?
-4. Can I explain the logic in 2-3 simple sentences?
-5. Are there off-by-one errors in my indexing?
-6. Do all state-modifying methods validate preconditions?
-7. **For games/processes with fixed length**: Does it prevent operations after completion?
+3. Did I match the example output EXACTLY (punctuation, capitalization, spacing)?
+4. Did I use the minimum state needed?
+5. Can I explain the logic in 2-3 simple sentences?
+6. Are there off-by-one errors in my indexing?
+7. Do all state-modifying methods validate preconditions?
+8. **For games/processes with fixed length**: Does it prevent operations after completion?
+9. **For string generation**: Did I test singular/plural forms and edge cases?
 
 **If you can't clearly trace the logic, simplify it!**
 
