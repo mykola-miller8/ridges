@@ -4,7 +4,7 @@ import ast
 import json
 import uuid
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -13,7 +13,7 @@ import requests
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
-# - Proactive bug prevention with explicit validation guidance
+# - Multi-candidate generation with diversity sampling
 
 
 DEFAULT_PROXY_URL = (
@@ -87,7 +87,13 @@ def _extract_main_py(response: str) -> str:
     return m2[0].strip() if m2 and m2[0].strip() else ""
 
 
-def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
+def _call_llm(
+    messages: List[Dict[str, str]], 
+    run_id: str, 
+    attempt: int, 
+    temperature: float = 0.0,
+    timeout_s: int = 240
+) -> str:
     """Call the inference gateway with retry logic."""
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
@@ -95,7 +101,7 @@ def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout
     body = {
         "run_id": run_id,
         "messages": messages,
-        "temperature": 0.0,
+        "temperature": temperature,
         "agent_id": "agent-v7",
         "model": model,
     }
@@ -116,54 +122,11 @@ def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout
     raise last_err if last_err else RuntimeError("LLM call failed")
 
 
-def _review_code(code: str, problem_statement: str, run_id: str, attempt: int) -> Tuple[bool, str]:
-    """
-    Review code focusing on validation logic correctness.
-    Returns (approved, refined_code).
-    """
-    review_system = (
-        "You are a code reviewer specializing in finding validation bugs.\n"
-        "Test the code mentally with edge cases, especially incomplete/malformed inputs.\n\n"
-        "If CORRECT, respond: APPROVED\n"
-        "If buggy, provide FIXED code:\n```python\n# main.py\n[fixed code]\n```"
-    )
-    
-    review_user = (
-        f"Problem:\n{problem_statement[:7000]}\n\n"
-        f"Code:\n```python\n{code}\n```\n\n"
-        "Check validation logic carefully:\n"
-        "- Does it catch empty AND incomplete inputs (e.g., tuple with 1 element when 3 needed)?\n"
-        "- Are length checks correct? (< 2 not < 1 if minimum is 2 elements)\n"
-        "- Are error messages exactly as specified?\n"
-        "- Do all edge cases work: empty, single item, incomplete, malformed?\n\n"
-        "Is this code correct?"
-    )
-    
-    review_messages = [
-        {"role": "system", "content": review_system},
-        {"role": "user", "content": review_user},
-    ]
-    
-    try:
-        review_resp = _call_llm(review_messages, run_id, attempt, 300)
-        
-        if "APPROVED" in review_resp.upper():
-            return True, code
-        
-        refined_code = _extract_main_py(review_resp)
-        if refined_code and not _validate_syntax(refined_code):
-            return False, refined_code
-    except Exception:
-        pass
-    
-    return True, code
-
-
 def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bool = False) -> str:
     """
     Entry point required by the evaluation harness.
     
-    Strategy: Prevent bugs at generation time with explicit guidance.
+    Strategy: Generate multiple diverse candidates, return first valid one.
     """
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
 
@@ -186,36 +149,34 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
     summary = "\n\n".join(parts)
 
-    # Generation prompt with explicit validation guidance
+    # Careful, detailed prompt for generation
     system_msg = (
-        "You are a senior Python engineer who writes SIMPLE, CORRECT, BUG-FREE code.\n"
+        "You are a senior Python engineer who writes simple, correct code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
         + "Return ONLY:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose."
+        "No explanations."
     )
     
     user_msg = (
         f"Problem:\n{problem_statement[:12000]}\n\n"
         f"Repository:\n{summary}\n\n"
-        "Implement a complete solution. CRITICAL VALIDATION GUIDANCE:\n\n"
-        "When validating input structures (lists, tuples, etc.), avoid these common bugs:\n"
-        "? BAD: if len(item) < 1  # Only catches empty, not incomplete (e.g., 1 element when 3 needed)\n"
-        "? GOOD: if len(item) < 3  # Catches both empty AND incomplete\n\n"
-        "? BAD: Checking length after accessing elements\n"
-        "? GOOD: Check length FIRST, then access elements\n\n"
-        "? BAD: Generic length check for all types\n"
-        "? GOOD: Type-specific validation (each type needs different length)\n\n"
-        "For input validation:\n"
-        "1. Check if input exists and has correct type FIRST\n"
-        "2. Check if it has MINIMUM required elements (not just > 0)\n"
-        "3. Validate each element's type and value\n"
-        "4. Use exact error messages as specified in problem\n\n"
-        "Test your logic mentally with:\n"
-        "- Empty input: [], (), None\n"
-        "- Incomplete: tuple with 1 element when 3 needed\n"
-        "- Malformed: wrong types\n"
-        "- Valid: correct structure\n\n"
-        "Implement the solution now."
+        "Implement a complete solution with careful input validation.\n\n"
+        "VALIDATION CHECKLIST (critical for correctness):\n"
+        "1. Check input type FIRST (is it None? wrong type?)\n"
+        "2. For sequences (tuples, lists), check minimum length needed\n"
+        "   - If validating tuples that need N elements, check len(tuple) >= N\n"
+        "   - Don't just check len > 0, check for the actual minimum needed\n"
+        "3. Check element types and values AFTER length validation\n"
+        "4. Match error messages EXACTLY as specified in problem\n"
+        "5. Use correct exception types (TypeError vs ValueError)\n\n"
+        "Example of CORRECT tuple validation pattern:\n"
+        "```python\n"
+        "# If tuple needs at least 2 elements:\n"
+        "if not isinstance(item, tuple) or len(item) < 2:\n"
+        "    raise TypeError(\"Item incomplete\")\n"
+        "# Now safe to access item[0], item[1]\n"
+        "```\n\n"
+        "Implement the solution following this validation pattern."
     )
 
     messages = [
@@ -223,44 +184,44 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         {"role": "user", "content": user_msg},
     ]
 
-    best_code = ""
+    # Try multiple models with different temperatures for diversity
+    candidates = []
     
-    # Try multiple models with review
-    for attempt in range(min(3, len(AGENT_MODELS))):
+    # First, try with temperature=0 (deterministic)
+    for attempt in range(len(AGENT_MODELS)):
         try:
-            # Generate solution
-            resp = _call_llm(messages, run_id, attempt, 300)
-            main_src = _extract_main_py(resp)
+            resp = _call_llm(messages, run_id, attempt, temperature=0.0, timeout_s=300)
+            code = _extract_main_py(resp)
             
-            if not main_src or _validate_syntax(main_src):
-                continue
-            
-            # Review the generated code
-            approved, reviewed_code = _review_code(main_src, problem_statement, run_id, attempt)
-            
-            if not approved and reviewed_code != main_src:
-                # Code was refined, use the refined version
-                best_code = reviewed_code
-            else:
-                best_code = reviewed_code
-            
-            if best_code:
+            if code and not _validate_syntax(code):
+                candidates.append(code)
+                # If we got a valid solution, try one more with higher temperature for diversity
+                if len(candidates) == 1:
+                    try:
+                        resp2 = _call_llm(messages, run_id, attempt, temperature=0.3, timeout_s=300)
+                        code2 = _extract_main_py(resp2)
+                        if code2 and not _validate_syntax(code2) and code2 != code:
+                            candidates.append(code2)
+                    except Exception:
+                        pass
                 break
-                
         except Exception:
             continue
-
-    # Fallback if no solution yet
-    if not best_code:
-        for attempt in range(3, len(AGENT_MODELS)):
-            try:
-                resp = _call_llm(messages, run_id, attempt, 300)
-                main_src = _extract_main_py(resp)
-                
-                if main_src and not _validate_syntax(main_src):
-                    best_code = main_src
-                    break
-            except Exception:
-                continue
-
-    return _build_single_file_patch("main.py", best_code) if best_code else ""
+    
+    # If we have candidates, return the first one
+    # (could add selection logic here, but first valid is often good)
+    if candidates:
+        return _build_single_file_patch("main.py", candidates[0])
+    
+    # Fallback: try remaining models if no solution yet
+    for attempt in range(len(AGENT_MODELS)):
+        try:
+            resp = _call_llm(messages, run_id, attempt, temperature=0.5, timeout_s=300)
+            code = _extract_main_py(resp)
+            
+            if code and not _validate_syntax(code):
+                return _build_single_file_patch("main.py", code)
+        except Exception:
+            continue
+    
+    return ""
