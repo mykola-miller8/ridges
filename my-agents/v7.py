@@ -66,7 +66,7 @@ def _read(path: str) -> str:
 
 def _validate_syntax(code: str) -> Tuple[bool, str]:
     """
-    Check if code has valid Python syntax and basic import safety.
+    Check if code has valid Python syntax and can be compiled without runtime errors.
     
     Returns:
         Tuple of (is_valid, error_message)
@@ -76,10 +76,11 @@ def _validate_syntax(code: str) -> Tuple[bool, str]:
         "code_lines": len(code.splitlines())
     })
     try:
+        # Step 1: Parse syntax
         tree = ast.parse(code)
         _verbose_log("SYNTAX_VALIDATION: Syntax is valid")
         
-        # Check for potentially problematic imports
+        # Step 2: Check imports
         imports = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -91,7 +92,6 @@ def _validate_syntax(code: str) -> Tuple[bool, str]:
         
         if imports:
             _verbose_log("SYNTAX_VALIDATION: Found imports", {"imports": imports})
-            # Check for common safe imports
             safe_imports = {
                 'collections', 're', 'math', 'itertools', 'functools',
                 'typing', 'dataclasses', 'enum', 'heapq', 'bisect',
@@ -99,11 +99,21 @@ def _validate_syntax(code: str) -> Tuple[bool, str]:
             }
             unsafe = [imp for imp in imports if imp.split('.')[0] not in safe_imports]
             if unsafe:
-                error_msg = f"Potentially unsafe/unavailable imports: {unsafe}. Use only standard library."
                 _verbose_log("SYNTAX_VALIDATION: Unsafe imports detected", {
                     "unsafe_imports": unsafe
                 }, level="WARN")
-                # Don't fail, just warn - some imports might be okay
+        
+        # Step 3: Try to compile (catches more errors than parse)
+        try:
+            compile(code, '<string>', 'exec')
+            _verbose_log("SYNTAX_VALIDATION: Code compiles successfully")
+        except Exception as compile_err:
+            error_msg = f"Compilation error: {compile_err}"
+            _verbose_log("SYNTAX_VALIDATION: Compilation failed", {
+                "error": str(compile_err),
+                "error_type": type(compile_err).__name__
+            }, level="ERROR")
+            return False, error_msg
         
         return True, ""
     except SyntaxError as e:
@@ -491,9 +501,23 @@ for item in data:
   - What repeats exactly vs what varies
   - Some lines may have extra elements, others may not
 - **Self-referential/shadowing definitions** (interpreters, parsers, DSLs):
-  - If defining something can reference a previous definition with the same name
-  - Capture definitions at definition time, not execution time
-  - Example: redefining `X` to call old `X` requires saving old `X` before overwriting
+  - **CRITICAL**: When redefining something that uses its own name, capture the OLD definition first
+  - Example: `: foo 10 ;` then `: foo foo 1 + ;` should call the OLD foo (10), not recurse infinitely
+  - **Implementation pattern**:
+    ```python
+    # When parsing ": foo foo 1 + ;" and foo already exists
+    # WRONG: definitions['foo'] = ['foo', '1', '+']  # 'foo' will recurse!
+    # RIGHT: Expand 'foo' to its current definition while parsing
+    old_foo = definitions.get('foo', [])  # Save old definition
+    new_body = []
+    for token in [' foo', '1', '+']:
+        if token in definitions:
+            new_body.extend(definitions[token])  # Expand using OLD definition
+        else:
+            new_body.append(token)
+    definitions['foo'] = new_body  # Now safe to overwrite
+    ```
+  - **Key insight**: Resolve references at definition time, not execution time
 
 ## 2. VALIDATION (AFTER CORE LOGIC WORKS)
 **Add validation AFTER the basic functionality is correct.**
@@ -602,8 +626,9 @@ Mentally trace through your code:
 5. **For DSL/tuple validation**: Did I validate in the correct order (completeness ? type valid ? length ? element types)?
 6. For sequential inputs: Did I identify phase boundaries where constraints reset?
 7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly?
-8. Can I explain the logic in 2-3 simple sentences?
-9. Did I test the logic with examples from the spec?
+8. **For interpreters/DSLs with definitions**: When redefining `X` to use `X`, did I capture the old definition first?
+9. Can I explain the logic in 2-3 simple sentences?
+10. Did I test the logic with examples from the spec?
 
 **If you can't clearly trace the logic, simplify it!**
 
