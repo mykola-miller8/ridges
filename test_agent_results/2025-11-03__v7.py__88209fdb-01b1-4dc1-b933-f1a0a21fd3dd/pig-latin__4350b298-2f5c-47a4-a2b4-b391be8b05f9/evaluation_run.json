@@ -1,0 +1,127 @@
+{
+    "evaluation_run_id": "4350b298-2f5c-47a4-a2b4-b391be8b05f9",
+    "evaluation_id": "88209fdb-01b1-4dc1-b933-f1a0a21fd3dd",
+    "problem_name": "pig-latin",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,28 @@\n-def translate(text: str) -> str:\n-    pass\n+def translate(text: str) -> str:\n+    def pig_latin_word(word: str) -> str:\n+        # Rule 1: If word begins with a vowel sound, add \"ay\" to the end\n+        # Also handles special cases \"xr\" and \"yt\"\n+        if word.startswith(('a', 'e', 'i', 'o', 'u')) or word.startswith(('xr', 'yt')):\n+            return word + 'ay'\n+        \n+        # Find the index where the consonant cluster ends\n+        i = 0\n+        while i < len(word):\n+            # Rule 3: If we encounter \"qu\", move everything up to and including \"qu\"\n+            if i < len(word) - 1 and word[i:i+2] == 'qu':\n+                i += 2  # Move past the 'qu'\n+                break\n+            # Rule 4: If we encounter 'y' after consonants, treat 'y' as a vowel\n+            elif word[i] == 'y' and i > 0:\n+                break\n+            # If we hit a vowel (except 'y' at the beginning), stop\n+            elif word[i] in 'aeiou':\n+                break\n+            # Continue moving through consonants\n+            i += 1\n+        \n+        # Move the consonant cluster to the end and add \"ay\"\n+        return word[i:] + word[:i] + 'ay'\n+    \n+    # Split the text into words, translate each word, and rejoin\n+    return ' '.join(pig_latin_word(word) for word in text.split())\n",
+    "test_results": [
+        {
+            "name": "test_a_whole_phrase",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_a",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_a_vowel_and_followed_by_a_qu",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_ch",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_e",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_i",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_k",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_o",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_p",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_q_without_a_following_u",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_qu",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_qu_and_a_preceding_consonant",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_sch",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_th",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_thr",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_u",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_x",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_xr",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_word_beginning_with_yt",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_y_as_second_letter_in_two_letter_word",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_y_is_treated_like_a_consonant_at_the_beginning_of_a_word",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_y_is_treated_like_a_vowel_at_the_end_of_a_consonant_cluster",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T19:14:46.990822",
+    "started_initializing_agent_at": "2025-11-03T19:14:46.990930",
+    "started_running_agent_at": "2025-11-03T19:14:47.432434",
+    "started_initializing_eval_at": "2025-11-03T19:14:54.270876",
+    "started_running_eval_at": "2025-11-03T19:14:54.572052",
+    "finished_or_errored_at": "2025-11-03T19:14:54.822315"
+}
