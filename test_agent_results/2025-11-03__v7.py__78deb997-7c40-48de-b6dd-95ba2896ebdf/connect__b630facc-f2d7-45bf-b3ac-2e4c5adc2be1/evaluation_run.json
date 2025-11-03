@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "b630facc-f2d7-45bf-b3ac-2e4c5adc2be1",
+    "evaluation_id": "78deb997-7c40-48de-b6dd-95ba2896ebdf",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,102 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        self.board = [list(row.replace(' ', '')) for row in board.splitlines()]\n+        self.rows = len(self.board)\n+        self.cols = len(self.board[0]) if self.rows > 0 else 0\n+\n+    def get_winner(self) -> str:\n+        if self._is_winner('O'):\n+            return 'O'\n+        if self._is_winner('X'):\n+            return 'X'\n+        return ''\n+\n+    def _is_winner(self, player: str) -> bool:\n+        if player == 'O':\n+            # Check if O connects top to bottom\n+            visited = set()\n+            for col in range(self.cols):\n+                if self.board[0][col] == player and self._dfs(0, col, player, visited, 'vertical'):\n+                    return True\n+            return False\n+        else:  # player == 'X'\n+            # Check if X connects left to right\n+            visited = set()\n+            for row in range(self.rows):\n+                if self.board[row][0] == player and self._dfs(row, 0, player, visited, 'horizontal'):\n+                    return True\n+            return False\n+\n+    def _dfs(self, row: int, col: int, player: str, visited: set, direction: str) -> bool:\n+        # Check bounds\n+        if not (0 <= row < self.rows and 0 <= col < self.cols):\n+            return False\n+        \n+        # Check if cell is not player's stone\n+        if self.board[row][col] != player:\n+            return False\n+            \n+        # Check if already visited\n+        if (row, col) in visited:\n+            return False\n+            \n+        # Mark as visited\n+        visited.add((row, col))\n+        \n+        # Check win condition\n+        if player == 'O' and direction == 'vertical' and row == self.rows - 1:\n+            return True\n+        if player == 'X' and direction == 'horizontal' and col == self.cols - 1:\n+            return True\n+            \n+        # Explore neighbors (hexagonal adjacency)\n+        neighbors = self._get_neighbors(row, col)\n+        for nr, nc in neighbors:\n+            if self._dfs(nr, nc, player, visited, direction):\n+                return True\n+                \n+        return False\n+\n+    def _get_neighbors(self, row: int, col: int) -> list:\n+        neighbors = []\n+        # Even rows (0-indexed) have neighbors in specific pattern\n+        if row % 2 == 0:\n+            # Up\n+            if row > 0:\n+                neighbors.append((row - 1, col))\n+            # Down\n+            if row < self.rows - 1:\n+                neighbors.append((row + 1, col))\n+            # Up-left\n+            if row > 0 and col > 0:\n+                neighbors.append((row - 1, col - 1))\n+            # Down-left\n+            if row < self.rows - 1 and col > 0:\n+                neighbors.append((row + 1, col - 1))\n+            # Right\n+            if col < self.cols - 1:\n+                neighbors.append((row, col + 1))\n+            # Left\n+            if col > 0:\n+                neighbors.append((row, col - 1))\n+        else:\n+            # Odd rows have different pattern\n+            # Up\n+            if row > 0:\n+                neighbors.append((row - 1, col))\n+            # Down\n+            if row < self.rows - 1:\n+                neighbors.append((row + 1, col))\n+            # Up-right\n+            if row > 0 and col < self.cols - 1:\n+                neighbors.append((row - 1, col + 1))\n+            # Down-right\n+            if row < self.rows - 1 and col < self.cols - 1:\n+                neighbors.append((row + 1, col + 1))\n+            # Right\n+            if col < self.cols - 1:\n+                neighbors.append((row, col + 1))\n+            # Left\n+            if col > 0:\n+                neighbors.append((row, col - 1))\n+        return neighbors\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T08:18:52.173054",
+    "started_initializing_agent_at": "2025-11-03T08:18:52.173152",
+    "started_running_agent_at": "2025-11-03T08:18:52.534076",
+    "started_initializing_eval_at": "2025-11-03T08:19:01.875500",
+    "started_running_eval_at": "2025-11-03T08:19:02.346176",
+    "finished_or_errored_at": "2025-11-03T08:19:02.699046"
+}

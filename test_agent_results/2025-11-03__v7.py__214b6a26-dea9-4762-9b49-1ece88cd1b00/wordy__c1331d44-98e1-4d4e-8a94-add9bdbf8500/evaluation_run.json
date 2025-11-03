@@ -1,0 +1,142 @@
+{
+    "evaluation_run_id": "c1331d44-98e1-4d4e-8a94-add9bdbf8500",
+    "evaluation_id": "214b6a26-dea9-4762-9b49-1ece88cd1b00",
+    "problem_name": "wordy",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,59 @@\n-def answer(question: str) -> int:\n-    pass\n+def answer(question: str) -> int:\n+    if not question.startswith(\"What is\") or not question.endswith(\"?\"):\n+        raise ValueError(\"syntax error\")\n+    \n+    # Remove \"What is\" and \"?\"\n+    expression = question[8:-1].strip()\n+    \n+    if not expression:\n+        raise ValueError(\"syntax error\")\n+    \n+    # Replace operation words with operators\n+    expression = expression.replace(\"plus\", \"+\")\n+    expression = expression.replace(\"minus\", \"-\")\n+    expression = expression.replace(\"multiplied by\", \"*\")\n+    expression = expression.replace(\"divided by\", \"/\")\n+    \n+    # Split into tokens\n+    tokens = expression.split()\n+    \n+    # Check for invalid operations\n+    for token in tokens:\n+        if token in [\"cubed\", \"squared\"]:\n+            raise ValueError(\"unknown operation\")\n+    \n+    # Check if the expression starts or ends with an operator\n+    if tokens[0] in [\"+\", \"-\", \"*\", \"/\"] or tokens[-1] in [\"+\", \"-\", \"*\", \"/\"]:\n+        raise ValueError(\"syntax error\")\n+    \n+    # Parse and evaluate from left to right\n+    try:\n+        result = int(tokens[0])\n+    except ValueError:\n+        raise ValueError(\"syntax error\")\n+    \n+    i = 1\n+    while i < len(tokens):\n+        if i + 1 >= len(tokens):\n+            raise ValueError(\"syntax error\")\n+        \n+        operator = tokens[i]\n+        try:\n+            operand = int(tokens[i + 1])\n+        except ValueError:\n+            raise ValueError(\"syntax error\")\n+        \n+        if operator == \"+\":\n+            result += operand\n+        elif operator == \"-\":\n+            result -= operand\n+        elif operator == \"*\":\n+            result *= operand\n+        elif operator == \"/\":\n+            result //= operand\n+        else:\n+            raise ValueError(\"unknown operation\")\n+        \n+        i += 2\n+    \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_addition",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_addition_and_multiplication",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_addition_and_subtraction",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_addition_with_negative_numbers",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_division",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_just_a_number",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_large_addition",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_missing_number",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_missing_operation",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_more_addition",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_additions",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_division",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_multiplication",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_subtraction",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiplication",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_non_math_question",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_reject_postfix_notation",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_reject_prefix_notation",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_reject_problem_missing_an_operand",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_reject_problem_with_no_operands_or_operators",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_reject_two_numbers_in_a_row",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_reject_two_operations_in_a_row",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_subtraction",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_subtraction_then_addition",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_unknown_operation",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T10:04:42.271104",
+    "started_initializing_agent_at": "2025-11-03T10:04:42.271217",
+    "started_running_agent_at": "2025-11-03T10:04:42.619407",
+    "started_initializing_eval_at": "2025-11-03T10:04:49.793953",
+    "started_running_eval_at": "2025-11-03T10:04:50.113193",
+    "finished_or_errored_at": "2025-11-03T10:04:50.373537"
+}

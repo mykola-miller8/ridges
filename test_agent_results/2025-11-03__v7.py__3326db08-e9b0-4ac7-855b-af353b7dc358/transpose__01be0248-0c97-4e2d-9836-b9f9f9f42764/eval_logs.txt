@@ -1,0 +1,97 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: TransposeTest
+[POLYGLOT_TEST_RUNNER] Found 12 test methods
+[POLYGLOT_TEST_RUNNER] [1/12] Running test_empty_string...
+[POLYGLOT_TEST_RUNNER] test_empty_string: PASSED
+[POLYGLOT_TEST_RUNNER] [2/12] Running test_first_line_longer_than_second_line...
+[POLYGLOT_TEST_RUNNER] test_first_line_longer_than_second_line: FAILED - 'TT\nhh\nee\n\nff\noi\nuf\nrt\nth\nh\n l\nli\nin\nne\ne.\n.' != 'TT\nhh\nee\n  \nff\noi\nuf\nrt\nth\nh \n l\nli\nin\nne\ne.\n.'
+  TT
+  hh
+  ee
+- 
++   
+  ff
+  oi
+  uf
+  rt
+  th
+- h
++ h 
+?  +
+   l
+  li
+  in
+  ne
+  e.
+  .
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_empty_string",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_first_line_longer_than_second_line",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_jagged_triangle",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_mixed_line_length",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_rectangle",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_second_line_longer_than_first_line",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_simple",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_single_line",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_square",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_triangle",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_two_characters_in_a_column",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_two_characters_in_a_row",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 1 passed, 1 failed, 10 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

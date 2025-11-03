@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "651db990-29e3-4c52-86d7-3bbb0048c454",
+    "evaluation_id": "a20e1a45-df2f-4475-b7a6-9a25aa432743",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,136 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+from typing import List, Optional, Tuple, Set\n+\n+class ConnectGame:\n+    def __init__(self, board_str: str):\n+        \"\"\"Initialize the game from a board string representation.\"\"\"\n+        self.board = self._parse_board(board_str)\n+        self.height = len(self.board)\n+        self.width = len(self.board[0]) if self.height > 0 else 0\n+        self.visited = set()\n+        \n+    def _parse_board(self, board_str: str) -> List[List[str]]:\n+        \"\"\"Parse board string into 2D list, handling uneven rows.\"\"\"\n+        lines = board_str.strip().split('\\n')\n+        board = []\n+        for line in lines:\n+            # Skip empty lines and handle uneven row lengths\n+            if line.strip():\n+                row_chars = []\n+                for char in line.strip():\n+                    if char in 'XO.':\n+                        row_chars.append(char)\n+                    elif char == ' ':\n+                        continue  # Skip spaces\n+                    else:\n+                        # Handle other characters that might appear\n+                        continue\n+                board.append(row_chars)\n+        \n+        # Pad shorter rows to match the longest row\n+        if board:\n+            max_len = max(len(row) for row in board)\n+            for i in range(len(board)):\n+                if len(board[i]) < max_len:\n+                    board[i] += ['.'] * (max_len - len(board[i]))\n+        \n+        return board\n+    \n+    def get_cell(self, row: int, col: int) -> str:\n+        \"\"\"Get cell content with bounds checking.\"\"\"\n+        if 0 <= row < self.height and 0 <= col < len(self.board[row]):\n+            return self.board[row][col]\n+        return '.'  # Out of bounds cells are empty\n+    \n+    def get_neighbors(self, row: int, col: int) -> List[Tuple[int, int]]:\n+        \"\"\"Get valid neighbors for a hexagonal grid.\"\"\"\n+        # Define the 6 directions in a hexagonal grid\n+        # Even rows (0, 2, 4...) and odd rows (1, 3, 5...) have different neighbor offsets\n+        if row % 2 == 0:  # Even row\n+            directions = [(-1, -1), (-1, 0), (0, -1), (0, 1), (1, -1), (1, 0)]\n+        else:  # Odd row\n+            directions = [(-1, 0), (-1, 1), (0, -1), (0, 1), (1, 0), (1, 1)]\n+        \n+        neighbors = []\n+        for dr, dc in directions:\n+            nr, nc = row + dr, col + dc\n+            if 0 <= nr < self.height and 0 <= nc < len(self.board[nr]):\n+                if self.get_cell(nr, nc) == '.':\n+                    neighbors.append((nr, nc))\n+        \n+        return neighbors\n+    \n+    def dfs(self, row: int, col: int, player: str, visited: Set[Tuple[int, int]]) -> bool:\n+        \"\"\"Depth-first search to find a connected path.\"\"\"\n+        if (row, col) in visited:\n+            return False\n+        \n+        visited.add((row, col))\n+        \n+        # Check if we've reached the opposite edge\n+        if player == 'X' and row == self.height - 1:  # X needs to reach bottom row\n+            return True\n+        if player == 'O' and col == self.width - 1:  # O needs to reach rightmost column\n+            return True\n+        \n+        # Explore neighbors\n+        for nr, nc in self.get_neighbors(row, col):\n+            if self.get_cell(nr, nc) == player:\n+                if self.dfs(nr, nc, player, visited.copy()):\n+                    return True\n+        \n+        return False\n+    \n+    def check_win(self, player: str) -> bool:\n+        \"\"\"Check if player has won by finding a connected path across the board.\"\"\"\n+        if player == 'X':  # X needs to go from top to bottom\n+            # Check each cell in top row\n+            for col in range(len(self.board[0])):\n+                if self.get_cell(0, col) == player:\n+                    if self.dfs(0, col, player, set()):\n+                        return True\n+        else:  # O needs to go from left to right\n+            # Check each cell in leftmost column\n+            for row in range(self.height):\n+                if len(self.board[row]) > 0 and self.get_cell(row, 0) == player:\n+                    if self.dfs(row, 0, player, set()):\n+                        return True\n+        \n+        return False\n+    \n+    def winner(self) -> Optional[str]:\n+        \"\"\"Determine the game winner.\"\"\"\n+        if self.check_win('X'):\n+            return 'X'\n+        if self.check_win('O'):\n+            return 'O'\n+        return None\n+    \n+    def print_board(self):\n+        \"\"\"Print the board for debugging.\"\"\"\n+        for i, row in enumerate(self.board):\n+            # Add indentation for hexagonal effect\n+            indent = ' ' * (i % 2)\n+            print(f\"{indent}{' '.join(row)}\")\n+\n+\n+def who_won(board_str: str) -> Optional[str]:\n+    \"\"\"Determine who won the game.\"\"\"\n+    game = ConnectGame(board_str)\n+    return game.winner()\n+\n+\n+# Test the implementation\n+if __name__ == \"__main__\":\n+    # Test cases\n+    test_boards = [\n+        \". X O . . .\\n. X O . O .\\n. X O . . .\\n. X O . . .\\n. X O . . .\\n. X O . . .\",\n+        \". O X . . .\\n. O X . X .\\n. O X . . .\\n. O X . . .\\n. O X . . .\\n. O X . . .\",\n+        \". X . O .\\n. O . X .\\n. X . O .\\n. O . X .\\n. X . O .\",\n+        \". X . . .\\n. O . . .\\n. X . . .\\n. O . . .\\n. X . . .\",\n+    ]\n+    \n+    for i, board in enumerate(test_boards):\n+        print(f\"Test case {i+1}:\")\n+        print(f\"Board:\\n{board}\")\n+        result = who_won(board)\n+        print(f\"Winner: {result}\\n\")\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T13:57:51.428252",
+    "started_initializing_agent_at": "2025-11-03T13:57:51.428370",
+    "started_running_agent_at": "2025-11-03T13:57:51.775190",
+    "started_initializing_eval_at": "2025-11-03T14:01:09.750443",
+    "started_running_eval_at": "2025-11-03T14:01:10.125533",
+    "finished_or_errored_at": "2025-11-03T14:01:10.430648"
+}

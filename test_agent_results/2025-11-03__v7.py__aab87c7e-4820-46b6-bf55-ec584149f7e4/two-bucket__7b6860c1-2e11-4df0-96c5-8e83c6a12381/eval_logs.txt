@@ -1,0 +1,77 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: TwoBucketTest
+[POLYGLOT_TEST_RUNNER] Found 9 test methods
+[POLYGLOT_TEST_RUNNER] [1/9] Running test_goal_larger_than_both_buckets_is_impossible...
+[POLYGLOT_TEST_RUNNER] test_goal_larger_than_both_buckets_is_impossible: PASSED
+[POLYGLOT_TEST_RUNNER] [2/9] Running test_measure_one_step_using_bucket_one_of_size_1_and_bucket_two_of_size_3_start_with_bucket_two...
+[POLYGLOT_TEST_RUNNER] test_measure_one_step_using_bucket_one_of_size_1_and_bucket_two_of_size_3_start_with_bucket_two: PASSED
+[POLYGLOT_TEST_RUNNER] [3/9] Running test_measure_using_bucket_one_of_size_2_and_bucket_two_of_size_3_start_with_bucket_one_and_end_with_bucket_two...
+[POLYGLOT_TEST_RUNNER] test_measure_using_bucket_one_of_size_2_and_bucket_two_of_size_3_start_with_bucket_one_and_end_with_bucket_two: PASSED
+[POLYGLOT_TEST_RUNNER] [4/9] Running test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_one...
+[POLYGLOT_TEST_RUNNER] test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_one: PASSED
+[POLYGLOT_TEST_RUNNER] [5/9] Running test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_two...
+[POLYGLOT_TEST_RUNNER] test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_two: PASSED
+[POLYGLOT_TEST_RUNNER] [6/9] Running test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_one...
+[POLYGLOT_TEST_RUNNER] test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_one: PASSED
+[POLYGLOT_TEST_RUNNER] [7/9] Running test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_two...
+[POLYGLOT_TEST_RUNNER] test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_two: PASSED
+[POLYGLOT_TEST_RUNNER] [8/9] Running test_not_possible_to_reach_the_goal...
+[POLYGLOT_TEST_RUNNER] test_not_possible_to_reach_the_goal: PASSED
+[POLYGLOT_TEST_RUNNER] [9/9] Running test_with_the_same_buckets_but_a_different_goal_then_it_is_possible...
+[POLYGLOT_TEST_RUNNER] test_with_the_same_buckets_but_a_different_goal_then_it_is_possible: PASSED
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_goal_larger_than_both_buckets_is_impossible",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_measure_one_step_using_bucket_one_of_size_1_and_bucket_two_of_size_3_start_with_bucket_two",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_measure_using_bucket_one_of_size_2_and_bucket_two_of_size_3_start_with_bucket_one_and_end_with_bucket_two",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_one",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_two",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_one",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_two",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_not_possible_to_reach_the_goal",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_with_the_same_buckets_but_a_different_goal_then_it_is_possible",
+    "category": "default",
+    "status": "pass"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 9 passed, 0 failed, 0 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

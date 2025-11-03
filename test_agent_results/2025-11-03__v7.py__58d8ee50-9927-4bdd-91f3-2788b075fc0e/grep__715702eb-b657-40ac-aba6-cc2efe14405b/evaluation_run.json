@@ -1,0 +1,142 @@
+{
+    "evaluation_run_id": "715702eb-b657-40ac-aba6-cc2efe14405b",
+    "evaluation_id": "58d8ee50-9927-4bdd-91f3-2788b075fc0e",
+    "problem_name": "grep",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,59 @@\n-def grep(pattern: str, flags: str, files: list[str]) -> str:\n-    pass\n+def grep(pattern: str, flags: str, files: list[str]) -> str:\n+    result = []\n+    files_with_matches = set()\n+    \n+    # Parse flags\n+    line_numbers = '-n' in flags\n+    files_only = '-l' in flags\n+    case_insensitive = '-i' in flags\n+    invert_match = '-v' in flags\n+    exact_match = '-x' in flags\n+    \n+    # Prepare pattern for comparison\n+    search_pattern = pattern.lower() if case_insensitive else pattern\n+    \n+    for filename in files:\n+        try:\n+            with open(filename, 'r') as file:\n+                lines = file.readlines()\n+                \n+            for i, line in enumerate(lines, 1):\n+                # Prepare line for comparison\n+                compare_line = line.rstrip('\\n').lower() if case_insensitive else line.rstrip('\\n')\n+                \n+                # Check for match based on flags\n+                if exact_match:\n+                    is_match = (compare_line == search_pattern)\n+                else:\n+                    is_match = (search_pattern in compare_line)\n+                \n+                # Apply invert flag\n+                if invert_match:\n+                    is_match = not is_match\n+                \n+                # If we found a match\n+                if is_match:\n+                    if files_only:\n+                        files_with_matches.add(filename)\n+                        # We can break early since we only need to know the file has a match\n+                        break\n+                    else:\n+                        output_line = line.rstrip('\\n')\n+                        if line_numbers:\n+                            if len(files) > 1:\n+                                output_line = f\"{filename}:{i}:{output_line}\"\n+                            else:\n+                                output_line = f\"{i}:{output_line}\"\n+                        elif len(files) > 1:\n+                            output_line = f\"{filename}:{output_line}\"\n+                        \n+                        result.append(output_line)\n+                \n+        except FileNotFoundError:\n+            # According to tests, we should just skip files that don't exist\n+            continue\n+    \n+    if files_only:\n+        return '\\n'.join(sorted(files_with_matches)) + ('\\n' if files_with_matches else '')\n+    else:\n+        return '\\n'.join(result) + ('\\n' if result else '')\n",
+    "test_results": [
+        {
+            "name": "test_multiple_files_no_matches_various_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_one_match_match_entire_lines_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_one_match_multiple_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_one_match_no_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_one_match_print_file_names_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_several_matches_case_insensitive_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_several_matches_file_flag_takes_precedence_over_line_number_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_several_matches_inverted_and_match_entire_lines_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_several_matches_inverted_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_several_matches_no_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_files_several_matches_print_line_numbers_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_no_matches_various_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_one_match_case_insensitive_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_one_match_file_flag_takes_precedence_over_line_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_one_match_match_entire_lines_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_one_match_multiple_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_one_match_no_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_one_match_print_file_names_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_one_match_print_line_numbers_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_several_matches_case_insensitive_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_several_matches_inverted_and_match_entire_lines_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_several_matches_inverted_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_several_matches_match_entire_lines_flag",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_several_matches_no_flags",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_file_several_matches_print_line_numbers_flag",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T09:44:40.754379",
+    "started_initializing_agent_at": "2025-11-03T09:44:40.754462",
+    "started_running_agent_at": "2025-11-03T09:44:41.073399",
+    "started_initializing_eval_at": "2025-11-03T09:44:47.722683",
+    "started_running_eval_at": "2025-11-03T09:44:48.044011",
+    "finished_or_errored_at": "2025-11-03T09:44:48.443255"
+}

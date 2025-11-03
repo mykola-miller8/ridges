@@ -1,0 +1,126 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: AffineCipherTest
+[POLYGLOT_TEST_RUNNER] Found 16 test methods
+[POLYGLOT_TEST_RUNNER] [1/16] Running test_decode_a_sentence...
+[POLYGLOT_TEST_RUNNER] test_decode_a_sentence: PASSED
+[POLYGLOT_TEST_RUNNER] [2/16] Running test_decode_all_the_letters...
+[POLYGLOT_TEST_RUNNER] test_decode_all_the_letters: PASSED
+[POLYGLOT_TEST_RUNNER] [3/16] Running test_decode_exercism...
+[POLYGLOT_TEST_RUNNER] test_decode_exercism: PASSED
+[POLYGLOT_TEST_RUNNER] [4/16] Running test_decode_numbers...
+[POLYGLOT_TEST_RUNNER] test_decode_numbers: PASSED
+[POLYGLOT_TEST_RUNNER] [5/16] Running test_decode_with_a_not_coprime_to_m...
+[POLYGLOT_TEST_RUNNER] test_decode_with_a_not_coprime_to_m: PASSED
+[POLYGLOT_TEST_RUNNER] [6/16] Running test_decode_with_no_spaces_in_input...
+[POLYGLOT_TEST_RUNNER] test_decode_with_no_spaces_in_input: PASSED
+[POLYGLOT_TEST_RUNNER] [7/16] Running test_decode_with_too_many_spaces...
+[POLYGLOT_TEST_RUNNER] test_decode_with_too_many_spaces: PASSED
+[POLYGLOT_TEST_RUNNER] [8/16] Running test_encode_all_the_letters...
+[POLYGLOT_TEST_RUNNER] test_encode_all_the_letters: PASSED
+[POLYGLOT_TEST_RUNNER] [9/16] Running test_encode_deep_thought...
+[POLYGLOT_TEST_RUNNER] test_encode_deep_thought: PASSED
+[POLYGLOT_TEST_RUNNER] [10/16] Running test_encode_mindblowingly...
+[POLYGLOT_TEST_RUNNER] test_encode_mindblowingly: PASSED
+[POLYGLOT_TEST_RUNNER] [11/16] Running test_encode_no...
+[POLYGLOT_TEST_RUNNER] test_encode_no: PASSED
+[POLYGLOT_TEST_RUNNER] [12/16] Running test_encode_numbers...
+[POLYGLOT_TEST_RUNNER] test_encode_numbers: PASSED
+[POLYGLOT_TEST_RUNNER] [13/16] Running test_encode_o_m_g...
+[POLYGLOT_TEST_RUNNER] test_encode_o_m_g: PASSED
+[POLYGLOT_TEST_RUNNER] [14/16] Running test_encode_omg...
+[POLYGLOT_TEST_RUNNER] test_encode_omg: PASSED
+[POLYGLOT_TEST_RUNNER] [15/16] Running test_encode_with_a_not_coprime_to_m...
+[POLYGLOT_TEST_RUNNER] test_encode_with_a_not_coprime_to_m: PASSED
+[POLYGLOT_TEST_RUNNER] [16/16] Running test_encode_yes...
+[POLYGLOT_TEST_RUNNER] test_encode_yes: PASSED
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_decode_a_sentence",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_decode_all_the_letters",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_decode_exercism",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_decode_numbers",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_decode_with_a_not_coprime_to_m",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_decode_with_no_spaces_in_input",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_decode_with_too_many_spaces",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_all_the_letters",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_deep_thought",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_mindblowingly",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_no",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_numbers",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_o_m_g",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_omg",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_with_a_not_coprime_to_m",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_encode_yes",
+    "category": "default",
+    "status": "pass"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 16 passed, 0 failed, 0 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

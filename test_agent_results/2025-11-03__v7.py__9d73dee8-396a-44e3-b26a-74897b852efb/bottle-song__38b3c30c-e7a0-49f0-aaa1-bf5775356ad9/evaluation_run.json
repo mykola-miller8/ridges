@@ -1,0 +1,52 @@
+{
+    "evaluation_run_id": "38b3c30c-e7a0-49f0-aaa1-bf5775356ad9",
+    "evaluation_id": "9d73dee8-396a-44e3-b26a-74897b852efb",
+    "problem_name": "bottle-song",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,71 @@\n-def recite(start: int, take: int = 1) -> list[str]:\n-    pass\n+def recite(start: int, take: int = 1) -> list[str]:\n+    if start < 0:\n+        raise ValueError(\"start must be non-negative\")\n+    if take < 0:\n+        raise ValueError(\"take must be non-negative\")\n+    \n+    number_words = {\n+        0: \"no\",\n+        1: \"one\",\n+        2: \"two\",\n+        3: \"three\",\n+        4: \"four\",\n+        5: \"five\",\n+        6: \"six\",\n+        7: \"seven\",\n+        8: \"eight\",\n+        9: \"nine\",\n+        10: \"ten\"\n+    }\n+    \n+    def capitalize_first(word):\n+        return word[0].upper() + word[1:]\n+    \n+    result = []\n+    \n+    for i in range(take):\n+        current_bottles = start - i\n+        \n+        if current_bottles < 0:\n+            break\n+            \n+        current_word = number_words[current_bottles]\n+        capitalized_current = capitalize_first(current_word)\n+        \n+        if current_bottles == 1:\n+            bottle_word = \"bottle\"\n+        else:\n+            bottle_word = \"bottles\"\n+            \n+        # First two lines\n+        line1 = f\"{capitalized_current} green {bottle_word} hanging on the wall,\"\n+        result.append(line1)\n+        result.append(line1)\n+        \n+        # Third line\n+        result.append(\"And if one green bottle should accidentally fall,\")\n+        \n+        # Fourth line\n+        next_bottles = current_bottles - 1\n+        if next_bottles == 0:\n+            next_word = \"no\"\n+        else:\n+            next_word = number_words[next_bottles]\n+            \n+        capitalized_next = capitalize_first(next_word)\n+        \n+        if next_bottles == 1:\n+            next_bottle_word = \"bottle\"\n+        elif next_bottles == 0:\n+            next_bottle_word = \"bottles\"  # \"no green bottles\"\n+        else:\n+            next_bottle_word = \"bottles\"\n+            \n+        line4 = f\"There'll be {next_word} green {next_bottle_word} hanging on the wall.\"\n+        result.append(line4)\n+        \n+        # Add empty string after each verse except the last one\n+        if i < take - 1:\n+            result.append(\"\")\n+    \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_all_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_first_generic_verse",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_first_two_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_last_generic_verse",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_last_three_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_verse_with_1_bottle",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_verse_with_2_bottles",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T13:53:51.760747",
+    "started_initializing_agent_at": "2025-11-03T13:53:51.760826",
+    "started_running_agent_at": "2025-11-03T13:53:52.087678",
+    "started_initializing_eval_at": "2025-11-03T13:54:20.712314",
+    "started_running_eval_at": "2025-11-03T13:54:21.008212",
+    "finished_or_errored_at": "2025-11-03T13:54:21.241937"
+}

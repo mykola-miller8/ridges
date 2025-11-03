@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "67ba9998-f293-4780-b9b1-183af4009972",
+    "evaluation_id": "449e6fcd-257d-42e2-98db-89ac5fd78d8c",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,55 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        self.board = [list(row.replace(' ', '')) for row in board.splitlines()]\n+        self.rows = len(self.board)\n+        self.cols = len(self.board[0]) if self.rows > 0 else 0\n+\n+    def get_winner(self) -> str:\n+        if self._is_winner('O', start_condition=lambda r, c: r == 0, \n+                          end_condition=lambda r, c: r == self.rows - 1):\n+            return 'O'\n+        if self._is_winner('X', start_condition=lambda r, c: c == 0,\n+                          end_condition=lambda r, c: c == self.cols - 1):\n+            return 'X'\n+        return ''\n+\n+    def _is_winner(self, player, start_condition, end_condition):\n+        if self.rows == 0 or self.cols == 0:\n+            return False\n+            \n+        visited = set()\n+        stack = []\n+        \n+        # Add all starting positions to stack\n+        for r in range(self.rows):\n+            for c in range(self.cols):\n+                if self.board[r][c] == player and start_condition(r, c):\n+                    stack.append((r, c))\n+                    visited.add((r, c))\n+        \n+        # DFS\n+        while stack:\n+            r, c = stack.pop()\n+            \n+            if end_condition(r, c):\n+                return True\n+                \n+            # Check all 6 neighbors in hex grid\n+            directions = [\n+                (-1, 0), (1, 0),  # up, down\n+                (0, -1), (0, 1),  # left, right\n+                (-1, 1), (1, -1)  # diagonals\n+            ]\n+            \n+            for dr, dc in directions:\n+                nr, nc = r + dr, c + dc\n+                \n+                if (0 <= nr < self.rows and \n+                    0 <= nc < self.cols and \n+                    self.board[nr][nc] == player and \n+                    (nr, nc) not in visited):\n+                    \n+                    visited.add((nr, nc))\n+                    stack.append((nr, nc))\n+        \n+        return False\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T13:23:48.773494",
+    "started_initializing_agent_at": "2025-11-03T13:23:48.773602",
+    "started_running_agent_at": "2025-11-03T13:23:49.114176",
+    "started_initializing_eval_at": "2025-11-03T13:23:57.555709",
+    "started_running_eval_at": "2025-11-03T13:23:57.880616",
+    "finished_or_errored_at": "2025-11-03T13:23:58.122085"
+}

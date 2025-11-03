@@ -1,0 +1,57 @@
+{
+    "evaluation_run_id": "73ff9eb9-e072-47d7-853f-2740a85d89a8",
+    "evaluation_id": "d1c95dcc-9c91-4b66-8bae-b41965574516",
+    "problem_name": "beer-song",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,20 @@\n-def recite(start: int, take: int = 1) -> list[str]:\n-    pass\n+def recite(start: int, take: int = 1) -> list[str]:\n+    verses = []\n+    for i in range(start, start - take, -1):\n+        if i > 2:\n+            verses.append(f\"{i} bottles of beer on the wall, {i} bottles of beer.\")\n+            verses.append(f\"Take one down and pass it around, {i-1} bottles of beer on the wall.\")\n+        elif i == 2:\n+            verses.append(f\"{i} bottles of beer on the wall, {i} bottles of beer.\")\n+            verses.append(f\"Take one down and pass it around, {i-1} bottle of beer on the wall.\")\n+        elif i == 1:\n+            verses.append(f\"{i} bottle of beer on the wall, {i} bottle of beer.\")\n+            verses.append(\"Take it down and pass it around, no more bottles of beer on the wall.\")\n+        else:  # i == 0\n+            verses.append(\"No more bottles of beer on the wall, no more bottles of beer.\")\n+            verses.append(\"Go to the store and buy some more, 99 bottles of beer on the wall.\")\n+        \n+        if take > 1 and i > start - take + 1:\n+            verses.append(\"\")\n+    \n+    return verses\n",
+    "test_results": [
+        {
+            "name": "test_all_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_first_generic_verse",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_first_two_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_last_generic_verse",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_last_three_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_verse_with_0_bottles",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_verse_with_1_bottle",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_verse_with_2_bottles",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T12:04:08.798562",
+    "started_initializing_agent_at": "2025-11-03T12:04:08.798651",
+    "started_running_agent_at": "2025-11-03T12:04:09.075060",
+    "started_initializing_eval_at": "2025-11-03T12:04:15.085703",
+    "started_running_eval_at": "2025-11-03T12:04:15.407168",
+    "finished_or_errored_at": "2025-11-03T12:04:15.668532"
+}

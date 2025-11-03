@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "bee64a7e-fb9a-470b-a7b1-3f1ee5fe1b32",
+    "evaluation_id": "7a3d938a-4055-419f-ab52-c37e3cb7c2e6",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,87 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        # Parse the board into a 2D list, preserving the hexagonal structure\n+        lines = board.strip().split('\\n')\n+        self.board = []\n+        for line in lines:\n+            # Count leading spaces to determine offset\n+            leading_spaces = len(line) - len(line.lstrip())\n+            # Remove leading spaces and split by space to get individual cells\n+            row = line.strip().split()\n+            self.board.append(row)\n+        \n+        self.rows = len(self.board)\n+        if self.rows > 0:\n+            self.cols = len(self.board[0])\n+        else:\n+            self.cols = 0\n+\n+    def get_winner(self) -> str:\n+        # Check if O has won (top to bottom)\n+        if self._check_winner('O'):\n+            return 'O'\n+        \n+        # Check if X has won (left to right)\n+        if self._check_winner('X'):\n+            return 'X'\n+        \n+        # No winner\n+        return ''\n+\n+    def _check_winner(self, player: str) -> bool:\n+        if player == 'O':\n+            # O needs to connect top to bottom\n+            # Start from all cells in the top row that belong to O\n+            starts = [(0, c) for c in range(self.cols) if self.board[0][c] == player]\n+            # Target is any cell in the bottom row that belongs to O\n+            targets = [(self.rows - 1, c) for c in range(self.cols) if self.board[self.rows - 1][c] == player]\n+        else:  # player == 'X'\n+            # X needs to connect left to right\n+            # Start from all cells in the leftmost column that belong to X\n+            starts = [(r, 0) for r in range(self.rows) if self.board[r][0] == player]\n+            # Target is any cell in the rightmost column that belongs to X\n+            targets = [(r, self.cols - 1) for r in range(self.rows) if self.board[r][self.cols - 1] == player]\n+        \n+        if not starts or not targets:\n+            return False\n+            \n+        # Convert targets to a set for faster lookup\n+        target_set = set(targets)\n+        \n+        # BFS to find a path\n+        from collections import deque\n+        queue = deque(starts)\n+        visited = set(starts)\n+        \n+        while queue:\n+            r, c = queue.popleft()\n+            \n+            # Check if we reached a target\n+            if (r, c) in target_set:\n+                return True\n+                \n+            # Explore neighbors - hexagonal grid has 6 neighbors\n+            neighbors = self._get_neighbors(r, c)\n+            for nr, nc in neighbors:\n+                # Check if it's the player's cell and not visited\n+                if self.board[nr][nc] == player and (nr, nc) not in visited:\n+                    visited.add((nr, nc))\n+                    queue.append((nr, nc))\n+        \n+        return False\n+    \n+    def _get_neighbors(self, r: int, c: int) -> list:\n+        \"\"\"Get valid neighbors for a hexagonal grid cell\"\"\"\n+        neighbors = []\n+        # Hexagonal grid neighbors depend on row parity\n+        if r % 2 == 0:  # Even row\n+            directions = [(-1, -1), (-1, 0), (0, -1), (0, 1), (1, -1), (1, 0)]\n+        else:  # Odd row\n+            directions = [(-1, 0), (-1, 1), (0, -1), (0, 1), (1, 0), (1, 1)]\n+        \n+        for dr, dc in directions:\n+            nr, nc = r + dr, c + dc\n+            if 0 <= nr < self.rows and 0 <= nc < self.cols:\n+                neighbors.append((nr, nc))\n+        \n+        return neighbors\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T14:12:16.839731",
+    "started_initializing_agent_at": "2025-11-03T14:12:16.839832",
+    "started_running_agent_at": "2025-11-03T14:12:17.234158",
+    "started_initializing_eval_at": "2025-11-03T14:15:49.739309",
+    "started_running_eval_at": "2025-11-03T14:15:50.163592",
+    "finished_or_errored_at": "2025-11-03T14:15:50.436585"
+}

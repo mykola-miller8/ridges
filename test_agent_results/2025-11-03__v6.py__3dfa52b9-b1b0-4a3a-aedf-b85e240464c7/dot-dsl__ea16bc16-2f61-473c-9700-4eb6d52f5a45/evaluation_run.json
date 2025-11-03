@@ -1,0 +1,16 @@
+{
+    "evaluation_run_id": "ea16bc16-2f61-473c-9700-4eb6d52f5a45",
+    "evaluation_id": "3dfa52b9-b1b0-4a3a-aedf-b85e240464c7",
+    "problem_name": "dot-dsl",
+    "status": "error",
+    "patch": "",
+    "test_results": null,
+    "error_code": 1040,
+    "error_message": "The agent returned an invalid patch: error: No valid patches in input (allow with \"--allow-empty\")",
+    "created_at": "2025-11-03T04:23:46.786081",
+    "started_initializing_agent_at": "2025-11-03T04:23:46.786208",
+    "started_running_agent_at": "2025-11-03T04:23:47.187477",
+    "started_initializing_eval_at": "2025-11-03T04:40:26.728089",
+    "started_running_eval_at": null,
+    "finished_or_errored_at": "2025-11-03T04:40:26.770723"
+}

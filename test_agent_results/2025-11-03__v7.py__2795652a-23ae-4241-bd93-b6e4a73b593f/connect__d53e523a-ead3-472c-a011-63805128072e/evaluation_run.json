@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "d53e523a-ead3-472c-a011-63805128072e",
+    "evaluation_id": "2795652a-23ae-4241-bd93-b6e4a73b593f",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,109 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        # Parse the board into a 2D grid\n+        lines = board.strip().split('\\n')\n+        self.board = []\n+        for line in lines:\n+            row = line.strip().split()\n+            self.board.append(row)\n+        \n+        self.rows = len(self.board)\n+        self.cols = len(self.board[0]) if self.rows > 0 else 0\n+\n+    def get_winner(self) -> str:\n+        # Check if player 'O' has won (top to bottom)\n+        if self._is_connected('O', 0, self.rows - 1):\n+            return 'O'\n+        \n+        # Check if player 'X' has won (left to right)\n+        if self._is_connected('X', 0, self.cols - 1):\n+            return 'X'\n+        \n+        return ''\n+\n+    def _is_connected(self, player, start_edge, end_edge):\n+        if player == 'O':\n+            # For 'O', check connection from top row to bottom row\n+            # Start from all 'O' cells in the top row\n+            visited = set()\n+            stack = []\n+            \n+            # Add all 'O' cells in the top row to the stack\n+            for j in range(self.cols):\n+                if self.board[0][j] == player:\n+                    stack.append((0, j))\n+                    visited.add((0, j))\n+            \n+            # DFS to find path to bottom row\n+            while stack:\n+                row, col = stack.pop()\n+                \n+                # If we reached the bottom row, player 'O' wins\n+                if row == self.rows - 1:\n+                    return True\n+                \n+                # Check all 6 neighbors in hex grid\n+                neighbors = self._get_neighbors(row, col)\n+                for nr, nc in neighbors:\n+                    if (nr, nc) not in visited and 0 <= nr < self.rows and 0 <= nc < self.cols:\n+                        if self.board[nr][nc] == player:\n+                            visited.add((nr, nc))\n+                            stack.append((nr, nc))\n+            \n+            return False\n+            \n+        else:  # player == 'X'\n+            # For 'X', check connection from left column to right column\n+            # Start from all 'X' cells in the left column\n+            visited = set()\n+            stack = []\n+            \n+            # Add all 'X' cells in the left column to the stack\n+            for i in range(self.rows):\n+                if self.board[i][0] == player:\n+                    stack.append((i, 0))\n+                    visited.add((i, 0))\n+            \n+            # DFS to find path to right column\n+            while stack:\n+                row, col = stack.pop()\n+                \n+                # If we reached the right column, player 'X' wins\n+                if col == self.cols - 1:\n+                    return True\n+                \n+                # Check all 6 neighbors in hex grid\n+                neighbors = self._get_neighbors(row, col)\n+                for nr, nc in neighbors:\n+                    if (nr, nc) not in visited and 0 <= nr < self.rows and 0 <= nc < self.cols:\n+                        if self.board[nr][nc] == player:\n+                            visited.add((nr, nc))\n+                            stack.append((nr, nc))\n+            \n+            return False\n+\n+    def _get_neighbors(self, row, col):\n+        # Hex grid neighbors\n+        # Even rows: offset to the right\n+        # Odd rows: offset to the left\n+        neighbors = []\n+        \n+        # Top and bottom neighbors (same column)\n+        neighbors.append((row - 1, col))\n+        neighbors.append((row + 1, col))\n+        \n+        # For hexagonal grid, the left/right neighbors depend on the row\n+        if row % 2 == 0:\n+            # Even row\n+            neighbors.append((row, col - 1))  # left\n+            neighbors.append((row, col + 1))  # right\n+            neighbors.append((row - 1, col - 1))  # top-left\n+            neighbors.append((row - 1, col + 1))  # top-right\n+        else:\n+            # Odd row\n+            neighbors.append((row, col - 1))  # left\n+            neighbors.append((row, col + 1))  # right\n+            neighbors.append((row + 1, col - 1))  # bottom-left\n+            neighbors.append((row + 1, col + 1))  # bottom-right\n+            \n+        return neighbors\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T14:17:42.325427",
+    "started_initializing_agent_at": "2025-11-03T14:17:42.325527",
+    "started_running_agent_at": "2025-11-03T14:17:42.745819",
+    "started_initializing_eval_at": "2025-11-03T14:18:08.993162",
+    "started_running_eval_at": "2025-11-03T14:18:09.293471",
+    "finished_or_errored_at": "2025-11-03T14:18:09.560762"
+}

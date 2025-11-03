@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "0e350541-9c6d-458d-a65d-f7bb719c2c55",
+    "evaluation_id": "e8581fbf-9708-4de0-969b-ff165cabbebf",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,123 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        if not board:\n+            raise ValueError(\"Board cannot be empty\")\n+        \n+        # Parse the board\n+        lines = board.strip().split('\\n')\n+        if not lines or not lines[0]:\n+            raise ValueError(\"Board cannot be empty\")\n+            \n+        # Process each line to remove leading spaces and create a uniform grid\n+        processed_lines = []\n+        for line in lines:\n+            stripped = line.lstrip()\n+            processed_lines.append(list(stripped))\n+        \n+        # Check for consistent board structure\n+        if not processed_lines:\n+            raise ValueError(\"Board cannot be empty\")\n+            \n+        # Validate that all characters are valid\n+        valid_chars = {'.', 'X', 'O'}\n+        for row in processed_lines:\n+            for char in row:\n+                if char not in valid_chars:\n+                    raise ValueError(f\"Invalid character '{char}' on board\")\n+        \n+        self.board = processed_lines\n+        self.rows = len(self.board)\n+        if self.rows == 0:\n+            raise ValueError(\"Board cannot be empty\")\n+            \n+        self.cols = len(self.board[0]) if self.rows > 0 else 0\n+        \n+        # Validate that all rows have the same length (after padding)\n+        for i, row in enumerate(self.board):\n+            if len(row) != self.cols:\n+                # Check if this is a valid hex pattern (alternating lengths)\n+                expected_length = self.cols - (i % 2)\n+                if len(row) != expected_length:\n+                    raise ValueError(\"Invalid board structure\")\n+\n+    def get_winner(self) -> str:\n+        # Check if O has won (top to bottom)\n+        if self._has_won('O'):\n+            return 'O'\n+        \n+        # Check if X has won (left to right)\n+        if self._has_won('X'):\n+            return 'X'\n+            \n+        return ''\n+\n+    def _has_won(self, player: str) -> bool:\n+        if player == 'O':\n+            # O needs to connect top to bottom\n+            # Start from all positions in the top row that belong to O\n+            starts = [(0, c) for c in range(len(self.board[0])) if self.board[0][c] == player]\n+            return self._dfs_connects(starts, player, 'bottom')\n+        else:  # player == 'X'\n+            # X needs to connect left to right\n+            # Start from all positions in the leftmost valid column that belong to X\n+            starts = []\n+            for r in range(self.rows):\n+                # For X, check the leftmost valid position in each row\n+                leftmost_col = r // 2  # In a hex grid, row r starts at column r//2\n+                if leftmost_col < len(self.board[r]) and self.board[r][leftmost_col] == player:\n+                    starts.append((r, leftmost_col))\n+            return self._dfs_connects(starts, player, 'right')\n+\n+    def _dfs_connects(self, starts, player, target):\n+        if not starts:\n+            return False\n+            \n+        visited = set()\n+        stack = starts[:]\n+        \n+        while stack:\n+            r, c = stack.pop()\n+            \n+            if (r, c) in visited:\n+                continue\n+            visited.add((r, c))\n+            \n+            # Check if we've reached the target\n+            if target == 'bottom' and r == self.rows - 1:\n+                return True\n+            if target == 'right':\n+                # For right side, check if we're at the rightmost valid position of this row\n+                rightmost_col = len(self.board[r]) - 1\n+                if c == rightmost_col:\n+                    return True\n+            \n+            # Explore neighbors\n+            neighbors = self._get_neighbors(r, c)\n+            for nr, nc in neighbors:\n+                if (nr, nc) not in visited and \\\n+                   0 <= nr < self.rows and \\\n+                   0 <= nc < len(self.board[nr]) and \\\n+                   self.board[nr][nc] == player:\n+                    stack.append((nr, nc))\n+        \n+        return False\n+\n+    def _get_neighbors(self, r, c):\n+        \"\"\"Get the 6 neighbors of a hex cell\"\"\"\n+        # In this representation, even rows are shifted right\n+        is_even_row = (r % 2) == 0\n+        \n+        if is_even_row:\n+            # Even rows: neighbors are in pattern\n+            return [\n+                (r-1, c-1), (r-1, c),   # top-left, top-right\n+                (r, c-1), (r, c+1),     # left, right\n+                (r+1, c-1), (r+1, c)    # bottom-left, bottom-right\n+            ]\n+        else:\n+            # Odd rows: neighbors are shifted\n+            return [\n+                (r-1, c), (r-1, c+1),   # top-left, top-right\n+                (r, c-1), (r, c+1),     # left, right\n+                (r+1, c), (r+1, c+1)    # bottom-left, bottom-right\n+            ]\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T13:55:08.969336",
+    "started_initializing_agent_at": "2025-11-03T13:55:08.969430",
+    "started_running_agent_at": "2025-11-03T13:55:09.295370",
+    "started_initializing_eval_at": "2025-11-03T13:55:29.313440",
+    "started_running_eval_at": "2025-11-03T13:55:29.615033",
+    "finished_or_errored_at": "2025-11-03T13:55:29.885943"
+}

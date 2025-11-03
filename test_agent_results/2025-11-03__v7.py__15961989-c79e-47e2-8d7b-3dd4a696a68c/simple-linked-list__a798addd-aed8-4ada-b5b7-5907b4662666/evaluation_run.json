@@ -1,0 +1,117 @@
+{
+    "evaluation_run_id": "a798addd-aed8-4ada-b5b7-5907b4662666",
+    "evaluation_id": "15961989-c79e-47e2-8d7b-3dd4a696a68c",
+    "problem_name": "simple-linked-list",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,36 +1,61 @@\n-class EmptyListException(Exception):\n-    pass\n-\n-\n-class Node:\n-    def __init__(self, value: int):\n-        pass\n-\n-    def value(self) -> int:\n-        pass\n-\n-    def next(self) -> \"Node | None\":\n-        pass\n-\n-\n-class LinkedList:\n-    def __init__(self, values: list | None = None):\n-        pass\n-\n-    def __iter__(self):\n-        pass\n-\n-    def __len__(self) -> int:\n-        pass\n-\n-    def head(self) -> Node:\n-        pass\n-\n-    def push(self, value: int) -> None:\n-        pass\n-\n-    def pop(self) -> int:\n-        pass\n-\n-    def reversed(self) -> \"LinkedList\":\n-        pass\n+class EmptyListException(Exception):\n+    def __init__(self, message):\n+        self.message = message\n+        super().__init__(self.message)\n+\n+\n+class Node:\n+    def __init__(self, value: int):\n+        self._value = value\n+        self._next = None\n+\n+    def value(self) -> int:\n+        return self._value\n+\n+    def next(self) -> \"Node | None\":\n+        return self._next\n+\n+\n+class LinkedList:\n+    def __init__(self, values: list | None = None):\n+        self._head = None\n+        self._size = 0\n+        if values is not None:\n+            for value in values:\n+                self.push(value)\n+\n+    def __iter__(self):\n+        current = self._head\n+        while current:\n+            yield current.value()\n+            current = current.next()\n+\n+    def __len__(self) -> int:\n+        return self._size\n+\n+    def head(self) -> Node:\n+        if self._head is None:\n+            raise EmptyListException(\"The list is empty.\")\n+        return self._head\n+\n+    def push(self, value: int) -> None:\n+        new_node = Node(value)\n+        new_node._next = self._head\n+        self._head = new_node\n+        self._size += 1\n+\n+    def pop(self) -> int:\n+        if self._head is None:\n+            raise EmptyListException(\"The list is empty.\")\n+        value = self._head.value()\n+        self._head = self._head.next()\n+        self._size -= 1\n+        return value\n+\n+    def reversed(self) -> \"LinkedList\":\n+        reversed_list = LinkedList()\n+        current = self._head\n+        while current:\n+            reversed_list.push(current.value())\n+            current = current.next()\n+        return reversed_list\n",
+    "test_results": [
+        {
+            "name": "test_can_pop_from_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_can_push_to_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_empty_linked_list_to_list_is_empty",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_empty_list_has_len_zero",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_error_on_empty_list_head",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_error_on_empty_list_pop",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_non_empty_linked_list_to_list_is_list_with_all_elements",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_non_empty_list_has_correct_head",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_non_empty_list_has_correct_len",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_non_empty_list_traverse",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_pop_from_singleton_list_removes_head",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_push_and_pop",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_pushing_to_empty_list_changes_head",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_reverse_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_reversed_empty_list_is_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_reversed_singleton_list_is_same_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_singleton_linked_list_to_list_list_with_singular_element",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_singleton_list_has_head",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_singleton_list_has_len_one",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_singleton_list_head_has_no_next",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T09:58:21.702349",
+    "started_initializing_agent_at": "2025-11-03T09:58:21.702470",
+    "started_running_agent_at": "2025-11-03T09:58:22.111417",
+    "started_initializing_eval_at": "2025-11-03T09:58:28.581239",
+    "started_running_eval_at": "2025-11-03T09:58:28.952763",
+    "finished_or_errored_at": "2025-11-03T09:58:29.259354"
+}

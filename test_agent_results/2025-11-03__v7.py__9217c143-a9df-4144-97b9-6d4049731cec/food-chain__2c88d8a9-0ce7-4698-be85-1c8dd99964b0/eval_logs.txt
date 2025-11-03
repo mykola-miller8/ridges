@@ -1,0 +1,86 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: FoodChainTest
+[POLYGLOT_TEST_RUNNER] Found 10 test methods
+[POLYGLOT_TEST_RUNNER] [1/10] Running test_bird...
+[POLYGLOT_TEST_RUNNER] test_bird: FAILED - Lists differ: ["I know an old lady who swallowed a bird.[173 chars]ie."] != ['I know an old lady who swallowed a bird.[235 chars]ie."]
+
+First differing element 0:
+"I know an old lady who swallowed a bird.[172 chars]die."
+'I know an old lady who swallowed a bird.'
+
+Second list contains 4 additional elements.
+First extra element 1:
+'How absurd to swallow a bird!'
+
+- ['I know an old lady who swallowed a bird. How absurd to swallow a bird! She '
+-  'swallowed the spider to catch the fly. She swallowed the spider to catch the '
++ ['I know an old lady who swallowed a bird.',
++  'How absurd to swallow a bird!',
++  'She swallowed the bird to catch the spider that wriggled and jiggled and '
++  'tickled inside her.',
++  'She swallowed the spider to catch the fly.',
+-  "fly. I don't know why she swallowed the fly. Perhaps she'll die."]
+?   -----
+
++  "I don't know why she swallowed the fly. Perhaps she'll die."]
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_bird",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_cat",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_cow",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_dog",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_fly",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_full_song",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_goat",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_horse",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_verses",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_spider",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 0 passed, 1 failed, 9 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

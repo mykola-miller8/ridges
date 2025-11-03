@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "5523e073-29dd-4256-9dfc-f083b80f51e9",
+    "evaluation_id": "0395b241-04c8-4251-88c7-ce35314e5957",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,104 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        if not board:\n+            self.board = []\n+            self.height = 0\n+            self.width = 0\n+            return\n+            \n+        # Parse the board\n+        lines = board.split('\\n')\n+        self.board = []\n+        self.height = len(lines)\n+        \n+        # Check for consistent width (accounting for offset spaces)\n+        widths = []\n+        for i, line in enumerate(lines):\n+            # Remove leading spaces\n+            line_content = line.lstrip()\n+            \n+            # Validate characters\n+            for char in line_content:\n+                if char not in ['X', 'O', '.']:\n+                    raise ValueError(f\"Invalid board character: '{char}'\")\n+            \n+            widths.append(len(line_content))\n+            self.board.append(list(line_content))\n+        \n+        if widths and len(set(widths)) > 1:\n+            raise ValueError(\"Invalid board: inconsistent width\")\n+            \n+        self.width = widths[0] if widths else 0\n+\n+    def get_winner(self) -> str:\n+        if not self.board or self.height == 0 or self.width == 0:\n+            return \"\"\n+            \n+        # Check for O winner (top to bottom)\n+        # Start DFS from all O cells in the top row\n+        for j in range(self.width):\n+            if self.board[0][j] == 'O':\n+                visited_o = set()  # Fresh visited set for each attempt\n+                if self._dfs(0, j, 'O', visited_o):\n+                    return 'O'\n+        \n+        # Check for X winner (left to right)\n+        # Start DFS from all X cells in the leftmost column\n+        for i in range(self.height):\n+            if self.board[i][0] == 'X':\n+                visited_x = set()  # Fresh visited set for each attempt\n+                if self._dfs(i, 0, 'X', visited_x):\n+                    return 'X'\n+        \n+        return \"\"\n+\n+    def _get_neighbors(self, row, col):\n+        \"\"\"Get valid neighbors for a hexagonal grid with offset coordinates\"\"\"\n+        # In a hex grid with offset coordinates, neighbors depend on row parity\n+        if row % 2 == 0:\n+            # Even row\n+            directions = [\n+                (-1, -1), (-1, 0),  # top neighbors\n+                (0, -1), (0, 1),    # side neighbors\n+                (1, -1), (1, 0)     # bottom neighbors\n+            ]\n+        else:\n+            # Odd row\n+            directions = [\n+                (-1, 0), (-1, 1),   # top neighbors\n+                (0, -1), (0, 1),    # side neighbors\n+                (1, 0), (1, 1)      # bottom neighbors\n+            ]\n+        \n+        neighbors = []\n+        for dr, dc in directions:\n+            new_row, new_col = row + dr, col + dc\n+            # Check bounds\n+            if 0 <= new_row < self.height and 0 <= new_col < self.width:\n+                neighbors.append((new_row, new_col))\n+        return neighbors\n+\n+    def _dfs(self, row, col, player, visited):\n+        # Check bounds\n+        if row < 0 or row >= self.height or col < 0 or col >= self.width:\n+            return False\n+            \n+        # Check if cell is not player's or already visited\n+        if self.board[row][col] != player or (row, col) in visited:\n+            return False\n+            \n+        # Check if we reached the opposite side\n+        if player == 'O' and row == self.height - 1:\n+            return True\n+        elif player == 'X' and col == self.width - 1:\n+            return True\n+            \n+        # Mark as visited\n+        visited.add((row, col))\n+        \n+        # Explore neighbors\n+        for new_row, new_col in self._get_neighbors(row, col):\n+            if self._dfs(new_row, new_col, player, visited):\n+                return True\n+                \n+        return False\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T13:40:14.527969",
+    "started_initializing_agent_at": "2025-11-03T13:40:14.528068",
+    "started_running_agent_at": "2025-11-03T13:40:14.875386",
+    "started_initializing_eval_at": "2025-11-03T13:43:49.325699",
+    "started_running_eval_at": "2025-11-03T13:43:49.750487",
+    "finished_or_errored_at": "2025-11-03T13:43:50.033586"
+}

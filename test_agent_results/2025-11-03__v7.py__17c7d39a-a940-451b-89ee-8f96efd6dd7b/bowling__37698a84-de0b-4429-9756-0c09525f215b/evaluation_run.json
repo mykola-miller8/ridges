@@ -1,0 +1,172 @@
+{
+    "evaluation_run_id": "37698a84-de0b-4429-9756-0c09525f215b",
+    "evaluation_id": "17c7d39a-a940-451b-89ee-8f96efd6dd7b",
+    "problem_name": "bowling",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,9 +1,108 @@\n-class BowlingGame:\n-    def __init__(self):\n-        pass\n-\n-    def roll(self, pins):\n-        pass\n-\n-    def score(self):\n-        pass\n+class BowlingGame:\n+    def __init__(self):\n+        self.rolls = []\n+        self.frame_scores = []\n+        self.current_frame = 0\n+        self.frame_rolls = []\n+        self.game_over = False\n+\n+    def roll(self, pins):\n+        if self.game_over:\n+            raise ValueError(\"Cannot roll after game is over\")\n+        if pins < 0:\n+            raise ValueError(\"Negative roll is invalid\")\n+        if pins > 10:\n+            raise ValueError(\"Pin count exceeds pins on the lane\")\n+            \n+        # Check if we're in the 10th frame\n+        if self.current_frame == 9:\n+            return self._handle_tenth_frame(pins)\n+        else:\n+            return self._handle_regular_frame(pins)\n+\n+    def _handle_regular_frame(self, pins):\n+        self.frame_rolls.append(pins)\n+        self.rolls.append(pins)\n+        \n+        # Strike\n+        if pins == 10 and len(self.frame_rolls) == 1:\n+            self.frame_scores.append((10, True, False))  # (score, is_strike, is_spare)\n+            self.current_frame += 1\n+            self.frame_rolls = []\n+        # Second roll of frame\n+        elif len(self.frame_rolls) == 2:\n+            frame_total = sum(self.frame_rolls)\n+            if frame_total > 10:\n+                raise ValueError(\"Pin count exceeds pins on the lane\")\n+            is_spare = (frame_total == 10)\n+            self.frame_scores.append((frame_total, False, is_spare))\n+            self.current_frame += 1\n+            self.frame_rolls = []\n+\n+    def _handle_tenth_frame(self, pins):\n+        self.frame_rolls.append(pins)\n+        self.rolls.append(pins)\n+        \n+        # Handle third roll validation\n+        if len(self.frame_rolls) == 3:\n+            # If first two rolls are strike or spare, third is allowed\n+            first_two = self.frame_rolls[0] + self.frame_rolls[1]\n+            if self.frame_rolls[0] == 10 or first_two == 10:\n+                # Valid third roll\n+                if self.frame_rolls[1] != 10 and first_two != 10:\n+                    # Second roll wasn't strike/spare, so third shouldn't be possible\n+                    raise ValueError(\"invalid fill balls\")\n+                self.game_over = True\n+            else:\n+                # First two rolls didn't earn a third roll\n+                raise ValueError(\"invalid fill balls\")\n+        elif len(self.frame_rolls) == 2:\n+            frame_total = sum(self.frame_rolls)\n+            if frame_total < 10:\n+                # Open frame - no third roll\n+                self.game_over = True\n+        elif len(self.frame_rolls) == 1 and self.frame_rolls[0] < 10:\n+            # First roll wasn't strike, so second roll is regular\n+            pass\n+\n+    def score(self):\n+        if not self.game_over and not (self.current_frame == 10 and len(self.frame_rolls) == 0):\n+            # Check if 10th frame is complete\n+            if self.current_frame < 9 or (self.current_frame == 9 and not self._is_tenth_frame_complete()):\n+                raise ValueError(\"Score cannot be taken until the end of the game\")\n+        \n+        total_score = 0\n+        roll_index = 0\n+        \n+        for frame in range(10):\n+            if frame < 9:  # Frames 1-9\n+                if self.rolls[roll_index] == 10:  # Strike\n+                    total_score += 10 + self.rolls[roll_index + 1] + self.rolls[roll_index + 2]\n+                    roll_index += 1\n+                elif self.rolls[roll_index] + self.rolls[roll_index + 1] == 10:  # Spare\n+                    total_score += 10 + self.rolls[roll_index + 2]\n+                    roll_index += 2\n+                else:  # Open frame\n+                    total_score += self.rolls[roll_index] + self.rolls[roll_index + 1]\n+                    roll_index += 2\n+            else:  # 10th frame\n+                if len(self.frame_rolls) >= 2:\n+                    total_score += sum(self.frame_rolls[:2])\n+                    if len(self.frame_rolls) == 3:\n+                        total_score += self.frame_rolls[2]\n+        \n+        return total_score\n+\n+    def _is_tenth_frame_complete(self):\n+        if self.current_frame < 9:\n+            return False\n+        if len(self.frame_rolls) == 0:\n+            return True  # Already finished\n+        \n+        if len(self.frame_rolls) >= 2:\n+            first_two = self.frame_rolls[0] + self.frame_rolls[1]\n+            if first_two < 10:  # Open frame\n+                return True\n+            elif len(self.frame_rolls) == 3:  # Had bonus roll\n+                return True\n+        return False\n",
+    "test_results": [
+        {
+            "name": "test_a_roll_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_spare_followed_by_zeros_is_worth_ten_points",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_spare_in_the_last_frame_gets_a_one_roll_bonus_that_is_counted_once",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_strike_earns_ten_points_in_a_frame_with_a_single_roll",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_strike_in_the_last_frame_gets_a_two_roll_bonus_that_is_counted_once",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_a_strike_with_the_one_roll_bonus_after_a_spare_in_the_last_frame_does_not_get_a_bonus",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_all_strikes_is_a_perfect_game",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_an_incomplete_game_cannot_be_scored",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_an_unstarted_game_cannot_be_scored",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_bonus_roll_after_a_strike_in_the_last_frame_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_bonus_roll_for_a_spare_in_the_last_frame_must_be_rolled_before_score_can_be_calculated",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_bonus_rolls_for_a_strike_in_the_last_frame_must_be_rolled_before_score_can_be_calculated",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_both_bonus_rolls_for_a_strike_in_the_last_frame_must_be_rolled_before_score_can_be_calculated",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_cannot_roll_after_bonus_roll_for_spare",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_cannot_roll_after_bonus_rolls_for_strike",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_cannot_roll_if_game_already_has_ten_frames",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_consecutive_spares_each_get_a_one_roll_bonus",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_consecutive_strikes_each_get_the_two_roll_bonus",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_last_two_strikes_followed_by_only_last_bonus_with_non_strike_points",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_points_scored_in_the_roll_after_a_spare_are_counted_twice",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_points_scored_in_the_two_rolls_after_a_strike_are_counted_twice_as_a_bonus",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_rolling_a_spare_with_the_two_roll_bonus_does_not_get_a_bonus_roll",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_rolls_cannot_score_negative_points",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_second_bonus_roll_after_a_strike_in_the_last_frame_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_should_be_able_to_score_a_game_with_all_zeros",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_should_be_able_to_score_a_game_with_no_strikes_or_spares",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_strikes_with_the_two_roll_bonus_do_not_get_bonus_rolls",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_the_second_bonus_rolls_after_a_strike_in_the_last_frame_cannot_be_a_strike_if_the_first_one_is_not_a_strike",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_bonus_rolls_after_a_strike_in_the_last_frame_can_score_more_than_10_points_if_one_is_a_strike",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_bonus_rolls_after_a_strike_in_the_last_frame_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_rolls_in_a_frame_cannot_score_more_than_10_points",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T12:57:26.329863",
+    "started_initializing_agent_at": "2025-11-03T12:57:26.329951",
+    "started_running_agent_at": "2025-11-03T12:57:26.659967",
+    "started_initializing_eval_at": "2025-11-03T12:57:36.888109",
+    "started_running_eval_at": "2025-11-03T12:57:37.224396",
+    "finished_or_errored_at": "2025-11-03T12:57:37.482107"
+}
