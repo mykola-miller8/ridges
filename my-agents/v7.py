@@ -107,7 +107,8 @@ def _call_llm(
     messages: List[Dict[str, str]],
     run_id: str,
     attempt: int,
-    timeout_s: int = 300
+    timeout_s: int = 300,
+    temperature: float = 0.0
 ) -> str:
     """Call inference gateway with retry logic."""
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
@@ -117,7 +118,7 @@ def _call_llm(
     body = {
         "run_id": run_id,
         "messages": messages,
-        "temperature": 0.0,
+        "temperature": temperature,
         "agent_id": "agent-v7",
         "model": model,
     }
@@ -175,7 +176,7 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # System prompt with emphasis on correctness through example verification
+    # System prompt emphasizing careful algorithm design
     system_msg = (
         "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
         "APPROACH:\n"
@@ -184,14 +185,14 @@ def agent_main(
         "   - What is the input format?\n"
         "   - What output is expected and why?\n"
         "   - Trace through the logic to see how input becomes output\n"
-        "3. Design your algorithm:\n"
+        "3. Design your algorithm carefully:\n"
         "   - Choose appropriate data structures\n"
         "   - For graphs/grids: plan traversal strategy (BFS/DFS)\n"
         "   - For spatial problems: model coordinates and neighbor relationships precisely\n"
         "   - For parsing: handle the exact input format including whitespace\n"
-        "4. Before coding, mentally trace through at least 2 examples to verify your approach\n"
+        "4. Before coding, mentally trace through multiple examples to verify your approach\n"
         "5. Implement complete, working code with all methods fully implemented\n"
-        "6. After coding, mentally verify it works for ALL examples\n\n"
+        "6. After coding, verify it works for ALL examples\n\n"
         "CRITICAL REQUIREMENTS:\n"
         "- Implement ALL methods completely (never leave empty or with just 'pass')\n"
         "- Parse input formats exactly as specified (handle whitespace, newlines, structure)\n"
@@ -204,16 +205,6 @@ def agent_main(
         "- Handle all edge cases (empty inputs, boundaries, single elements, complex paths)\n"
         "- Implement validation rules and raise exceptions as needed\n"
         "- Test your logic mentally against ALL provided examples before finalizing\n\n"
-        "VERIFICATION:\n"
-        "- For problems with examples, mentally walk through EACH example:\n"
-        "  * Simple examples (empty, single element, basic cases)\n"
-        "  * Complex examples (convoluted paths, edge cases, tricky scenarios)\n"
-        "- For each example, trace step-by-step:\n"
-        "  * How is input parsed?\n"
-        "  * What does the algorithm do?\n"
-        "  * What output is produced?\n"
-        "  * Does it match expected output?\n"
-        "- If any example fails your mental test, revise your algorithm\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
         "Start with '# main.py' as the first line.\n"
@@ -242,8 +233,11 @@ def agent_main(
     
     for attempt in range(max_attempts):
         try:
+            # Use temperature variation: 0.0 for first attempts, slightly higher for retries
+            temp = 0.0 if attempt < len(AGENT_MODELS) else 0.3
+            
             # Step 1: Generate initial code
-            response = _call_llm(messages, run_id, attempt, 300)
+            response = _call_llm(messages, run_id, attempt, 300, temperature=temp)
             code_blocks = _extract_code_blocks(response)
             
             for code in code_blocks:
@@ -290,7 +284,7 @@ def agent_main(
                 except Exception:
                     pass
                 
-                # Step 2: Self-review with emphasis on testing examples
+                # Step 2: Initial review
                 if attempt < len(AGENT_MODELS):
                     review_messages = [
                         {"role": "system", "content": (
@@ -299,16 +293,13 @@ def agent_main(
                         {"role": "user", "content": (
                             f"# Problem\n{problem_statement[:15000]}\n\n"
                             f"# Code\n```python\n{code}\n```\n\n"
-                            "Review this code by:\n"
-                            "1. Checking all methods are fully implemented\n"
-                            "2. Verifying input parsing handles the format correctly\n"
-                            "3. For graphs/grids: checking neighbor calculations and traversal logic\n"
-                            "4. MOST IMPORTANT: Trace through examples (including complex ones):\n"
-                            "   - Pick a simple example and walk through the code step-by-step\n"
-                            "   - Pick a complex example (convoluted path, large input) and trace it\n"
-                            "   - Does the code produce correct output for both?\n"
-                            "5. Checking edge cases are handled\n\n"
-                            "Reply 'APPROVED' if correct for all examples, or list specific issues."
+                            "Review this code:\n"
+                            "1. Are all methods fully implemented?\n"
+                            "2. Does input parsing handle the format correctly?\n"
+                            "3. For graphs/grids: Are neighbors calculated correctly? Is traversal sound?\n"
+                            "4. Trace through a simple example - does it work?\n"
+                            "5. Are edge cases handled?\n\n"
+                            "Reply 'APPROVED' if correct, or list specific issues."
                         )}
                     ]
                     
@@ -322,8 +313,7 @@ def agent_main(
                                     "role": "user",
                                     "content": (
                                         f"Review found issues:\n{review_response}\n\n"
-                                        "Fix all issues, ensuring the code works for ALL examples "
-                                        "(especially complex ones). Return corrected code.\n"
+                                        "Fix all issues and return corrected code.\n"
                                         "Format: ```python\\n# main.py\\n[corrected code]\\n```"
                                     )
                                 })
@@ -331,7 +321,48 @@ def agent_main(
                     except Exception:
                         pass
                 
-                # Code passed validation and review
+                # Step 3: Deep verification for complex examples (on first 2 attempts)
+                if attempt < 2:
+                    verification_messages = [
+                        {"role": "system", "content": (
+                            "You are a verification specialist who tests code against complex scenarios."
+                        )},
+                        {"role": "user", "content": (
+                            f"# Problem\n{problem_statement[:15000]}\n\n"
+                            f"# Code\n```python\n{code}\n```\n\n"
+                            "Perform a DEEP verification:\n"
+                            "1. Pick the MOST COMPLEX example from the problem (largest, most convoluted)\n"
+                            "2. Manually trace through the code with this complex example:\n"
+                            "   - Parse the input step by step\n"
+                            "   - Execute each line of logic\n"
+                            "   - Track what happens at each step\n"
+                            "   - Determine what output is produced\n"
+                            "3. Does the output match what's expected?\n"
+                            "4. Are there any bugs in neighbor calculation, traversal, or logic?\n\n"
+                            "Reply 'VERIFIED' if the complex example works correctly, "
+                            "or explain exactly what goes wrong."
+                        )}
+                    ]
+                    
+                    try:
+                        verify_response = _call_llm(verification_messages, run_id, attempt, 120)
+                        
+                        if verify_response and "VERIFIED" not in verify_response.upper():
+                            if attempt < max_attempts - 1:
+                                messages.append({"role": "assistant", "content": response})
+                                messages.append({
+                                    "role": "user",
+                                    "content": (
+                                        f"Complex example verification failed:\n{verify_response}\n\n"
+                                        "Fix the issues to handle complex examples correctly.\n"
+                                        "Format: ```python\\n# main.py\\n[corrected code]\\n```"
+                                    )
+                                })
+                                break
+                    except Exception:
+                        pass
+                
+                # Code passed all validations
                 return _build_single_file_patch("main.py", code)
             
         except Exception:
