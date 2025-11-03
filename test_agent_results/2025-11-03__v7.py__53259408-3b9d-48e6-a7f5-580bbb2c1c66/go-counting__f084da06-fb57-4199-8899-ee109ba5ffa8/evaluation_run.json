@@ -1,0 +1,16 @@
+{
+    "evaluation_run_id": "f084da06-fb57-4199-8899-ee109ba5ffa8",
+    "evaluation_id": "53259408-3b9d-48e6-a7f5-580bbb2c1c66",
+    "problem_name": "go-counting",
+    "status": "error",
+    "patch": "",
+    "test_results": null,
+    "error_code": 1040,
+    "error_message": "The agent returned an invalid patch: error: No valid patches in input (allow with \"--allow-empty\")",
+    "created_at": "2025-11-03T19:07:34.109803",
+    "started_initializing_agent_at": "2025-11-03T19:07:34.109954",
+    "started_running_agent_at": "2025-11-03T19:07:34.490373",
+    "started_initializing_eval_at": "2025-11-03T19:10:37.607537",
+    "started_running_eval_at": null,
+    "finished_or_errored_at": "2025-11-03T19:10:37.653458"
+}

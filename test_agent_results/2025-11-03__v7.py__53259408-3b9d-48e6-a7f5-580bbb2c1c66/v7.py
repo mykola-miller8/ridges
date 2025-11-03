@@ -181,7 +181,7 @@ def _extract_main_py(response: str) -> str:
         return ""
     
     # Strategy 1: Explicitly headed block with main.py comment
-    m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*?)\n```", response, re.DOTALL)
+    m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*→)\n```", response, re.DOTALL)
     if m and m[0].strip():
         extracted = m[0].strip()
         _verbose_log("CODE_EXTRACTION: Strategy 1 succeeded (explicit main.py)", {
@@ -192,7 +192,7 @@ def _extract_main_py(response: str) -> str:
         return extracted
     
     # Strategy 2: Any python code block
-    m2 = re.findall(r"```python\s*\n([\s\S]*?)\n```", response, re.DOTALL)
+    m2 = re.findall(r"```python\s*\n([\s\S]*→)\n```", response, re.DOTALL)
     if m2:
         for block in m2:
             if block.strip():
@@ -205,7 +205,7 @@ def _extract_main_py(response: str) -> str:
                 return extracted
     
     # Strategy 3: Code block without language specifier
-    m3 = re.findall(r"```\n([\s\S]*?)\n```", response, re.DOTALL)
+    m3 = re.findall(r"```\n([\s\S]*→)\n```", response, re.DOTALL)
     if m3:
         for block in m3:
             # Check if it looks like Python code (has def, class, or import)
@@ -486,17 +486,26 @@ for item in data:
 
 ### Mental testing (CRITICAL):
 - Pick 2-3 examples from spec and trace through your logic
-- Check: start ? middle ? end states
+- Check: start → middle → end states
 - Verify boundary conditions: first, last, empty inputs
 - If you can't trace it in your head, simplify!
+
+### For grid/board/coordinate problems (CRITICAL):
+- **Clarify coordinate system FIRST**: Is `x` the row or column→ Is `y` the row or column→
+- **Common conventions**:
+  - `board[y][x]` or `board[row][col]` means y=row (vertical), x=col (horizontal)
+  - If given `(x, y)` coordinates, determine which maps to rows and which to columns
+- **Test with examples**: Pick a coordinate from the spec, verify your indexing gives the right cell
+- **Rectangular boards expose errors**: Non-square boards make row/col confusion obvious
+- **Trace a specific example**: "If spec says coordinate (2, 3), which cell is that in my board→"
 
 ### Special cases:
 - Look for keywords: "special", "except", "however", "but", "otherwise", "bonus", "final"
 - **Implement special cases EXPLICITLY** - don't assume a loop handles them
-- Example: "The 10th frame is special" ? implement frame 10 separately
+- Example: "The 10th frame is special" → implement frame 10 separately
 - **Visual layouts with indentation/spacing**: Often encode structure (e.g., hex grids, trees)
   - Don't ignore the visual formatting - it's usually meaningful
-  - If examples show increasing indentation per row ? likely a hex/offset grid
+  - If examples show increasing indentation per row → likely a hex/offset grid
 - **Repetitive/cumulative patterns**: Don't assume uniformity - check examples line-by-line
   - What repeats exactly vs what varies
   - Some lines may have extra elements, others may not
@@ -524,14 +533,14 @@ for item in data:
 
 ### Validation order (fail fast):
 1. Type checks first (TypeError: wrong type, structural problems)
-2. Structure checks (right length/format?)
+2. Structure checks (right length/format→)
 3. Content checks (valid values, ranges)
 4. Dependent checks last (constraints based on previous inputs - see below)
 
 ### Key points:
 - **Use EXACT error messages if spec provides them** (copy verbatim)
 - TypeError vs ValueError: TypeError = wrong type/structure; ValueError = wrong values
-- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` ? malformed)
+- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` → malformed)
 
 ### Dependent/Sequential Validation:
 **For sequential inputs (methods called multiple times), later inputs may depend on earlier ones.**
@@ -539,7 +548,7 @@ for item in data:
 **Key concept: Constraint resets vs. cumulative constraints**
 - **Cumulative**: "If you knocked down 6, you can't knock down more than 4 remaining" (same phase)
 - **Resets**: "After a strike, you get fresh pins" (new phase - constraints reset!)
-- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" ? indicates phase boundary
+- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" → indicates phase boundary
 
 **Implementation tip**:
 ```python
@@ -586,8 +595,8 @@ for item in data:
 ```
 
 **WHY THIS ORDER MATTERS:**
-- `()` has len=0, can't even check `item[0]` ? must check length FIRST
-- `(ATTR,)` has len=1, `item[0]` exists but missing args ? "incomplete" not "malformed"
+- `()` has len=0, can't even check `item[0]` → must check length FIRST
+- `(ATTR,)` has len=1, `item[0]` exists but missing args → "incomplete" not "malformed"
 - Only after confirming completeness can you safely check type-specific requirements
 
 ### State management for stateful classes:
@@ -602,7 +611,7 @@ for item in data:
 - **Over-complicating completion logic**: Understand what "complete" means, don't make up restrictions
 - **DSL tuple validation - WRONG ORDER = WRONG ERROR**:
   - **CRITICAL**: Check tuple completeness (length) BEFORE checking type-specific validation
-  - Empty `()` or incomplete `(TYPE,)` ? TypeError: "incomplete" (NOT ValueError: "malformed")
+  - Empty `()` or incomplete `(TYPE,)` → TypeError: "incomplete" (NOT ValueError: "malformed")
   - Must check `len(item) < min_length` FIRST, before accessing `item[0]`
   - See Section 2 for complete code example showing correct validation order
 - **Cumulative constraints across phases**: Don't apply unless in same phase (watch for "new", "fresh", "bonus")
@@ -615,20 +624,21 @@ for item in data:
   - **Parsing strategy**: Remove leading spaces from each row, track the offset per row
   - **Adjacency depends on row offset**: For offset grids, neighbors differ by row (even vs odd)
   - **MUST test adjacency with examples**: Pick a cell in the middle, manually verify its neighbors match expected
-  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids ? wrong connectivity
+  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids → wrong connectivity
 
 ## 4. FINAL VERIFICATION
 Mentally trace through your code:
-1. Does it handle the basic case correctly?
-2. Does it handle ALL special cases from the spec?
-3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)?
-4. For validation: Did I use EXACT error messages if provided?
-5. **For DSL/tuple validation**: Did I validate in the correct order (completeness ? type valid ? length ? element types)?
-6. For sequential inputs: Did I identify phase boundaries where constraints reset?
-7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly?
-8. **For interpreters/DSLs with definitions**: When redefining `X` to use `X`, did I capture the old definition first?
-9. Can I explain the logic in 2-3 simple sentences?
-10. Did I test the logic with examples from the spec?
+1. Does it handle the basic case correctly→
+2. Does it handle ALL special cases from the spec→
+3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)→
+4. For validation: Did I use EXACT error messages if provided→
+5. **For DSL/tuple validation**: Did I validate in the correct order (completeness → type valid → length → element types)→
+6. For sequential inputs: Did I identify phase boundaries where constraints reset→
+7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly→
+8. **For interpreters/DSLs with definitions**: When redefining `X` to use `X`, did I capture the old definition first→
+9. **For coordinate systems**: Did I verify x/y map correctly to rows/columns using spec examples→
+10. Can I explain the logic in 2-3 simple sentences→
+11. Did I test the logic with examples from the spec→
 
 **If you can't clearly trace the logic, simplify it!**
 
