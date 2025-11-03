@@ -181,7 +181,7 @@ class CursorAPIClient:
             time.sleep(poll_interval)
             
             status_data = self.get_agent_status(agent_id)
-            print(f"[POLL] Agent status: {status_data}")
+            # print(f"[POLL] Agent status: {status_data}")
             status = status_data.get("status") or status_data.get("state")
             
             if status_callback:

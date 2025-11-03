@@ -316,7 +316,7 @@ def _add_followup_with_failure_context(
     # Poll until completion
     def status_callback(status_data: Dict[str, Any]) -> None:
         status = status_data.get("status") or status_data.get("state") or "unknown"
-        print(f"[BUILDER] Agent status: {status}")
+        # print(f"[BUILDER] Agent status: {status}")
     
     try:
         final_data = client.poll_until_complete(
