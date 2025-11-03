@@ -1,0 +1,72 @@
+{
+    "evaluation_run_id": "c4fa9020-3341-480d-b2c1-1bb1fab4e069",
+    "evaluation_id": "f38cc45b-67fb-4893-b449-6b872c60f63a",
+    "problem_name": "go-counting",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,39 +1,98 @@\n-\n-class Board:\n-    \"\"\"Count territories of each player in a Go game\n-\n-    Args:\n-        board (list[str]): A two-dimensional Go board\n-    \"\"\"\n-\n-    def __init__(self, board: list[str]):\n-        pass\n-\n-    def territory(self, x: int, y: int) -> tuple[str, set[tuple[int, int]]]:\n-        \"\"\"Find the owner and the territories given a coordinate on\n-           the board\n-\n-        Args:\n-            x (int): Column on the board\n-            y (int): Row on the board\n-\n-        Returns:\n-            (str, set): A tuple, the first element being the owner\n-                        of that area.  One of \"W\", \"B\", \"\".  The\n-                        second being a set of coordinates, representing\n-                        the owner's territories.\n-        \"\"\"\n-        pass\n-\n-    def territories(self) -> dict[str, set[tuple[int, int]]]:\n-        \"\"\"Find the owners and the territories of the whole board\n-\n-        Args:\n-            none\n-\n-        Returns:\n-            dict(str, set): A dictionary whose key being the owner\n-                        , i.e. \"W\", \"B\", \"\".  The value being a set\n-                        of coordinates owned by the owner.\n-        \"\"\"\n-        pass\n+class Board:\n+    \"\"\"Count territories of each player in a Go game\n+\n+    Args:\n+        board (list[str]): A two-dimensional Go board\n+    \"\"\"\n+\n+    def __init__(self, board: list[str]):\n+        self.board = board\n+        self.rows = len(board)\n+        self.cols = len(board[0]) if self.rows > 0 else 0\n+\n+    def territory(self, x: int, y: int) -> tuple[str, set[tuple[int, int]]]:\n+        \"\"\"Find the owner and the territories given a coordinate on\n+           the board\n+\n+        Args:\n+            x (int): Column on the board\n+            y (int): Row on the board\n+\n+        Returns:\n+            (str, set): A tuple, the first element being the owner\n+                        of that area.  One of \"W\", \"B\", \"\".  The\n+                        second being a set of coordinates, representing\n+                        the owner's territories.\n+        \"\"\"\n+        # Validate coordinates\n+        if x < 0 or x >= self.cols or y < 0 or y >= self.rows:\n+            raise ValueError('Invalid coordinate')\n+        \n+        # If the position is already occupied by a stone, it has no territory\n+        if self.board[y][x] in 'WB':\n+            return ('', set())\n+        \n+        # If it's an empty position, we need to find the connected territory\n+        visited = set()\n+        territory_coords = set()\n+        owners = set()\n+        \n+        # BFS to find all connected empty positions and their neighboring stones\n+        queue = [(x, y)]\n+        visited.add((x, y))\n+        territory_coords.add((x, y))\n+        \n+        while queue:\n+            cx, cy = queue.pop(0)\n+            \n+            # Check all four neighbors\n+            for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:\n+                nx, ny = cx + dx, cy + dy\n+                \n+                # Check if neighbor is within bounds\n+                if 0 <= nx < self.cols and 0 <= ny < self.rows:\n+                    # If it's an empty position we haven't visited\n+                    if self.board[ny][nx] == ' ' and (nx, ny) not in visited:\n+                        visited.add((nx, ny))\n+                        territory_coords.add((nx, ny))\n+                        queue.append((nx, ny))\n+                    # If it's a stone, add its owner to the owners set\n+                    elif self.board[ny][nx] in 'WB':\n+                        owners.add(self.board[ny][nx])\n+        \n+        # Determine the owner\n+        if len(owners) == 1:\n+            owner = owners.pop()\n+        else:\n+            owner = ''\n+            \n+        return (owner, territory_coords)\n+\n+    def territories(self) -> dict[str, set[tuple[int, int]]]:\n+        \"\"\"Find the owners and the territories of the whole board\n+\n+        Args:\n+            none\n+\n+        Returns:\n+            dict(str, set): A dictionary whose key being the owner\n+                        , i.e. \"W\", \"B\", \"\".  The value being a set\n+                        of coordinates owned by the owner.\n+        \"\"\"\n+        result = {'W': set(), 'B': set(), '': set()}\n+        visited = set()\n+        \n+        # Go through each position on the board\n+        for y in range(self.rows):\n+            for x in range(self.cols):\n+                # If we haven't processed this position yet and it's empty\n+                if (x, y) not in visited and self.board[y][x] == ' ':\n+                    # Find the territory for this position\n+                    owner, territory_coords = self.territory(x, y)\n+                    result[owner].update(territory_coords)\n+                    visited.update(territory_coords)\n+                # If it's a stone, add it to the appropriate owner's territory\n+                elif self.board[y][x] in 'WB':\n+                    result[self.board[y][x]].add((x, y))\n+        \n+        return result\n",
+    "test_results": [
+        {
+            "name": "test_a_stone_and_not_a_territory_on_5x5_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_black_corner_territory_on_5x5_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_invalid_because_x_is_too_high_for_5x5_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_invalid_because_x_is_too_low_for_5x5_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_invalid_because_y_is_too_high_for_5x5_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_invalid_because_y_is_too_low_for_5x5_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_territory_is_the_whole_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_open_corner_territory_on_5x5_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_region_rectangular_board",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_two_territory_rectangular_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_white_center_territory_on_5x5_board",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T19:05:02.625549",
+    "started_initializing_agent_at": "2025-11-03T19:05:02.625630",
+    "started_running_agent_at": "2025-11-03T19:05:03.059127",
+    "started_initializing_eval_at": "2025-11-03T19:05:11.846960",
+    "started_running_eval_at": "2025-11-03T19:05:12.155874",
+    "finished_or_errored_at": "2025-11-03T19:05:12.397445"
+}
