@@ -502,6 +502,23 @@ for item in data:
 - Verify boundary conditions: first, last, empty inputs
 - If you can't trace it in your head, simplify!
 
+### For sparse/vague specifications:
+- **If spec is very short (<500 chars) or lacks detail, be EXTRA careful**
+- **Think through edge cases explicitly**: What happens with ties→ Empty input→ Boundary conditions→
+- **Don't make assumptions** - implement only what's clearly specified
+- **For external references** (e.g., "see Wikipedia"), use common sense but stick to basics
+
+### For comparison/ranking problems:
+- **Tie-breaking is CRITICAL**: "Pick the best X" means if multiple items tie for best, return ALL tied items
+- **Test tie scenarios mentally**: What if all items are equal→ What if 2 items tie for first→
+- **Common pattern**: Calculate scores, find max score, return ALL items with max score
+- **Example**:
+  ```python
+  scores = [score_item(item) for item in items]
+  max_score = max(scores)
+  return [items[i] for i, s in enumerate(scores) if s == max_score]
+  ```
+
 ### For grid/board/coordinate problems (CRITICAL):
 - **Clarify coordinate system FIRST**: Is `x` the row or column→ Is `y` the row or column→
 - **Common conventions**:
@@ -649,8 +666,10 @@ Mentally trace through your code:
 7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly→
 8. **For interpreters/DSLs with definitions**: When redefining `X` to use `X`, did I capture the old definition first→
 9. **For coordinate systems**: Did I verify x/y map correctly to rows/columns using spec examples→
-10. Can I explain the logic in 2-3 simple sentences→
-11. Did I test the logic with examples from the spec→
+10. **For comparison/ranking problems**: Did I handle ties correctly (return ALL items with best score)→
+11. **If spec is sparse**: Did I think through edge cases explicitly→
+12. Can I explain the logic in 2-3 simple sentences→
+13. Did I test the logic with examples from the spec→
 
 **If you can't clearly trace the logic, simplify it!**
 
