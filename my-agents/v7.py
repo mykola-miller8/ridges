@@ -401,12 +401,13 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "bug-free Python code that correctly implements the given specification.\n\n"
         "CRITICAL PRIORITIES:\n"
         "1. GET THE CORE LOGIC CORRECT FIRST - focus on basic functionality working properly\n"
-        "2. THEN add validation - don't over-validate or make up restrictions not in the spec\n"
-        "3. Follow the specification EXACTLY - do not deviate or add assumptions\n"
-        "4. If error messages are specified, use them VERBATIM (exact wording)\n"
-        "5. !!! DSL VALIDATION: Check `len(item) < min` BEFORE accessing `item[0]` - see top of guidelines\n"
-        "6. For sequential inputs: watch for phase boundaries where constraints RESET ('new', 'fresh', 'bonus')\n"
-        + ("7. IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
+        "2. IMPLEMENT ALL METHODS - never leave methods as 'pass', write actual working code\n"
+        "3. INITIALIZE ALL VARIABLES - if skeleton has self.value=None, set it properly (e.g., initial_value)\n"
+        "4. Follow the specification EXACTLY - do not deviate or add assumptions\n"
+        "5. If error messages are specified, use them VERBATIM (exact wording)\n"
+        "6. !!! DSL VALIDATION: Check `len(item) < min` BEFORE accessing `item[0]` - see top of guidelines\n"
+        "7. For sequential inputs: watch for phase boundaries where constraints RESET ('new', 'fresh', 'bonus')\n"
+        + ("8. IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
         + "\nReturn your solution in this exact format:\n"
         "```python\n# main.py\n<your complete implementation here>\n```"
     )
@@ -496,9 +497,16 @@ for item in data:
   - Avoid obscure imports that might not be available
   - Prefer built-in functions over imports when possible
 
+### Critical: Make code RUNNABLE, not just compilable
+- **NEVER leave methods as `pass`** - implement ALL methods with actual logic
+- **Initialize ALL instance variables in `__init__`** - don't leave as `None` unless that's the correct initial value
+- **If skeleton has `self.value = None`, you MUST set it properly** (e.g., `self.value = initial_value`)
+- **Test basic usage mentally**: Can you create an instance and call its methods without errors?
+- **Property getters/setters**: If value needs to trigger updates, use a private variable + property
+
 ### Mental testing (CRITICAL):
 - Pick 2-3 examples from spec and trace through your logic
-- Check: start → middle → end states
+- Check: start ? middle ? end states
 - Verify boundary conditions: first, last, empty inputs
 - If you can't trace it in your head, simplify!
 
@@ -507,18 +515,18 @@ for item in data:
 - **Initialize before registering**: Create objects fully before adding observers/callbacks
 - **Store callbacks in lists, not sets**: Order matters, callbacks should be called in registration order
 - **Keep it simple**: Don't over-engineer - basic list of observers/callbacks usually sufficient
-- **Propagation pattern**: When value changes → notify observers → observers update themselves
+- **Propagation pattern**: When value changes ? notify observers ? observers update themselves
 - **Callback removal**: Store callbacks by identity (use list, support removal by reference)
 
 ### For sparse/vague specifications:
 - **If spec is very short (<500 chars) or lacks detail, be EXTRA careful**
-- **Think through edge cases explicitly**: What happens with ties→ Empty input→ Boundary conditions→
+- **Think through edge cases explicitly**: What happens with ties? Empty input? Boundary conditions?
 - **Don't make assumptions** - implement only what's clearly specified
 - **For external references** (e.g., "see Wikipedia"), use common sense but stick to basics
 
 ### For comparison/ranking problems:
 - **Tie-breaking is CRITICAL**: "Pick the best X" means if multiple items tie for best, return ALL tied items
-- **Test tie scenarios mentally**: What if all items are equal→ What if 2 items tie for first→
+- **Test tie scenarios mentally**: What if all items are equal? What if 2 items tie for first?
 - **Common pattern**: Calculate scores, find max score, return ALL items with max score
 - **Example**:
   ```python
@@ -528,21 +536,21 @@ for item in data:
   ```
 
 ### For grid/board/coordinate problems (CRITICAL):
-- **Clarify coordinate system FIRST**: Is `x` the row or column→ Is `y` the row or column→
+- **Clarify coordinate system FIRST**: Is `x` the row or column? Is `y` the row or column?
 - **Common conventions**:
   - `board[y][x]` or `board[row][col]` means y=row (vertical), x=col (horizontal)
   - If given `(x, y)` coordinates, determine which maps to rows and which to columns
 - **Test with examples**: Pick a coordinate from the spec, verify your indexing gives the right cell
 - **Rectangular boards expose errors**: Non-square boards make row/col confusion obvious
-- **Trace a specific example**: "If spec says coordinate (2, 3), which cell is that in my board→"
+- **Trace a specific example**: "If spec says coordinate (2, 3), which cell is that in my board?"
 
 ### Special cases:
 - Look for keywords: "special", "except", "however", "but", "otherwise", "bonus", "final"
 - **Implement special cases EXPLICITLY** - don't assume a loop handles them
-- Example: "The 10th frame is special" → implement frame 10 separately
+- Example: "The 10th frame is special" ? implement frame 10 separately
 - **Visual layouts with indentation/spacing**: Often encode structure (e.g., hex grids, trees)
   - Don't ignore the visual formatting - it's usually meaningful
-  - If examples show increasing indentation per row → likely a hex/offset grid
+  - If examples show increasing indentation per row ? likely a hex/offset grid
 - **Repetitive/cumulative patterns**: Don't assume uniformity - check examples line-by-line
   - What repeats exactly vs what varies
   - Some lines may have extra elements, others may not
@@ -570,14 +578,14 @@ for item in data:
 
 ### Validation order (fail fast):
 1. Type checks first (TypeError: wrong type, structural problems)
-2. Structure checks (right length/format→)
+2. Structure checks (right length/format?)
 3. Content checks (valid values, ranges)
 4. Dependent checks last (constraints based on previous inputs - see below)
 
 ### Key points:
 - **Use EXACT error messages if spec provides them** (copy verbatim)
 - TypeError vs ValueError: TypeError = wrong type/structure; ValueError = wrong values
-- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` → malformed)
+- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` ? malformed)
 
 ### Dependent/Sequential Validation:
 **For sequential inputs (methods called multiple times), later inputs may depend on earlier ones.**
@@ -585,7 +593,7 @@ for item in data:
 **Key concept: Constraint resets vs. cumulative constraints**
 - **Cumulative**: "If you knocked down 6, you can't knock down more than 4 remaining" (same phase)
 - **Resets**: "After a strike, you get fresh pins" (new phase - constraints reset!)
-- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" → indicates phase boundary
+- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" ? indicates phase boundary
 
 **Implementation tip**:
 ```python
@@ -632,8 +640,8 @@ for item in data:
 ```
 
 **WHY THIS ORDER MATTERS:**
-- `()` has len=0, can't even check `item[0]` → must check length FIRST
-- `(ATTR,)` has len=1, `item[0]` exists but missing args → "incomplete" not "malformed"
+- `()` has len=0, can't even check `item[0]` ? must check length FIRST
+- `(ATTR,)` has len=1, `item[0]` exists but missing args ? "incomplete" not "malformed"
 - Only after confirming completeness can you safely check type-specific requirements
 
 ### State management for stateful classes:
@@ -645,12 +653,12 @@ for item in data:
 - Store previous values if needed for dependent validation
 
 ## 3. COMMON PITFALLS
-- **Circular dependencies**: In reactive/observer patterns, avoid A→B→A dependency chains
+- **Circular dependencies**: In reactive/observer patterns, avoid A?B?A dependency chains
 - **Initialization order**: Initialize all attributes in __init__ before registering observers
 - **Over-complicating completion logic**: Understand what "complete" means, don't make up restrictions
 - **DSL tuple validation - WRONG ORDER = WRONG ERROR**:
   - **CRITICAL**: Check tuple completeness (length) BEFORE checking type-specific validation
-  - Empty `()` or incomplete `(TYPE,)` → TypeError: "incomplete" (NOT ValueError: "malformed")
+  - Empty `()` or incomplete `(TYPE,)` ? TypeError: "incomplete" (NOT ValueError: "malformed")
   - Must check `len(item) < min_length` FIRST, before accessing `item[0]`
   - See Section 2 for complete code example showing correct validation order
 - **Cumulative constraints across phases**: Don't apply unless in same phase (watch for "new", "fresh", "bonus")
@@ -663,24 +671,24 @@ for item in data:
   - **Parsing strategy**: Remove leading spaces from each row, track the offset per row
   - **Adjacency depends on row offset**: For offset grids, neighbors differ by row (even vs odd)
   - **MUST test adjacency with examples**: Pick a cell in the middle, manually verify its neighbors match expected
-  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids → wrong connectivity
+  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids ? wrong connectivity
 
 ## 4. FINAL VERIFICATION
 Mentally trace through your code:
-1. Does it handle the basic case correctly→
-2. Does it handle ALL special cases from the spec→
-3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)→
-4. For validation: Did I use EXACT error messages if provided→
-5. **For DSL/tuple validation**: Did I validate in the correct order (completeness → type valid → length → element types)→
-6. For sequential inputs: Did I identify phase boundaries where constraints reset→
-7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly→
-8. **For interpreters/DSLs with definitions**: When redefining `X` to use `X`, did I capture the old definition first→
-9. **For coordinate systems**: Did I verify x/y map correctly to rows/columns using spec examples→
-10. **For comparison/ranking problems**: Did I handle ties correctly (return ALL items with best score)→
-11. **For observer/reactive patterns**: Did I avoid circular dependencies and initialize before registering→
-12. **If spec is sparse**: Did I think through edge cases explicitly→
-13. Can I explain the logic in 2-3 simple sentences→
-14. Did I test the logic with examples from the spec→
+1. Does it handle the basic case correctly?
+2. Does it handle ALL special cases from the spec?
+3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)?
+4. For validation: Did I use EXACT error messages if provided?
+5. **For DSL/tuple validation**: Did I validate in the correct order (completeness ? type valid ? length ? element types)?
+6. For sequential inputs: Did I identify phase boundaries where constraints reset?
+7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly?
+8. **For interpreters/DSLs with definitions**: When redefining `X` to use `X`, did I capture the old definition first?
+9. **For coordinate systems**: Did I verify x/y map correctly to rows/columns using spec examples?
+10. **For comparison/ranking problems**: Did I handle ties correctly (return ALL items with best score)?
+11. **For observer/reactive patterns**: Did I avoid circular dependencies and initialize before registering?
+12. **If spec is sparse**: Did I think through edge cases explicitly?
+13. Can I explain the logic in 2-3 simple sentences?
+14. Did I test the logic with examples from the spec?
 
 **If you can't clearly trace the logic, simplify it!**
 
