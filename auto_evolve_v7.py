@@ -17,7 +17,7 @@ TEST_AGENT_CLI = f"{ROOT}/test_agent.py"
 INFERENCE_URL = os.getenv("INFERENCE_URL", "http://172.17.0.1:1234")
 PROBLEM_SET = os.getenv("PROBLEM_SET", "all-polyglot")
 SOURCE_BRANCH = "cursor-work"
-TARGET_BRANCH = "cursor-work-10"
+TARGET_BRANCH = "cursor-work-11"
 
 # v7 solving uses the inference gateway (set in test_agent CLI). For rewriting v7 itself,
 # we use the Cursor API only (no public LLM).
@@ -306,6 +306,8 @@ def _add_followup_with_failure_context(
         f"- Focus on the root cause: why did the agent fail on this problem?\n"
         f"- Apply the minimal change that fixes this while maintaining genericity\n"
         f"- ALWAYS clean up the agent code: remove unused imports, functions, and variables\n"
+        f"- ALWAYS check the code is generic before committing\n"
+        f"- ALWAYS try to add verbose logging to the code to help debug the issues\n"
         f"- Make the code look professional: follow Python best practices, add proper docstrings, ensure consistent formatting, and improve readability\n\n"
         f"Review the files in the paths above to understand the failure context. Return the complete updated my-agents/v7.py file."
     )

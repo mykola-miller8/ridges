@@ -4,6 +4,7 @@ import ast
 import json
 import uuid
 import time
+from datetime import datetime
 from typing import Any, Dict, List, Tuple
 
 import requests
@@ -23,12 +24,43 @@ AGENT_MODELS: List[str] = [
 ]
 
 
+def _verbose_log(step: str, details: Any = None, level: str = "INFO") -> None:
+    """Log verbose information for evaluation and evolution tracking."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    log_line = f"[V7_VERBOSE:{level}] [{timestamp}] {step}"
+    if details is not None:
+        if isinstance(details, (dict, list)):
+            details_str = json.dumps(details, indent=2, default=str)
+            # Truncate very long details
+            if len(details_str) > 2000:
+                details_str = details_str[:2000] + "... [truncated]"
+            log_line += f"\n{details_str}"
+        else:
+            details_str = str(details)
+            if len(details_str) > 1000:
+                details_str = details_str[:1000] + "... [truncated]"
+            log_line += f": {details_str}"
+    print(log_line, flush=True)
+
+
 def _read(path: str) -> str:
     """Read file contents, returning empty string on error."""
+    _verbose_log("FILE_READ: Attempting to read file", {"path": path})
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return f.read()
-    except Exception:
+            content = f.read()
+            _verbose_log("FILE_READ: Successfully read file", {
+                "path": path,
+                "size_bytes": len(content),
+                "size_lines": len(content.splitlines()),
+                "preview": content[:200] + "..." if len(content) > 200 else content
+            })
+            return content
+    except Exception as e:
+        _verbose_log("FILE_READ: Failed to read file", {
+            "path": path,
+            "error": str(e)
+        }, level="WARN")
         return ""
 
 
@@ -39,20 +71,43 @@ def _validate_syntax(code: str) -> Tuple[bool, str]:
     Returns:
         Tuple of (is_valid, error_message)
     """
+    _verbose_log("SYNTAX_VALIDATION: Starting syntax validation", {
+        "code_length": len(code),
+        "code_lines": len(code.splitlines())
+    })
     try:
         ast.parse(code)
+        _verbose_log("SYNTAX_VALIDATION: Syntax is valid")
         return True, ""
     except SyntaxError as e:
-        return False, f"Syntax error at line {e.lineno}: {e.msg}"
+        error_msg = f"Syntax error at line {e.lineno}: {e.msg}"
+        _verbose_log("SYNTAX_VALIDATION: Syntax error found", {
+            "line": e.lineno,
+            "message": e.msg,
+            "error": error_msg
+        }, level="ERROR")
+        return False, error_msg
     except Exception as e:
-        return False, str(e)
+        error_msg = str(e)
+        _verbose_log("SYNTAX_VALIDATION: Validation exception", {
+            "error_type": type(e).__name__,
+            "error": error_msg
+        }, level="ERROR")
+        return False, error_msg
 
 
 def _build_single_file_patch(filename: str, new_content: str) -> str:
     """Build unified diff patch replacing file contents."""
+    _verbose_log("PATCH_BUILD: Building patch", {"filename": filename})
     old = _read(filename)
     old_lines = old.splitlines()
     new_lines = new_content.splitlines()
+    _verbose_log("PATCH_BUILD: File comparison", {
+        "old_lines": len(old_lines),
+        "new_lines": len(new_lines),
+        "old_size": len(old),
+        "new_size": len(new_content)
+    })
     header = [
         f"diff --git a/{filename} b/{filename}",
         "index 0000000..1111111 100644",
@@ -69,25 +124,48 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
         body.extend(["+" + ln for ln in new_lines])
     else:
         body.append("+")
-    return "\n".join(header + body) + "\n"
+    patch = "\n".join(header + body) + "\n"
+    _verbose_log("PATCH_BUILD: Patch built successfully", {
+        "patch_size": len(patch),
+        "patch_lines": len(patch.splitlines()),
+        "preview": patch[:500] + "..." if len(patch) > 500 else patch
+    })
+    return patch
 
 
 def _extract_main_py(response: str) -> str:
     """Extract Python code from LLM response using multiple strategies."""
+    _verbose_log("CODE_EXTRACTION: Starting code extraction", {
+        "response_length": len(response),
+        "response_preview": response[:300] + "..." if len(response) > 300 else response
+    })
     if not response:
+        _verbose_log("CODE_EXTRACTION: Empty response, returning empty", level="WARN")
         return ""
     
     # Strategy 1: Explicitly headed block with main.py comment
     m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*?)\n```", response, re.DOTALL)
     if m and m[0].strip():
-        return m[0].strip()
+        extracted = m[0].strip()
+        _verbose_log("CODE_EXTRACTION: Strategy 1 succeeded (explicit main.py)", {
+            "extracted_length": len(extracted),
+            "extracted_lines": len(extracted.splitlines()),
+            "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
+        })
+        return extracted
     
     # Strategy 2: Any python code block
     m2 = re.findall(r"```python\s*\n([\s\S]*?)\n```", response, re.DOTALL)
     if m2:
         for block in m2:
             if block.strip():
-                return block.strip()
+                extracted = block.strip()
+                _verbose_log("CODE_EXTRACTION: Strategy 2 succeeded (python block)", {
+                    "extracted_length": len(extracted),
+                    "extracted_lines": len(extracted.splitlines()),
+                    "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
+                })
+                return extracted
     
     # Strategy 3: Code block without language specifier
     m3 = re.findall(r"```\n([\s\S]*?)\n```", response, re.DOTALL)
@@ -95,8 +173,18 @@ def _extract_main_py(response: str) -> str:
         for block in m3:
             # Check if it looks like Python code (has def, class, or import)
             if block.strip() and any(keyword in block for keyword in ['def ', 'class ', 'import ']):
-                return block.strip()
+                extracted = block.strip()
+                _verbose_log("CODE_EXTRACTION: Strategy 3 succeeded (generic code block)", {
+                    "extracted_length": len(extracted),
+                    "extracted_lines": len(extracted.splitlines()),
+                    "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
+                })
+                return extracted
     
+    _verbose_log("CODE_EXTRACTION: All strategies failed, no code extracted", {
+        "response_length": len(response),
+        "strategies_tried": 3
+    }, level="WARN")
     return ""
 
 
@@ -107,9 +195,19 @@ def _call_llm(
     temperature: float = 0.0
 ) -> str:
     """Call inference gateway with specified model and parameters."""
-    url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
-    headers = {"Content-Type": "application/json"}
     model = AGENT_MODELS[model_idx % len(AGENT_MODELS)]
+    url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
+    _verbose_log("LLM_CALL: Preparing LLM request", {
+        "model": model,
+        "model_idx": model_idx,
+        "run_id": run_id,
+        "temperature": temperature,
+        "url": url,
+        "message_count": len(messages),
+        "total_chars": sum(len(m.get("content", "")) for m in messages)
+    })
+    
+    headers = {"Content-Type": "application/json"}
     body = {
         "run_id": run_id,
         "messages": messages,
@@ -117,20 +215,59 @@ def _call_llm(
         "agent_id": "agent-v7",
         "model": model,
     }
+    
     for retry in range(3):
+        _verbose_log("LLM_CALL: Attempting request", {
+            "retry": retry + 1,
+            "max_retries": 3,
+            "model": model
+        })
+        call_start_time = time.time()
         try:
             resp = requests.post(url, json=body, headers=headers, timeout=300)
+            call_duration = time.time() - call_start_time
             resp.raise_for_status()
             data = resp.json()
+            
+            _verbose_log("LLM_CALL: Request successful", {
+                "retry": retry + 1,
+                "duration_seconds": round(call_duration, 2),
+                "status_code": resp.status_code,
+                "response_type": type(data).__name__
+            })
+            
             if isinstance(data, dict) and data.get("choices"):
-                return (data["choices"][0].get("message", {}) or {}).get("content") or ""
+                content = (data["choices"][0].get("message", {}) or {}).get("content") or ""
+                _verbose_log("LLM_CALL: Response extracted from choices", {
+                    "content_length": len(content),
+                    "content_preview": content[:300] + "..." if len(content) > 300 else content
+                })
+                return content
             if isinstance(data, str):
+                _verbose_log("LLM_CALL: Response is string", {
+                    "content_length": len(data),
+                    "content_preview": data[:300] + "..." if len(data) > 300 else data
+                })
                 return data
+            _verbose_log("LLM_CALL: Converting response to JSON string", {
+                "data_keys": list(data.keys()) if isinstance(data, dict) else "non-dict"
+            })
             return json.dumps(data)
-        except Exception:
+        except Exception as e:
+            call_duration = time.time() - call_start_time
+            _verbose_log("LLM_CALL: Request failed", {
+                "retry": retry + 1,
+                "duration_seconds": round(call_duration, 2),
+                "error_type": type(e).__name__,
+                "error": str(e)
+            }, level="ERROR")
             if retry == 2:
+                _verbose_log("LLM_CALL: Max retries reached, raising exception", level="ERROR")
                 raise
-            time.sleep(1 + retry)
+            sleep_time = 1 + retry
+            _verbose_log("LLM_CALL: Retrying after delay", {"sleep_seconds": sleep_time})
+            time.sleep(sleep_time)
+    _verbose_log("LLM_CALL: All retries exhausted, returning empty", level="ERROR")
     return ""
 
 
@@ -147,27 +284,68 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     Returns:
         Unified diff patch string for main.py, or empty string on failure
     """
+    agent_start_time = time.time()
+    _verbose_log("AGENT_MAIN: Starting agent execution", {
+        "repo_dir": repo_dir,
+        "test_mode": test_mode,
+        "input_dict_keys": list(input_dict.keys()) if input_dict else []
+    })
+    
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
+    _verbose_log("AGENT_MAIN: Run ID determined", {"run_id": run_id})
 
     if repo_dir and os.path.exists(repo_dir):
         try:
+            old_cwd = os.getcwd()
             os.chdir(repo_dir)
-        except Exception:
-            pass
+            new_cwd = os.getcwd()
+            _verbose_log("AGENT_MAIN: Changed working directory", {
+                "old_cwd": old_cwd,
+                "new_cwd": new_cwd,
+                "repo_dir": repo_dir
+            })
+        except Exception as e:
+            _verbose_log("AGENT_MAIN: Failed to change directory", {
+                "repo_dir": repo_dir,
+                "error": str(e)
+            }, level="WARN")
 
     problem_statement = (input_dict or {}).get("problem_statement", "") or ""
+    _verbose_log("AGENT_MAIN: Problem statement loaded", {
+        "statement_length": len(problem_statement),
+        "statement_preview": problem_statement[:300] + "..." if len(problem_statement) > 300 else problem_statement
+    })
+    
     mode = (input_dict or {}).get("problem_category", None)
     if mode not in ("spec_only", "tests_available"):
         mode = "tests_available" if os.path.exists("tests.py") else "spec_only"
+    _verbose_log("AGENT_MAIN: Mode determined", {
+        "mode": mode,
+        "tests_available": os.path.exists("tests.py") if mode == "tests_available" else False
+    })
 
     # Build repository context with larger context window
+    _verbose_log("AGENT_MAIN: Building repository context")
     parts: List[str] = []
     for name in ("main.py", "tests.py"):
         content = _read(name)
         if content:
             # Increased from 8000 to 15000 for better context
-            parts.append(f"### {name}\n```python\n{content[:15000]}\n```")
+            truncated = content[:15000]
+            parts.append(f"### {name}\n```python\n{truncated}\n```")
+            _verbose_log("AGENT_MAIN: File added to context", {
+                "file": name,
+                "original_size": len(content),
+                "truncated_size": len(truncated),
+                "was_truncated": len(content) > 15000
+            })
+        else:
+            _verbose_log("AGENT_MAIN: File not found or empty", {"file": name}, level="WARN")
     repo_summary = "\n\n".join(parts)
+    _verbose_log("AGENT_MAIN: Repository context built", {
+        "summary_length": len(repo_summary),
+        "files_included": len(parts)
+    })
 
     system_msg = (
         "You are an expert Python engineer. Your task is to write production-quality, "
@@ -280,23 +458,79 @@ Provide your complete implementation now."""
         {"role": "system", "content": system_msg},
         {"role": "user", "content": user_msg},
     ]
+    
+    _verbose_log("AGENT_MAIN: Prompt messages built", {
+        "system_msg_length": len(system_msg),
+        "user_msg_length": len(user_msg),
+        "total_length": len(system_msg) + len(user_msg),
+        "message_count": len(messages)
+    })
 
     # Try each model with iterative refinement
+    _verbose_log("AGENT_MAIN: Starting model attempts", {
+        "total_models": len(AGENT_MODELS),
+        "models": AGENT_MODELS
+    })
+    
     for model_idx in range(len(AGENT_MODELS)):
+        model = AGENT_MODELS[model_idx]
+        _verbose_log("AGENT_MAIN: Starting model attempt", {
+            "model_idx": model_idx,
+            "model": model,
+            "attempt": model_idx + 1,
+            "total": len(AGENT_MODELS)
+        })
+        model_start_time = time.time()
         try:
             # First attempt
+            _verbose_log("AGENT_MAIN: First LLM call", {"model": model})
             response = _call_llm(messages, run_id, model_idx)
+            response_duration = time.time() - model_start_time
+            _verbose_log("AGENT_MAIN: First LLM response received", {
+                "model": model,
+                "response_length": len(response),
+                "duration_seconds": round(response_duration, 2)
+            })
+            
             code = _extract_main_py(response)
             
             if not code:
+                _verbose_log("AGENT_MAIN: No code extracted, trying next model", {
+                    "model": model,
+                    "response_length": len(response)
+                }, level="WARN")
                 continue
+            
+            _verbose_log("AGENT_MAIN: Code extracted, validating syntax", {
+                "model": model,
+                "code_length": len(code),
+                "code_lines": len(code.splitlines())
+            })
             
             # Validate syntax
             is_valid, error_msg = _validate_syntax(code)
             
             if is_valid:
+                _verbose_log("AGENT_MAIN: Syntax valid, building patch", {
+                    "model": model,
+                    "code_length": len(code)
+                })
                 # Success - return the patch
-                return _build_single_file_patch("main.py", code)
+                patch = _build_single_file_patch("main.py", code)
+                total_duration = time.time() - agent_start_time
+                _verbose_log("AGENT_MAIN: Agent execution successful", {
+                    "model": model,
+                    "model_idx": model_idx,
+                    "total_duration_seconds": round(total_duration, 2),
+                    "patch_size": len(patch)
+                })
+                return patch
+            
+            _verbose_log("AGENT_MAIN: Syntax error detected, attempting refinement", {
+                "model": model,
+                "error": error_msg,
+                "code_length": len(code)
+            }, level="WARN")
             
             # If syntax error, try one refinement attempt with this model
             refinement_msg = {
@@ -318,17 +552,67 @@ Return it in the same format:
                 refinement_msg
             ]
             
+            _verbose_log("AGENT_MAIN: Calling LLM for refinement", {
+                "model": model,
+                "refinement_context_length": len(error_msg)
+            })
+            refinement_start_time = time.time()
             refined_response = _call_llm(refined_messages, run_id, model_idx)
+            refinement_duration = time.time() - refinement_start_time
+            _verbose_log("AGENT_MAIN: Refinement response received", {
+                "model": model,
+                "response_length": len(refined_response),
+                "duration_seconds": round(refinement_duration, 2)
+            })
+            
             refined_code = _extract_main_py(refined_response)
             
             if refined_code:
-                is_valid_refined, _ = _validate_syntax(refined_code)
+                _verbose_log("AGENT_MAIN: Refined code extracted, validating", {
+                    "model": model,
+                    "refined_code_length": len(refined_code)
+                })
+                is_valid_refined, refined_error_msg = _validate_syntax(refined_code)
                 if is_valid_refined:
-                    return _build_single_file_patch("main.py", refined_code)
+                    _verbose_log("AGENT_MAIN: Refined code syntax valid, building patch", {
+                        "model": model,
+                        "refined_code_length": len(refined_code)
+                    })
+                    patch = _build_single_file_patch("main.py", refined_code)
+                    total_duration = time.time() - agent_start_time
+                    _verbose_log("AGENT_MAIN: Agent execution successful after refinement", {
+                        "model": model,
+                        "model_idx": model_idx,
+                        "total_duration_seconds": round(total_duration, 2),
+                        "patch_size": len(patch)
+                    })
+                    return patch
+                else:
+                    _verbose_log("AGENT_MAIN: Refined code still has syntax errors", {
+                        "model": model,
+                        "error": refined_error_msg
+                    }, level="ERROR")
+            else:
+                _verbose_log("AGENT_MAIN: No code extracted from refinement", {
+                    "model": model
+                }, level="WARN")
                     
-        except Exception:
+        except Exception as e:
+            model_duration = time.time() - model_start_time
+            _verbose_log("AGENT_MAIN: Model attempt failed with exception", {
+                "model": model,
+                "model_idx": model_idx,
+                "duration_seconds": round(model_duration, 2),
+                "error_type": type(e).__name__,
+                "error": str(e)
+            }, level="ERROR")
             # Move to next model on exception
             continue
     
     # All models failed
+    total_duration = time.time() - agent_start_time
+    _verbose_log("AGENT_MAIN: All model attempts failed", {
+        "total_models_tried": len(AGENT_MODELS),
+        "total_duration_seconds": round(total_duration, 2)
+    }, level="ERROR")
     return ""
