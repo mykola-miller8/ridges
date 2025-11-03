@@ -66,7 +66,7 @@ def _read(path: str) -> str:
 
 def _validate_syntax(code: str) -> Tuple[bool, str]:
     """
-    Check if code has valid Python syntax.
+    Check if code has valid Python syntax and basic import safety.
     
     Returns:
         Tuple of (is_valid, error_message)
@@ -76,8 +76,35 @@ def _validate_syntax(code: str) -> Tuple[bool, str]:
         "code_lines": len(code.splitlines())
     })
     try:
-        ast.parse(code)
+        tree = ast.parse(code)
         _verbose_log("SYNTAX_VALIDATION: Syntax is valid")
+        
+        # Check for potentially problematic imports
+        imports = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports.append(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imports.append(node.module)
+        
+        if imports:
+            _verbose_log("SYNTAX_VALIDATION: Found imports", {"imports": imports})
+            # Check for common safe imports
+            safe_imports = {
+                'collections', 're', 'math', 'itertools', 'functools',
+                'typing', 'dataclasses', 'enum', 'heapq', 'bisect',
+                'string', 'operator', 'copy', 'decimal', 'fractions'
+            }
+            unsafe = [imp for imp in imports if imp.split('.')[0] not in safe_imports]
+            if unsafe:
+                error_msg = f"Potentially unsafe/unavailable imports: {unsafe}. Use only standard library."
+                _verbose_log("SYNTAX_VALIDATION: Unsafe imports detected", {
+                    "unsafe_imports": unsafe
+                }, level="WARN")
+                # Don't fail, just warn - some imports might be okay
+        
         return True, ""
     except SyntaxError as e:
         error_msg = f"Syntax error at line {e.lineno}: {e.msg}"
@@ -429,20 +456,23 @@ for item in data:
 - Prefer simple, direct logic over clever abstractions
 - For stateful classes: Track only what you absolutely need
 - Don't over-engineer - try the simplest approach first
+- **Keep code self-contained**: Only import from Python standard library (collections, re, math, itertools, etc.)
+  - Avoid obscure imports that might not be available
+  - Prefer built-in functions over imports when possible
 
 ### Mental testing (CRITICAL):
 - Pick 2-3 examples from spec and trace through your logic
-- Check: start → middle → end states
+- Check: start ? middle ? end states
 - Verify boundary conditions: first, last, empty inputs
 - If you can't trace it in your head, simplify!
 
 ### Special cases:
 - Look for keywords: "special", "except", "however", "but", "otherwise", "bonus", "final"
 - **Implement special cases EXPLICITLY** - don't assume a loop handles them
-- Example: "The 10th frame is special" → implement frame 10 separately
+- Example: "The 10th frame is special" ? implement frame 10 separately
 - **Visual layouts with indentation/spacing**: Often encode structure (e.g., hex grids, trees)
   - Don't ignore the visual formatting - it's usually meaningful
-  - If examples show increasing indentation per row → likely a hex/offset grid
+  - If examples show increasing indentation per row ? likely a hex/offset grid
 - **Repetitive/cumulative patterns**: Don't assume uniformity - check examples line-by-line
   - What repeats exactly vs what varies
   - Some lines may have extra elements, others may not
@@ -463,7 +493,7 @@ for item in data:
 ### Key points:
 - **Use EXACT error messages if spec provides them** (copy verbatim)
 - TypeError vs ValueError: TypeError = wrong type/structure; ValueError = wrong values
-- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` → malformed)
+- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` ? malformed)
 
 ### Dependent/Sequential Validation:
 **For sequential inputs (methods called multiple times), later inputs may depend on earlier ones.**
@@ -471,7 +501,7 @@ for item in data:
 **Key concept: Constraint resets vs. cumulative constraints**
 - **Cumulative**: "If you knocked down 6, you can't knock down more than 4 remaining" (same phase)
 - **Resets**: "After a strike, you get fresh pins" (new phase - constraints reset!)
-- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" → indicates phase boundary
+- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" ? indicates phase boundary
 
 **Implementation tip**:
 ```python
@@ -518,8 +548,8 @@ for item in data:
 ```
 
 **WHY THIS ORDER MATTERS:**
-- `()` has len=0, can't even check `item[0]` → must check length FIRST
-- `(ATTR,)` has len=1, `item[0]` exists but missing args → "incomplete" not "malformed"
+- `()` has len=0, can't even check `item[0]` ? must check length FIRST
+- `(ATTR,)` has len=1, `item[0]` exists but missing args ? "incomplete" not "malformed"
 - Only after confirming completeness can you safely check type-specific requirements
 
 ### State management for stateful classes:
@@ -534,7 +564,7 @@ for item in data:
 - **Over-complicating completion logic**: Understand what "complete" means, don't make up restrictions
 - **DSL tuple validation - WRONG ORDER = WRONG ERROR**:
   - **CRITICAL**: Check tuple completeness (length) BEFORE checking type-specific validation
-  - Empty `()` or incomplete `(TYPE,)` → TypeError: "incomplete" (NOT ValueError: "malformed")
+  - Empty `()` or incomplete `(TYPE,)` ? TypeError: "incomplete" (NOT ValueError: "malformed")
   - Must check `len(item) < min_length` FIRST, before accessing `item[0]`
   - See Section 2 for complete code example showing correct validation order
 - **Cumulative constraints across phases**: Don't apply unless in same phase (watch for "new", "fresh", "bonus")
@@ -547,7 +577,7 @@ for item in data:
   - **Parsing strategy**: Remove leading spaces from each row, track the offset per row
   - **Adjacency depends on row offset**: For offset grids, neighbors differ by row (even vs odd)
   - **MUST test adjacency with examples**: Pick a cell in the middle, manually verify its neighbors match expected
-  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids → wrong connectivity
+  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids ? wrong connectivity
 
 ## 4. FINAL VERIFICATION
 Mentally trace through your code:
@@ -555,7 +585,7 @@ Mentally trace through your code:
 2. Does it handle ALL special cases from the spec?
 3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)?
 4. For validation: Did I use EXACT error messages if provided?
-5. **For DSL/tuple validation**: Did I validate in the correct order (completeness → type valid → length → element types)?
+5. **For DSL/tuple validation**: Did I validate in the correct order (completeness ? type valid ? length ? element types)?
 6. For sequential inputs: Did I identify phase boundaries where constraints reset?
 7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly?
 8. Can I explain the logic in 2-3 simple sentences?
