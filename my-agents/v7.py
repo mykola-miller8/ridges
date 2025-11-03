@@ -13,7 +13,7 @@ import requests
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
-# - Multi-model generation with robust error handling validation
+# - Multi-model generation with concrete edge case validation
 
 
 DEFAULT_PROXY_URL = (
@@ -40,10 +40,7 @@ def _read(path: str) -> str:
 
 
 def _validate_syntax(code: str) -> Optional[str]:
-    """
-    Validate Python syntax of the given code.
-    Returns None if valid, or an error message if invalid.
-    """
+    """Validate Python syntax. Returns None if valid, or error message."""
     try:
         ast.parse(code)
         return None
@@ -119,61 +116,65 @@ def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout
     raise last_err if last_err else RuntimeError("LLM call failed")
 
 
-def _extract_examples_from_problem(problem_statement: str) -> str:
-    """Extract example sections from problem statement for validation."""
-    examples = []
+def _extract_requirements_from_problem(problem_statement: str) -> str:
+    """Extract specific requirements like error messages from problem statement."""
+    requirements = []
     lines = problem_statement.split('\n')
-    in_example = False
-    current_example = []
     
-    for line in lines:
+    # Look for sections with requirements, error messages, etc.
+    in_requirement_section = False
+    current_section = []
+    
+    for i, line in enumerate(lines):
         lower = line.lower()
-        # Start of example section
-        if any(marker in lower for marker in ['example', 'for example', 'here is', 'consider']):
-            in_example = True
-            current_example = [line]
-        elif in_example:
-            # Continue collecting example lines
-            current_example.append(line)
-            # End example after some lines or when hitting new section
-            if len(current_example) > 15 or (line and not line.startswith(' ') and ':' in line):
-                examples.append('\n'.join(current_example))
-                current_example = []
-                in_example = False
+        
+        # Start of requirement sections
+        if any(marker in lower for marker in ['exception', 'error', 'raise', 'requirement', 'must', 'should']):
+            in_requirement_section = True
+            current_section = [line]
+        elif in_requirement_section:
+            current_section.append(line)
+            # End after collecting some context
+            if len(current_section) > 20 or (line.strip() == '' and len(current_section) > 5):
+                requirements.append('\n'.join(current_section))
+                current_section = []
+                in_requirement_section = False
     
-    if current_example:
-        examples.append('\n'.join(current_example))
+    if current_section:
+        requirements.append('\n'.join(current_section))
     
-    return '\n\n'.join(examples[:3]) if examples else ""
+    return '\n\n'.join(requirements[:2]) if requirements else ""
 
 
-def _review_code(code: str, problem_statement: str, examples: str, run_id: str, attempt: int) -> Tuple[bool, str]:
+def _review_code(code: str, problem_statement: str, requirements: str, run_id: str, attempt: int) -> Tuple[bool, str]:
     """
-    Review code for correctness with emphasis on error handling and edge cases.
-    Returns (approved, refined_code) where refined_code is the corrected version if not approved.
+    Review code with concrete edge case validation.
+    Returns (approved, refined_code).
     """
     review_system = (
-        "You are an expert code reviewer who validates correctness through concrete testing.\n"
-        "Focus especially on error handling, validation logic, and edge cases.\n\n"
-        "If the code is CORRECT, respond ONLY with: APPROVED\n"
+        "You are an expert code reviewer who finds bugs by testing concrete edge cases.\n"
+        "You must mentally execute the code with specific inputs to find logic errors.\n\n"
+        "If the code is CORRECT for all edge cases, respond ONLY with: APPROVED\n"
         "If you find bugs, provide FIXED code:\n```python\n# main.py\n[fixed code]\n```"
     )
     
-    examples_section = f"\n\nExamples from problem:\n{examples}\n" if examples else ""
+    requirements_section = f"\n\nRequirements:\n{requirements}\n" if requirements else ""
     
     review_user = (
-        f"Problem:\n{problem_statement[:8000]}\n{examples_section}\n"
-        f"Code to validate:\n```python\n{code}\n```\n\n"
-        "Critical validation checklist:\n"
-        "1. TRACE through with concrete examples - verify output matches expected\n"
-        "2. ERROR HANDLING: Do validation checks catch ALL invalid inputs correctly?\n"
-        "   - Check error messages match requirements exactly\n"
-        "   - Verify validation logic handles edge cases (empty, incomplete, malformed)\n"
-        "   - Ensure correct exception types (TypeError vs ValueError, etc.)\n"
-        "3. EDGE CASES: empty input, single element, boundary values, special values\n"
-        "4. LOGIC: off-by-one errors, wrong comparisons, incorrect operators\n"
-        "5. ALGORITHM: does the approach correctly solve the problem?\n\n"
-        "Does this code handle ALL cases correctly, especially error conditions?"
+        f"Problem:\n{problem_statement[:6000]}\n{requirements_section}\n"
+        f"Code to review:\n```python\n{code}\n```\n\n"
+        "Review by mentally executing with these CONCRETE edge cases:\n\n"
+        "1. EMPTY INPUTS: What happens with empty string, empty list, None, etc?\n"
+        "2. SINGLE ELEMENT: What about the smallest valid input?\n"
+        "3. INCOMPLETE DATA: If input expects 3 parts but gets 1 or 2?\n"
+        "4. MALFORMED DATA: Wrong types, negative numbers, out of range?\n"
+        "5. BOUNDARY VALUES: Zero, maximum, minimum values?\n"
+        "6. ERROR CONDITIONS: Does each validation check catch what it should?\n"
+        "   - Are error messages EXACTLY as specified?\n"
+        "   - Are exception types correct?\n"
+        "   - Do validation conditions use correct comparisons (<, <=, ==, >, >=)?\n\n"
+        "Mentally trace through the code with each edge case above.\n"
+        "Does the code handle ALL of them correctly?"
     )
     
     review_messages = [
@@ -195,18 +196,18 @@ def _review_code(code: str, problem_statement: str, examples: str, run_id: str, 
     except Exception:
         pass
     
-    return True, code  # If review fails, approve current code
+    return True, code
 
 
 def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bool = False) -> str:
     """
     Entry point required by the evaluation harness.
     
-    Multi-model approach with error handling validation:
-    1. Try multiple models to generate solutions
-    2. Review with emphasis on error handling and edge cases
-    3. If review makes changes, do second validation pass
-    4. Return the best validated solution
+    Generates solution with concrete edge case validation:
+    1. Extract requirements from problem statement
+    2. Generate solution with emphasis on correctness
+    3. Review by mentally executing with concrete edge cases
+    4. Refine if issues found
     """
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
 
@@ -221,7 +222,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     if mode not in ("spec_only", "tests_available"):
         mode = "tests_available" if os.path.exists("tests.py") else "spec_only"
 
-    # Compact repository summary for context
+    # Compact repository summary
     parts: List[str] = []
     for name in ("main.py", "tests.py"):
         content = _read(name)
@@ -229,27 +230,27 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
     summary = "\n\n".join(parts)
 
-    # Extract examples from problem for validation
-    examples = _extract_examples_from_problem(problem_statement)
+    # Extract requirements (especially error handling requirements)
+    requirements = _extract_requirements_from_problem(problem_statement)
 
-    # System message emphasizing simplicity and correctness
+    # System message emphasizing correctness
     system_msg = (
         "You are a senior Python engineer who writes SIMPLE, CORRECT code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
-        + "CRITICAL: Write the SIMPLEST solution that correctly solves the problem.\n"
-        "Pay special attention to error handling and validation logic.\n"
+        + "Write the SIMPLEST solution that correctly handles ALL cases.\n"
+        "Pay careful attention to validation logic and edge cases.\n"
         "Return ONLY one code block:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Focus on correctness, clarity, and proper error handling."
+        "No prose."
     )
     
     user_msg = (
         f"Problem Statement:\n{problem_statement[:12000]}\n\n"
         f"Repository Summary:\n{summary}\n\n"
-        "Implement a complete, correct solution.\n"
-        "- Use the SIMPLEST approach that works\n"
-        "- Handle ALL edge cases correctly\n"
-        "- Implement precise error handling and validation\n"
-        "- Write clear, readable code"
+        "Implement a complete solution that:\n"
+        "- Uses simple, clear logic\n"
+        "- Handles ALL edge cases: empty, single element, incomplete, malformed, boundary values\n"
+        "- Implements precise validation with correct error conditions\n"
+        "- Follows all requirements exactly"
     )
 
     messages = [
@@ -259,7 +260,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
     best_code = ""
     
-    # Try up to 2 models to generate and validate solutions
+    # Try up to 2 models
     for attempt in range(min(2, len(AGENT_MODELS))):
         try:
             # Generate solution
@@ -270,31 +271,29 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                 continue
                 
             # Validate syntax
-            syntax_err = _validate_syntax(main_src)
-            if syntax_err:
+            if _validate_syntax(main_src):
                 continue
             
-            # Review and validate with emphasis on error handling
-            approved, reviewed_code = _review_code(main_src, problem_statement, examples, run_id, attempt)
+            # Review with concrete edge case validation
+            approved, reviewed_code = _review_code(main_src, problem_statement, requirements, run_id, attempt)
             
             if not approved and reviewed_code != main_src:
-                # Review made changes - do a second validation pass
+                # Review made changes - validate again with different model
                 second_approved, final_code = _review_code(
-                    reviewed_code, problem_statement, examples, run_id, 
+                    reviewed_code, problem_statement, requirements, run_id, 
                     (attempt + 1) % len(AGENT_MODELS)
                 )
                 best_code = final_code
             else:
                 best_code = reviewed_code
             
-            # If we have a validated solution, use it
             if best_code:
                 break
                 
         except Exception:
             continue
 
-    # Fallback: if no validated solution, try remaining models
+    # Fallback: try remaining models
     if not best_code:
         for attempt in range(2, len(AGENT_MODELS)):
             try:
