@@ -474,11 +474,24 @@ Examples:
    - **Look for constant definitions** at the top of main.py (e.g., `NODE, EDGE, ATTR = range(3)`)
    - **These constants identify different data types** in the input
    - **Each type usually has a specific structure**: (TYPE_CONSTANT, ...required args...)
-   - **Validation must check**:
-     1. Is the type constant valid/recognized?
-     2. Does the tuple have the right number of elements for that type?
-     3. Are the element types correct (str, dict, int, etc.)?
-   - **Read all examples in the spec** to understand the expected structure for each type
+   - **CRITICAL: Count arguments from examples to determine exact tuple length per type**
+     - Example: If spec shows (NODE, "a", dict) ? NODE tuples must have exactly 3 elements
+     - Example: If spec shows (EDGE, "a", "b", dict) ? EDGE tuples must have exactly 4 elements
+     - **Different types can have different lengths!** Don't use a single length check for all
+   - **Validation must check (in order)**:
+     1. Is the tuple empty or too short to even have a type? ? "Graph item incomplete"
+     2. Is the type constant valid/recognized? ? "Unknown item"  
+     3. Does the tuple have the RIGHT NUMBER of elements for THAT SPECIFIC type? ? "X is malformed"
+     4. Are the element types correct (str, dict, int, etc.)? ? "X is malformed"
+   - **Read ALL examples in the spec** to determine the expected length for EACH type
+   - **Use if/elif/else to handle each type separately** with its own length check
+   - **Example validation structure**:
+     ```python
+     if item[0] == TYPE_A:
+         if len(item) != 3: raise ValueError("Type A is malformed")
+     elif item[0] == TYPE_B:
+         if len(item) != 4: raise ValueError("Type B is malformed")
+     ```
 
 ### State management for classes:
 - **Validate preconditions** in all state-modifying methods
