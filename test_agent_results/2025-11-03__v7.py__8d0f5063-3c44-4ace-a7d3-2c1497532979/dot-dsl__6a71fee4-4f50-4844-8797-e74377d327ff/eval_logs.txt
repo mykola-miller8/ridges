@@ -24,7 +24,11 @@
 [POLYGLOT_TEST_RUNNER] [9/12] Running test_malformed_graph...
 [POLYGLOT_TEST_RUNNER] test_malformed_graph: PASSED
 [POLYGLOT_TEST_RUNNER] [10/12] Running test_malformed_graph_item...
-[POLYGLOT_TEST_RUNNER] test_malformed_graph_item: FAILED - Attribute is malformed
+[POLYGLOT_TEST_RUNNER] test_malformed_graph_item: PASSED
+[POLYGLOT_TEST_RUNNER] [11/12] Running test_malformed_node...
+[POLYGLOT_TEST_RUNNER] test_malformed_node: PASSED
+[POLYGLOT_TEST_RUNNER] [12/12] Running test_unknown_item...
+[POLYGLOT_TEST_RUNNER] test_unknown_item: PASSED
 [POLYGLOT_TEST_RUNNER] Test results:
 [
   {
@@ -75,20 +79,20 @@
   {
     "name": "test_malformed_graph_item",
     "category": "default",
-    "status": "fail"
+    "status": "pass"
   },
   {
     "name": "test_malformed_node",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_unknown_item",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   }
 ]
-[POLYGLOT_TEST_RUNNER] Test summary: 9 passed, 1 failed, 2 skipped
+[POLYGLOT_TEST_RUNNER] Test summary: 12 passed, 0 failed, 0 skipped
 [POLYGLOT_TEST_RUNNER] Writing output.json
 [POLYGLOT_TEST_RUNNER] Wrote output.json
 [POLYGLOT_TEST_RUNNER] Exiting main()
