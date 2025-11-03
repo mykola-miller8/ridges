@@ -1,0 +1,117 @@
+{
+    "evaluation_run_id": "826147df-b45f-46ff-a342-41745bd1b4b1",
+    "evaluation_id": "8a671506-8481-4dfd-8266-89d07d882060",
+    "problem_name": "grade-school",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,15 +1,36 @@\n-class School:\n-    def __init__(self):\n-        pass\n-\n-    def add_student(self, name: str, grade: int) -> None:\n-        pass\n-\n-    def roster(self) -> list[str]:\n-        pass\n-\n-    def grade(self, grade_number: int) -> list[str]:\n-        pass\n-\n-    def added(self) -> list[bool]:\n-        pass\n+class School:\n+    def __init__(self):\n+        self._roster = {}  # grade -> set of student names\n+        self._added_status = []  # track success/failure of each addition\n+        self._all_students = set()  # track all students to prevent duplicates\n+\n+    def add_student(self, name: str, grade: int) -> None:\n+        # Check if student already exists in any grade\n+        if name in self._all_students:\n+            self._added_status.append(False)\n+            return\n+        \n+        # Add student to the grade\n+        if grade not in self._roster:\n+            self._roster[grade] = set()\n+        \n+        self._roster[grade].add(name)\n+        self._all_students.add(name)\n+        self._added_status.append(True)\n+\n+    def roster(self) -> list[str]:\n+        # Return all students sorted by grade, then alphabetically\n+        result = []\n+        for grade in sorted(self._roster.keys()):\n+            students_in_grade = sorted(self._roster[grade])\n+            result.extend(students_in_grade)\n+        return result\n+\n+    def grade(self, grade_number: int) -> list[str]:\n+        # Return students in specific grade sorted alphabetically\n+        if grade_number in self._roster:\n+            return sorted(self._roster[grade_number])\n+        return []\n+\n+    def added(self) -> list[bool]:\n+        return self._added_status.copy()\n",
+    "test_results": [
+        {
+            "name": "test_add_a_student",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_adding_multiple_students_in_the_same_grade_in_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_adding_students_in_multiple_grades",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cannot_add_same_student_to_multiple_grades_in_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cannot_add_student_to_same_grade_in_the_roster_more_than_once",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_grade_is_empty_if_no_students_in_that_grade",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_grade_is_empty_if_no_students_in_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_students_in_the_same_grade_are_added_to_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_roster_is_empty_when_no_student_is_added",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_student_is_added_to_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_student_not_added_to_multiple_grades",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_student_not_added_to_multiple_grades_in_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_student_not_added_to_other_grade_for_multiple_grades",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_student_not_added_to_same_grade_in_the_roster_more_than_once",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_student_not_added_to_same_grade_more_than_once",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_students_are_sorted_by_grades_and_then_by_name_in_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_students_are_sorted_by_grades_in_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_students_are_sorted_by_name_in_a_grade",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_students_are_sorted_by_name_in_the_roster",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_students_in_multiple_grades_are_added_to_the_roster",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T19:13:08.847673",
+    "started_initializing_agent_at": "2025-11-03T19:13:08.847777",
+    "started_running_agent_at": "2025-11-03T19:13:09.182600",
+    "started_initializing_eval_at": "2025-11-03T19:13:24.143942",
+    "started_running_eval_at": "2025-11-03T19:13:24.458443",
+    "finished_or_errored_at": "2025-11-03T19:13:24.717522"
+}
