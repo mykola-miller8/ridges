@@ -221,10 +221,13 @@ Write a complete, correct implementation following these critical rules:
    - For completion/validation checks: ensure conditions cover ALL cases
    - Avoid duplicate or conflicting state (e.g., tracking same info in 2+ variables)
 
-4. **Input Validation in State-Modifying Methods**: Methods that change state must validate preconditions!
+4. **Input Validation in State-Modifying Methods**: Methods that change state must validate ALL preconditions!
    - Before modifying state, check: Is this operation allowed right now?
    - For methods like roll(), add(), push(): Validate the object's current state permits the operation
    - Common validations: Is operation complete? Is limit reached? Is state valid for this action?
+   - **Context-dependent validation**: Sometimes validity depends on previous actions, not just current state
+     * Example: In special cases, an input may be valid only if previous inputs had certain properties
+     * Check constraints that involve relationships between current and prior values
    - Raise appropriate exceptions with clear messages when validation fails
    - Example: A game's roll() should check if game is already finished
 
