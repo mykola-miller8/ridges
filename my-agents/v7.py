@@ -1,5 +1,5 @@
 """
-Generic Python code-solving agent with validation and self-correction.
+Generic Python code-solving agent with validation and self-review.
 
 Entry point: agent_main(input_dict, repo_dir='repo', test_mode=False) -> str
 Returns a unified diff patch for main.py.
@@ -178,15 +178,16 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # Construct system prompt emphasizing correctness
+    # Construct system prompt emphasizing correctness and edge cases
     system_msg = (
-        "You are an expert Python engineer. Write clean, correct, and complete code.\n\n"
+        "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
         "CRITICAL REQUIREMENTS:\n"
-        "- Implement ALL required methods/functions from the skeleton\n"
-        "- Handle ALL edge cases mentioned in the problem statement\n"
-        "- Use proper state management for stateful problems\n"
-        "- Validate inputs and raise exceptions with meaningful messages as required\n"
-        "- Write deterministic code with no infinite loops\n"
+        "- Read the problem statement CAREFULLY, especially special cases and boundary conditions\n"
+        "- Implement ALL required methods/functions with complete logic\n"
+        "- Pay close attention to state management and state transitions\n"
+        "- Handle ALL edge cases, corner cases, and special scenarios mentioned\n"
+        "- Validate inputs rigorously and raise exceptions with meaningful messages\n"
+        "- Write deterministic code with no infinite loops or undefined behavior\n"
         "- Do NOT modify tests.py if present\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
@@ -198,7 +199,8 @@ def agent_main(
     user_msg = (
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
-        "Implement a complete, correct solution that passes all tests."
+        "Implement a complete, correct solution. "
+        "Pay special attention to any special cases, boundary conditions, or state transitions described."
     )
 
     messages = [
@@ -206,11 +208,12 @@ def agent_main(
         {"role": "user", "content": user_msg},
     ]
 
-    # Try multiple models with validation and self-correction
-    max_attempts = len(AGENT_MODELS) * 2  # Allow 2 passes through all models
+    # Try generate-review-refine cycle with multiple models
+    max_attempts = len(AGENT_MODELS) * 2
     
     for attempt in range(max_attempts):
         try:
+            # Step 1: Generate initial code
             response = _call_llm(messages, run_id, attempt, 300)
             code_blocks = _extract_code_blocks(response)
             
@@ -218,22 +221,61 @@ def agent_main(
                 # Validate syntax
                 is_valid, error_msg = _validate_syntax(code)
                 
-                if is_valid:
-                    # Syntax valid, return the patch
-                    return _build_single_file_patch("main.py", code)
-                else:
-                    # Syntax invalid, add error feedback and retry
+                if not is_valid:
+                    # Syntax error - add feedback and retry
                     if attempt < max_attempts - 1:
                         messages.append({"role": "assistant", "content": response})
                         messages.append({
                             "role": "user",
                             "content": (
-                                f"The code has a syntax error: {error_msg}\n\n"
-                                "Please fix the syntax error and return the corrected code.\n"
-                                "Format: ```python\\n# main.py\\n[complete corrected code]\\n```"
+                                f"Syntax error: {error_msg}\n\n"
+                                "Fix the syntax and return corrected code.\n"
+                                "Format: ```python\\n# main.py\\n[corrected code]\\n```"
                             )
                         })
-                        break  # Break inner loop to retry with feedback
+                        break
+                    continue
+                
+                # Step 2: Self-review for logic and edge cases
+                # Only do review on first few attempts to save time
+                if attempt < len(AGENT_MODELS):
+                    review_messages = [
+                        {"role": "system", "content": (
+                            "You are a code reviewer. Review the following code for correctness.\n"
+                            "Check if it handles ALL requirements, edge cases, and special conditions.\n"
+                            "Respond with 'APPROVED' if the code is correct, or describe specific issues."
+                        )},
+                        {"role": "user", "content": (
+                            f"# Problem Statement\n{problem_statement[:15000]}\n\n"
+                            f"# Proposed Code\n```python\n{code}\n```\n\n"
+                            "Does this code correctly handle all requirements and edge cases? "
+                            "Check especially for: state management, boundary conditions, special cases, "
+                            "input validation, and exception handling."
+                        )}
+                    ]
+                    
+                    try:
+                        review_response = _call_llm(review_messages, run_id, attempt, 120)
+                        
+                        # If review finds issues, ask for refinement
+                        if review_response and "APPROVED" not in review_response.upper():
+                            if attempt < max_attempts - 1:
+                                messages.append({"role": "assistant", "content": response})
+                                messages.append({
+                                    "role": "user",
+                                    "content": (
+                                        f"Code review identified issues:\n{review_response}\n\n"
+                                        "Revise the code to address these issues.\n"
+                                        "Format: ```python\\n# main.py\\n[revised code]\\n```"
+                                    )
+                                })
+                                break  # Retry with feedback
+                    except Exception:
+                        # Review failed, but code is syntactically valid, so accept it
+                        pass
+                
+                # Code is syntactically valid and passed review (or review skipped)
+                return _build_single_file_patch("main.py", code)
             
         except Exception:
             # LLM call failed, try next model
