@@ -107,6 +107,7 @@ class CursorAPIClient:
         
         if branch_name:
             payload["target"]["branchName"] = branch_name
+            payload["source"]["ref"] = branch_name
         
         resp = requests.post(url, headers=self._headers(), json=payload, timeout=60)
         
@@ -173,6 +174,9 @@ class CursorAPIClient:
             failed_statuses = ["failed", "error", "cancelled"]
         
         for poll_num in range(max_polls):
+            # Wait-first: sleep before checking status each iteration
+            time.sleep(poll_interval)
+            
             status_data = self.get_agent_status(agent_id)
             print(f"[POLL] Agent status: {status_data}")
             status = status_data.get("status") or status_data.get("state")
@@ -186,9 +190,6 @@ class CursorAPIClient:
             if status in failed_statuses:
                 error_msg = status_data.get("error") or status_data.get("message") or "Unknown error"
                 raise RuntimeError(f"Agent failed with status '{status}': {error_msg}")
-            
-            if poll_num < max_polls - 1:
-                time.sleep(poll_interval)
         
         raise TimeoutError(
             f"Agent did not complete within {max_polls * poll_interval} seconds"
@@ -289,7 +290,7 @@ class CursorAPIClient:
         repository: Optional[str] = None,
         branch_name: Optional[str] = None,
         skip_reviewer_request: bool = True,
-        auto_create_pr: bool = False,
+        auto_create_pr: bool = True,
         max_polls: int = 60,
         poll_interval: int = 5,
         status_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
