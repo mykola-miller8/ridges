@@ -436,9 +436,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 **Implement special cases EXPLICITLY - don't assume a uniform loop will handle them!**
 
 Examples:
-- "The 10th frame is special" ? Handle frame 10 separately with different logic
-- "Except for the last element" ? Process n-1 items in loop, then handle last specially
-- "Bonus rolls if spare/strike" ? Add conditional logic after main processing
+- "The 10th frame is special" → Handle frame 10 separately with different logic
+- "Except for the last element" → Process n-1 items in loop, then handle last specially
+- "Bonus rolls if spare/strike" → Add conditional logic after main processing
 
 ## 4. INPUT VALIDATION AND ERROR HANDLING
 **Many problems require strict input validation with specific error types and messages.**
@@ -475,23 +475,27 @@ Examples:
    - **These constants identify different data types** in the input
    - **Each type usually has a specific structure**: (TYPE_CONSTANT, ...required args...)
    - **CRITICAL: Count arguments from examples to determine exact tuple length per type**
-     - Example: If spec shows (NODE, "a", dict) ? NODE tuples must have exactly 3 elements
-     - Example: If spec shows (EDGE, "a", "b", dict) ? EDGE tuples must have exactly 4 elements
+     - Example: If spec shows (NODE, "a", dict) → NODE tuples must have exactly 3 elements
+     - Example: If spec shows (EDGE, "a", "b", dict) → EDGE tuples must have exactly 4 elements
      - **Different types can have different lengths!** Don't use a single length check for all
    - **Validation must check (in order)**:
-     1. Is the tuple empty or too short to even have a type? ? "Graph item incomplete"
-     2. Is the type constant valid/recognized? ? "Unknown item"  
-     3. Does the tuple have the RIGHT NUMBER of elements for THAT SPECIFIC type? ? "X is malformed"
-     4. Are the element types correct (str, dict, int, etc.)? ? "X is malformed"
+     1. Is the tuple empty or too short to even have a type? → "Graph item incomplete"
+     2. Is the type constant valid/recognized? → "Unknown item"  
+     3. Does the tuple have **EXACTLY** the right number of elements? Use `len(item) != expected` not `<` or `>`
+        - Catches BOTH too few AND too many elements → "X is malformed"
+     4. Are the element types correct (str, dict, int, etc.)? → "X is malformed"
    - **Read ALL examples in the spec** to determine the expected length for EACH type
-   - **Use if/elif/else to handle each type separately** with its own length check
+   - **Use if/elif/else to handle each type separately** with its own length AND type checks
    - **Example validation structure**:
      ```python
      if item[0] == TYPE_A:
          if len(item) != 3: raise ValueError("Type A is malformed")
+         if not isinstance(item[1], str): raise ValueError("Type A is malformed")
      elif item[0] == TYPE_B:
          if len(item) != 4: raise ValueError("Type B is malformed")
+         if not isinstance(item[1], str): raise ValueError("Type B is malformed")
      ```
+   - **CRITICAL**: Use `!=` for length check (catches too many AND too few), then validate each element type
 
 ### State management for classes:
 - **Validate preconditions** in all state-modifying methods
