@@ -422,20 +422,36 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
             )
             
             # After follow-up completes, checkout agent file from target_branch and apply it
-            print(f"[CHECKOUT] Follow-up completed; checking out {AGENT_PATH} from branch '{TARGET_BRANCH}'...")
+            print(f"[CHECKOUT] Follow-up completed; fetching and checking out {AGENT_PATH} from branch '{TARGET_BRANCH}'...")
             try:
-                agent_rel_path = os.path.relpath(AGENT_PATH, ROOT)
-                result = subprocess.run(
-                    ["git", "show", f"{TARGET_BRANCH}:{agent_rel_path}"],
+                # First fetch to get latest remote branches
+                fetch_result = subprocess.run(
+                    ["git", "fetch", "origin"],
                     cwd=ROOT,
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=False
                 )
+                if fetch_result.returncode != 0:
+                    print(f"[WARN] Failed to fetch from origin: {fetch_result.stderr}")
+                
+                # Get the file from remote branch
+                agent_rel_path = os.path.relpath(AGENT_PATH, ROOT)
+                result = subprocess.run(
+                    ["git", "show", f"origin/{TARGET_BRANCH}:{agent_rel_path}"],
+                    cwd=ROOT,
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                
+                if result.returncode != 0:
+                    print(f"[WARN] Failed to checkout from branch 'origin/{TARGET_BRANCH}'")
+                    if result.stderr:
+                        print(f"[WARN] Error details: {result.stderr}")
+                    break
+                
                 proposal = result.stdout
-            except subprocess.CalledProcessError as e:
-                print(f"[WARN] Failed to checkout from branch '{TARGET_BRANCH}': {e}; stopping evolution for this problem")
-                break
             except Exception as e:
                 print(f"[WARN] Error during checkout: {e}; stopping evolution for this problem")
                 break
