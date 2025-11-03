@@ -356,6 +356,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "- If error messages are specified, use them VERBATIM (exact wording)\n"
         "- If validation is required, implement ALL validation cases completely\n"
         "- For sequential inputs: implement ALL dependent validation rules (input N based on input N-1)\n"
+        "- IMPORTANT: Watch for phase boundaries where constraints RESET (keywords: 'new', 'fresh', 'bonus')\n"
         "- Pay attention to type signatures, constants, and structure definitions\n"
         + ("- IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
         + "\nReturn your solution in this exact format:\n"
@@ -494,7 +495,19 @@ Examples:
    - **Cumulative limits**: "Sum of X and Y cannot exceed Z"
    - **Conditional rules**: "If previous input was A, current can only be B or C"
 
-3. **Implementation pattern**:
+3. **CRITICAL: Recognize constraint resets (phases/boundaries)**:
+   Many problems have "phases" where dependent constraints RESET:
+   - **Keywords to watch for**: "new", "fresh", "reset", "bonus", "extra", "next set", "another chance"
+   - **Example patterns**:
+     - "After a strike, you get fresh pins" ? Constraint resets, new phase begins
+     - "Bonus rounds with new resources" ? New phase, don't carry over limits from previous phase
+     - "Each section is independent" ? No dependency across section boundaries
+   - **Implementation**: Track which "phase" or "context" you're in
+     - Cumulative constraints apply WITHIN a phase
+     - Constraints RESET at phase boundaries
+     - Don't incorrectly apply cross-phase constraints
+
+4. **Implementation pattern**:
    ```python
    def accept_input(self, value):
        # 1. Basic validation (type, range)
@@ -505,34 +518,40 @@ Examples:
        if self.is_complete:
            raise Exception("Cannot accept more input")
        
-       # 3. DEPENDENT VALIDATION - check against previous inputs
-       if self.previous_value is not None:
-           # Example: remaining capacity constraint
+       # 3. DEPENDENT VALIDATION - but check if constraints apply
+       # Only apply cumulative constraints WITHIN the same phase
+       if self.in_same_phase() and self.previous_value is not None:
+           # Example: remaining capacity constraint (SAME phase only!)
            if value + self.previous_value > 10:
                raise Exception("Exceeds limit")
-           # Example: conditional constraint  
+       
+       # 4. Conditional constraint (may span phases depending on rules)
+       if self.previous_value is not None:
            if self.previous_value < 10 and value == 10:
-               # Special rule based on previous input
+               # Check if this rule applies across phase boundaries
                raise Exception("Not allowed after non-max value")
    ```
 
-4. **How to find these rules in the spec**:
+5. **How to find these rules in the spec**:
    - Read the ENTIRE spec 2-3 times carefully
    - Look for sections on "validation", "constraints", "rules", "exceptions"
    - Look for phrases: "cannot", "must not", "only if", "unless", "depends on"
+   - **Also look for resets**: "new", "fresh", "bonus", "extra", "independent"
    - Check all test scenarios - they often reveal subtle constraints
    - **Don't assume simple rules** - complex problems often have special cases
 
-5. **Common scenarios**:
-   - **Game scoring with multiple rounds**: Later rounds may have special rules
+6. **Common scenarios**:
+   - **Game scoring with multiple rounds**: Later rounds may have special rules AND phase boundaries
    - **Parsers with state**: What's valid depends on what was parsed before
    - **Resource allocation**: Can't allocate more than remaining capacity
    - **Sequential construction**: Each piece must be compatible with previous pieces
+   - **Bonus/extra attempts**: Often get fresh resources, constraints reset
 
 **CRITICAL: Test your validation mentally**
 For each input-accepting method:
 - "What are ALL the ways this input could be invalid?"
 - "Does validity depend on previous inputs? If so, what are ALL those rules?"
+- "Are there phases/boundaries where constraints reset?"
 - "Are there special cases for the first/last input?"
 - "Did I implement EVERY constraint mentioned in the spec?"
 
@@ -585,6 +604,11 @@ For each input-accepting method:
 - **Avoid state redundancy**: Don't track the same information multiple ways
 
 ## 5. COMMON PITFALLS TO AVOID
+- **Dependent validation without recognizing resets**: 
+  - **CRITICAL**: Don't apply cumulative constraints across phase boundaries
+  - Look for keywords: "new", "fresh", "bonus", "extra", "reset"
+  - Example: "After a strike, you get fresh pins" means pin count constraints reset
+  - Track which phase/context you're in; only apply cumulative constraints within the same phase
 - **Off-by-one errors**: Double-check loop bounds and index arithmetic
   - Is it `range(n)` or `range(n+1)`?
   - Is frame 10 at index 9 or 10?
@@ -630,6 +654,8 @@ Before submitting, mentally trace through your code:
 6. **For sequential input problems**: Did I implement ALL dependent validation rules?
    - Does input N check constraints based on input N-1?
    - Are there cumulative constraints (sum, capacity, etc.)?
+   - **Did I identify phase boundaries where constraints reset?** (look for "new", "fresh", "bonus")
+   - Are cumulative constraints only applied WITHIN a phase, not across phases?
    - Did I handle special rules for first/last inputs?
 7. Did I use the minimum state needed?
 8. Can I explain the logic in 2-3 simple sentences?
