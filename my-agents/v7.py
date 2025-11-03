@@ -449,6 +449,20 @@ for item in data:
 - Look for keywords: "raise", "exception", "error message", "must", "cannot"
 - Tests verify both exception type AND exact message text
 
+### For custom exceptions:
+- **CRITICAL**: Custom exception classes must call `super().__init__(message)` in `__init__`
+- Without this, `exception.args[0]` will be undefined and cause IndexError in tests
+- **Example of CORRECT custom exception**:
+  ```python
+  class CustomError(Exception):
+      def __init__(self, message):
+          super().__init__(message)  # REQUIRED!
+          # Optional: self.message = message
+  ```
+- **Simpler alternative**: Just use `class CustomError(Exception): pass` (no custom __init__)
+- **DO NOT** implement `__init__` without calling `super().__init__(message)`
+- Even if spec shows broken exception code, fix it to call super().__init__()
+
 ## 1. SIMPLICITY + CORRECTNESS = SUCCESS
 **Get the basic logic working correctly with minimum complexity.**
 
