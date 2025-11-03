@@ -1,16 +1,16 @@
 {
-    "evaluation_run_id": "59607637-6a9a-4ada-aa6d-bb9511ddac81",
-    "evaluation_id": "607bbf81-2b97-4c33-92b7-a4cb3067b3cb",
+    "evaluation_run_id": "35594e17-8f93-4eca-b2df-2bad6e165b3b",
+    "evaluation_id": "fa69d1db-36de-4599-a9e6-7ba5d38ed114",
     "problem_name": "react",
     "status": "error",
     "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,18 +1,56 @@\n-from typing import Callable\n-\n-\n-class InputCell:\n-    def __init__(self, initial_value: int):\n-        self.value = None\n-\n-\n-class ComputeCell:\n-    def __init__(self, inputs: list, compute_function: Callable):\n-        self.value = None\n-\n-    def add_callback(self, callback: Callable) -> None:\n-        pass\n-\n-    def remove_callback(self, callback: Callable) -> None:\n-        pass\n-    \n+from typing import Callable, List\n+\n+\n+class InputCell:\n+    def __init__(self, initial_value: int):\n+        self._value = initial_value\n+        self._observers = []\n+\n+    @property\n+    def value(self) -> int:\n+        return self._value\n+\n+    @value.setter\n+    def value(self, new_value: int):\n+        if self._value != new_value:\n+            self._value = new_value\n+            self._notify_observers()\n+\n+    def _notify_observers(self):\n+        for observer in self._observers:\n+            observer._update()\n+\n+\n+class ComputeCell:\n+    def __init__(self, inputs: List[InputCell], compute_function: Callable):\n+        self._inputs = inputs\n+        self._compute_function = compute_function\n+        self._callbacks = []\n+        self._value = self._compute_function([input_cell.value for input_cell in self._inputs])\n+        self._previous_value = self._value\n+        \n+        # Register this compute cell as an observer of its input cells\n+        for input_cell in self._inputs:\n+            input_cell._observers.append(self)\n+\n+    @property\n+    def value(self) -> int:\n+        return self._value\n+\n+    def _update(self):\n+        \"\"\"Recompute the value and notify observers if it changed.\"\"\"\n+        self._previous_value = self._value\n+        self._value = self._compute_function([input_cell.value for input_cell in self._inputs])\n+        \n+        if self._value != self._previous_value:\n+            for callback in self._callbacks:\n+                callback(self._value)\n+\n+    def add_callback(self, callback: Callable) -> None:\n+        \"\"\"Add a callback to be called when the cell's value changes.\"\"\"\n+        self._callbacks.append(callback)\n+\n+    def remove_callback(self, callback: Callable) -> None:\n+        \"\"\"Remove a previously added callback.\"\"\"\n+        if callback in self._callbacks:\n+            self._callbacks.remove(callback)\n",
     "test_results": null,
     "error_code": 1040,
     "error_message": "The agent returned an invalid patch: error: patch failed: main.py:1\nerror: main.py: patch does not apply",
-    "created_at": "2025-11-03T19:41:52.215007",
-    "started_initializing_agent_at": "2025-11-03T19:41:52.215093",
-    "started_running_agent_at": "2025-11-03T19:41:52.545248",
-    "started_initializing_eval_at": "2025-11-03T19:42:00.032070",
+    "created_at": "2025-11-03T19:42:52.990346",
+    "started_initializing_agent_at": "2025-11-03T19:42:52.990467",
+    "started_running_agent_at": "2025-11-03T19:42:53.343242",
+    "started_initializing_eval_at": "2025-11-03T19:43:01.014823",
     "started_running_eval_at": null,
-    "finished_or_errored_at": "2025-11-03T19:42:00.060682"
+    "finished_or_errored_at": "2025-11-03T19:43:01.051715"
 }
