@@ -8,13 +8,7 @@
 [POLYGLOT_TEST_RUNNER] [1/31] Running test_a_roll_cannot_score_more_than_10_points...
 [POLYGLOT_TEST_RUNNER] test_a_roll_cannot_score_more_than_10_points: PASSED
 [POLYGLOT_TEST_RUNNER] [2/31] Running test_a_spare_followed_by_zeros_is_worth_ten_points...
-[POLYGLOT_TEST_RUNNER] test_a_spare_followed_by_zeros_is_worth_ten_points: PASSED
-[POLYGLOT_TEST_RUNNER] [3/31] Running test_a_spare_in_the_last_frame_gets_a_one_roll_bonus_that_is_counted_once...
-[POLYGLOT_TEST_RUNNER] test_a_spare_in_the_last_frame_gets_a_one_roll_bonus_that_is_counted_once: PASSED
-[POLYGLOT_TEST_RUNNER] [4/31] Running test_a_strike_earns_ten_points_in_a_frame_with_a_single_roll...
-[POLYGLOT_TEST_RUNNER] test_a_strike_earns_ten_points_in_a_frame_with_a_single_roll: PASSED
-[POLYGLOT_TEST_RUNNER] [5/31] Running test_a_strike_in_the_last_frame_gets_a_two_roll_bonus_that_is_counted_once...
-[POLYGLOT_TEST_RUNNER] test_a_strike_in_the_last_frame_gets_a_two_roll_bonus_that_is_counted_once: FAILED - Pin count exceeds pins on the lane
+[POLYGLOT_TEST_RUNNER] test_a_spare_followed_by_zeros_is_worth_ten_points: FAILED - Score cannot be taken until the end of the game
 [POLYGLOT_TEST_RUNNER] Test results:
 [
   {
@@ -25,22 +19,22 @@
   {
     "name": "test_a_spare_followed_by_zeros_is_worth_ten_points",
     "category": "default",
-    "status": "pass"
+    "status": "fail"
   },
   {
     "name": "test_a_spare_in_the_last_frame_gets_a_one_roll_bonus_that_is_counted_once",
     "category": "default",
-    "status": "pass"
+    "status": "skip"
   },
   {
     "name": "test_a_strike_earns_ten_points_in_a_frame_with_a_single_roll",
     "category": "default",
-    "status": "pass"
+    "status": "skip"
   },
   {
     "name": "test_a_strike_in_the_last_frame_gets_a_two_roll_bonus_that_is_counted_once",
     "category": "default",
-    "status": "fail"
+    "status": "skip"
   },
   {
     "name": "test_a_strike_with_the_one_roll_bonus_after_a_spare_in_the_last_frame_does_not_get_a_bonus",
@@ -173,7 +167,7 @@
     "status": "skip"
   }
 ]
-[POLYGLOT_TEST_RUNNER] Test summary: 4 passed, 1 failed, 26 skipped
+[POLYGLOT_TEST_RUNNER] Test summary: 1 passed, 1 failed, 29 skipped
 [POLYGLOT_TEST_RUNNER] Writing output.json
 [POLYGLOT_TEST_RUNNER] Wrote output.json
 [POLYGLOT_TEST_RUNNER] Exiting main()
