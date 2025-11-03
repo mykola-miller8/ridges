@@ -167,53 +167,46 @@ def agent_main(
 
     problem_statement = (input_dict or {}).get("problem_statement", "") or ""
 
-    # Build context from available files
-    parts: List[str] = []
-    for name in ("main.py", "tests.py"):
-        content = _read(name)
-        if content:
-            parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
-    repo_summary = "\n\n".join(parts)
+    # Build context from available files (main.py only - tests.py not available at runtime)
+    main_py_content = _read("main.py")
+    repo_summary = ""
+    if main_py_content:
+        repo_summary = f"### main.py (skeleton)\n```python\n{main_py_content[:10000]}\n```"
 
-    # System prompt with emphasis on correctness through example verification
+    # Generic system prompt for diverse problem types
     system_msg = (
-        "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
+        "You are an expert Python engineer who writes correct, production-ready code.\n\n"
         "APPROACH:\n"
-        "1. Read the entire problem carefully, including all examples\n"
-        "2. Study EACH example to understand the required logic:\n"
-        "   - What is the input format?\n"
-        "   - What output is expected and why?\n"
-        "   - Trace through the logic to see how input becomes output\n"
-        "3. Design your algorithm:\n"
-        "   - Choose appropriate data structures\n"
-        "   - For graphs/grids: plan traversal strategy (BFS/DFS)\n"
-        "   - For spatial problems: model coordinates and neighbor relationships precisely\n"
-        "   - For parsing: handle the exact input format including whitespace\n"
-        "4. Before coding, mentally trace through at least 2 examples to verify your approach\n"
-        "5. Implement complete, working code with all methods fully implemented\n"
-        "6. After coding, mentally verify it works for ALL examples\n\n"
-        "CRITICAL REQUIREMENTS:\n"
-        "- Implement ALL methods completely (never leave empty or with just 'pass')\n"
-        "- Parse input formats exactly as specified (handle whitespace, newlines, structure)\n"
-        "- For graph/grid problems:\n"
-        "  * Calculate neighbor relationships correctly (consider offsets for hex/irregular grids)\n"
-        "  * Use proper BFS/DFS with correct visited tracking\n"
-        "  * Ensure traversal explores ALL valid neighbors\n"
-        "  * Handle boundary conditions correctly\n"
-        "- For spatial problems: be precise with coordinate calculations (no off-by-one errors)\n"
-        "- Handle all edge cases (empty inputs, boundaries, single elements, complex paths)\n"
-        "- Implement validation rules and raise exceptions as needed\n"
-        "- Test your logic mentally against ALL provided examples before finalizing\n\n"
-        "VERIFICATION:\n"
-        "- For problems with examples, mentally walk through EACH example:\n"
-        "  * Simple examples (empty, single element, basic cases)\n"
-        "  * Complex examples (convoluted paths, edge cases, tricky scenarios)\n"
-        "- For each example, trace step-by-step:\n"
-        "  * How is input parsed?\n"
-        "  * What does the algorithm do?\n"
-        "  * What output is produced?\n"
-        "  * Does it match expected output?\n"
-        "- If any example fails your mental test, revise your algorithm\n\n"
+        "1. Read the problem statement carefully, understanding:\n"
+        "   - The core requirements and functionality needed\n"
+        "   - Input/output specifications and formats\n"
+        "   - All examples provided (what they demonstrate)\n"
+        "   - Edge cases and validation rules\n"
+        "   - Any exceptions that must be raised\n\n"
+        "2. Analyze the problem type and choose appropriate approach:\n"
+        "   - State management: Track state across method calls correctly\n"
+        "   - Algorithms: Choose efficient data structures (lists, dicts, sets, deques)\n"
+        "   - Parsing: Handle input format precisely (whitespace, newlines, delimiters)\n"
+        "   - Validation: Check inputs and raise exceptions with meaningful messages\n"
+        "   - Business logic: Implement all rules and special cases exactly as specified\n\n"
+        "3. Trace through examples mentally:\n"
+        "   - For EACH example, walk through your logic step-by-step\n"
+        "   - Verify the output matches expectations\n"
+        "   - Check edge cases (empty inputs, boundaries, special states)\n\n"
+        "4. Implementation requirements:\n"
+        "   - Implement ALL methods completely (never leave empty or with just 'pass')\n"
+        "   - Initialize state properly in __init__ methods\n"
+        "   - Handle all validation (raise exceptions with messages as required)\n"
+        "   - Parse inputs exactly as specified\n"
+        "   - Implement all business rules and special cases\n"
+        "   - Use appropriate data structures for efficiency\n"
+        "   - Handle edge cases (empty, boundary, invalid inputs)\n\n"
+        "COMMON PATTERNS:\n"
+        "- Classes with state: Initialize instance variables in __init__, update in methods\n"
+        "- Validation: Check constraints and raise ValueError/Exception with clear messages\n"
+        "- Parsing: Use split(), strip(), int() carefully for the exact format\n"
+        "- Algorithms: Consider BFS/DFS for graphs, dynamic programming for optimization\n"
+        "- Edge cases: Test mentally with empty, single element, maximum, invalid inputs\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
         "Start with '# main.py' as the first line.\n"
@@ -225,11 +218,12 @@ def agent_main(
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
         "Implement a complete, correct solution that:\n"
-        "- Handles ALL examples correctly (trace through each one)\n"
-        "- Implements all methods fully (no empty implementations)\n"
-        "- Handles all edge cases including complex scenarios\n"
-        "- Uses appropriate algorithms and data structures\n"
-        "- Gets spatial/neighbor relationships exactly right for grid problems"
+        "1. Implements all methods fully (no empty bodies)\n"
+        "2. Initializes and manages state correctly\n"
+        "3. Handles all validation and raises exceptions as specified\n"
+        "4. Parses inputs in the exact format required\n"
+        "5. Implements all business logic and special cases\n"
+        "6. Works correctly for all examples and edge cases"
     )
 
     messages = [
@@ -269,46 +263,53 @@ def agent_main(
                 try:
                     tree = ast.parse(code)
                     has_empty_methods = False
+                    empty_method_names: List[str] = []
+                    
                     for node in ast.walk(tree):
                         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                            # Check if function body is just 'pass'
+                            # Check if function body is just 'pass' or empty
                             if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                                 has_empty_methods = True
-                                break
+                                empty_method_names.append(node.name)
                     
                     if has_empty_methods:
                         if attempt < max_attempts - 1:
                             messages.append({"role": "assistant", "content": response})
+                            methods_str = ", ".join(empty_method_names[:5])
                             messages.append({
                                 "role": "user",
                                 "content": (
-                                    "The code has empty method bodies. Implement ALL methods with complete logic.\n"
+                                    f"The code has empty method bodies: {methods_str}\n"
+                                    "Implement ALL methods with complete logic based on the problem requirements.\n"
                                     "Format: ```python\\n# main.py\\n[complete implementation]\\n```"
                                 )
                             })
                             break
+                        continue
                 except Exception:
                     pass
                 
-                # Step 2: Self-review with emphasis on testing examples
+                # Step 2: Self-review with emphasis on correctness
                 if attempt < len(AGENT_MODELS):
                     review_messages = [
                         {"role": "system", "content": (
-                            "You are a meticulous code reviewer who verifies correctness by tracing through examples."
+                            "You are a meticulous code reviewer who verifies correctness."
                         )},
                         {"role": "user", "content": (
                             f"# Problem\n{problem_statement[:15000]}\n\n"
                             f"# Code\n```python\n{code}\n```\n\n"
-                            "Review this code by:\n"
-                            "1. Checking all methods are fully implemented\n"
-                            "2. Verifying input parsing handles the format correctly\n"
-                            "3. For graphs/grids: checking neighbor calculations and traversal logic\n"
-                            "4. MOST IMPORTANT: Trace through examples (including complex ones):\n"
-                            "   - Pick a simple example and walk through the code step-by-step\n"
-                            "   - Pick a complex example (convoluted path, large input) and trace it\n"
-                            "   - Does the code produce correct output for both?\n"
-                            "5. Checking edge cases are handled\n\n"
-                            "Reply 'APPROVED' if correct for all examples, or list specific issues."
+                            "Review this code by checking:\n"
+                            "1. All methods are fully implemented (no empty bodies)\n"
+                            "2. State is initialized and managed correctly\n"
+                            "3. Input parsing handles the exact format specified\n"
+                            "4. All validation rules are implemented (exceptions raised as needed)\n"
+                            "5. Business logic matches all requirements and special cases\n"
+                            "6. Examples work correctly:\n"
+                            "   - Trace through at least one simple example\n"
+                            "   - Trace through at least one complex example\n"
+                            "   - Does the code produce correct results?\n"
+                            "7. Edge cases are handled (empty, boundary, invalid inputs)\n\n"
+                            "Reply 'APPROVED' if correct for all cases, or list specific issues found."
                         )}
                     ]
                     
@@ -322,8 +323,11 @@ def agent_main(
                                     "role": "user",
                                     "content": (
                                         f"Review found issues:\n{review_response}\n\n"
-                                        "Fix all issues, ensuring the code works for ALL examples "
-                                        "(especially complex ones). Return corrected code.\n"
+                                        "Fix all issues. Ensure the code:\n"
+                                        "- Implements all logic completely\n"
+                                        "- Handles all examples and edge cases correctly\n"
+                                        "- Follows all requirements and special rules\n"
+                                        "Return corrected code.\n"
                                         "Format: ```python\\n# main.py\\n[corrected code]\\n```"
                                     )
                                 })
