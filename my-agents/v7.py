@@ -413,6 +413,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 - Look for keywords: "special", "except", "however", "but", "otherwise", "bonus", "final"
 - **Implement special cases EXPLICITLY** - don't assume a loop handles them
 - Example: "The 10th frame is special" → implement frame 10 separately
+- **Visual layouts with indentation/spacing**: Often encode structure (e.g., hex grids, trees)
+  - Don't ignore the visual formatting - it's usually meaningful
+  - If examples show increasing indentation per row → likely a hex/offset grid
 
 ## 2. VALIDATION (AFTER CORE LOGIC WORKS)
 **Add validation AFTER the basic functionality is correct.**
@@ -468,7 +471,13 @@ if self.in_same_phase() and self.previous_value:
 - **Off-by-one errors**: Check loop bounds and index arithmetic
 - **Loop safety**: In `while` loops with `continue`, increment BEFORE continue
 - **Return types**: `list[str]` = one line per element (no embedded `\n`)
-- **Grid adjacency**: Don't assume 4-way/8-way - verify with examples
+- **Hex/offset grids - CRITICAL for connectivity problems**:
+  - **Indentation encodes adjacency**: If rows have increasing indentation, it's likely a hex grid
+  - **Hex grids have 6 neighbors** (not 4 or 8) - diagonals typically NOT valid
+  - **Parsing strategy**: Remove leading spaces from each row, track the offset per row
+  - **Adjacency depends on row offset**: For offset grids, neighbors differ by row (even vs odd)
+  - **MUST test adjacency with examples**: Pick a cell in the middle, manually verify its neighbors match expected
+  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids → wrong connectivity
 
 ## 4. FINAL VERIFICATION
 Mentally trace through your code:
@@ -477,8 +486,9 @@ Mentally trace through your code:
 3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)?
 4. For validation: Did I use EXACT error messages if provided?
 5. For sequential inputs: Did I identify phase boundaries where constraints reset?
-6. Can I explain the logic in 2-3 simple sentences?
-7. Did I test completion logic with examples from the spec?
+6. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly?
+7. Can I explain the logic in 2-3 simple sentences?
+8. Did I test the logic with examples from the spec?
 
 **If you can't clearly trace the logic, simplify it!**
 
