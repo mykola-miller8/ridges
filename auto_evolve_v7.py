@@ -4,7 +4,6 @@ import re
 import json
 import time
 import glob
-import pathlib
 import subprocess
 from typing import List, Dict, Any, Tuple
 
@@ -18,7 +17,7 @@ TEST_AGENT_CLI = f"{ROOT}/test_agent.py"
 INFERENCE_URL = os.getenv("INFERENCE_URL", "http://172.17.0.1:1234")
 PROBLEM_SET = os.getenv("PROBLEM_SET", "all-polyglot")
 SOURCE_BRANCH = "cursor-work"
-TARGET_BRANCH = "cursor-work-3"
+TARGET_BRANCH = "cursor-work-4"
 
 # v7 solving uses the inference gateway (set in test_agent CLI). For rewriting v7 itself,
 # we use the Cursor API only (no public LLM).
@@ -172,24 +171,6 @@ def _get_problem_context(problem_name: str) -> Dict[str, str]:
     return context
 
 
-def _anonymize(text: str) -> str:
-    if not text:
-        return ""
-    s = text
-    # Drop fenced code blocks
-    s = re.sub(r"```[\s\S]*?```", "<CODE_BLOCK>", s)
-    # Redact file paths and .py names
-    s = re.sub(r"/[^\s\n]+", "<PATH>", s)
-    s = re.sub(r"\\[^\s\n]+", "<PATH>", s)
-    s = re.sub(r"[A-Za-z0-9_\-]+\.py\b", "<PYFILE>", s)
-    # Redact test names
-    s = re.sub(r"\btest_[A-Za-z0-9_]+\b", "<TEST>", s)
-    # Collapse long hex/ids
-    s = re.sub(r"\b[0-9a-f]{8,}\b", "<ID>", s)
-    # Trim
-    return s[:6000]
-
-
 def _categorize_failures(failures: List[Dict[str, Any]]) -> Dict[str, int]:
     cats: Dict[str, int] = {}
     for f in failures:
@@ -207,9 +188,10 @@ def _categorize_failures(failures: List[Dict[str, Any]]) -> Dict[str, int]:
     return cats
 
 
-def _genericity_checks(code: str) -> bool:
+def _genericity_checks(code: str) -> Tuple[bool, str]:
+    """Check if code is generic. Returns (is_valid, reason)."""
     if not code:
-        return False
+        return False, "Code is empty"
     forbidden = [
         "swebench",
         "polyglot",
@@ -218,11 +200,16 @@ def _genericity_checks(code: str) -> bool:
         "evaluation_run.json",
         "/evaluator/datasets/",
     ]
-    if any(w in code.lower() for w in forbidden):
-        return False
-    if re.search(r"\btest_[A-Za-z0-9_]+\b", code):
-        return False
-    return True
+    code_lower = code.lower()
+    for word in forbidden:
+        if word in code_lower:
+            return False, f"Contains forbidden word/phrase: '{word}'"
+    
+    test_match = re.search(r"\btest_[A-Za-z0-9_]+\b", code)
+    if test_match:
+        return False, f"Contains test function name pattern: '{test_match.group()}'"
+    
+    return True, ""
 
 
 def _launch_initial_cursor_agent(client: CursorAPIClient, current_v7: str) -> str:
@@ -238,6 +225,7 @@ def _launch_initial_cursor_agent(client: CursorAPIClient, current_v7: str) -> st
         "- Use only the existing inference gateway (INFERENCE_URL/SANDBOX_PROXY_URL env vars) for LLM calls\n"
         "- NEVER embed any problem-specific strings, dataset names (polyglot, swebench), expected outputs, or test names\n"
         "- The agent must remain completely generic - usable for ANY problem domain\n"
+        "- IMPORTANT: The agent code deals with Python ONLY - no other programming languages\n"
         "- Focus on generic mechanisms: prompt format, code parsing, retries/backoff, patch generation, syntax validation\n\n"
         "IMPORTANT RUNTIME CONTEXT:\n"
         "- At runtime, the agent ONLY has access to:\n"
@@ -309,11 +297,14 @@ def _add_followup_with_failure_context(
         f"TASK:\n"
         f"Improve my-agents/v7.py to handle this failure case. Remember:\n"
         f"- The agent must remain GENERIC - no problem-specific logic\n"
+        f"- IMPORTANT: The agent code deals with Python ONLY - no other programming languages\n"
         f"- At runtime, only problem_statement (instruction.md) and main.py skeleton are available\n"
         f"- tests.py is NOT available at runtime, so don't rely on test specifics\n"
         f"- Decide whether small tweaks (prompt/params) or major changes (architecture/flow) are needed\n"
         f"- Focus on the root cause: why did the agent fail on this problem?\n"
-        f"- Apply the minimal change that fixes this while maintaining genericity\n\n"
+        f"- Apply the minimal change that fixes this while maintaining genericity\n"
+        f"- ALWAYS clean up the agent code: remove unused imports, functions, and variables\n"
+        f"- Make the code look professional: follow Python best practices, add proper docstrings, ensure consistent formatting, and improve readability\n\n"
         f"Return the complete updated my-agents/v7.py file."
     )
     
@@ -460,8 +451,9 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
                 print("[WARN] No proposal available; stopping evolution for this problem")
                 break
             
-            if not _genericity_checks(proposal):
-                print("[REJECT] Proposed v7 contains non-generic/problem-specific content; skipping")
+            is_valid, reason = _genericity_checks(proposal)
+            if not is_valid:
+                print(f"[REJECT] Proposed v7 contains non-generic/problem-specific content: {reason}")
                 break
             
             # Apply the proposal
