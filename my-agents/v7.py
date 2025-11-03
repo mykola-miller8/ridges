@@ -355,7 +355,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "2. THEN add validation - don't over-validate or make up restrictions not in the spec\n"
         "3. Follow the specification EXACTLY - do not deviate or add assumptions\n"
         "4. If error messages are specified, use them VERBATIM (exact wording)\n"
-        "5. For DSL/tuple validation: Check completeness (length) BEFORE type-specific checks\n"
+        "5. !!! DSL VALIDATION: Check `len(item) < min` BEFORE accessing `item[0]` - see top of guidelines\n"
         "6. For sequential inputs: watch for phase boundaries where constraints RESET ('new', 'fresh', 'bonus')\n"
         + ("7. IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
         + "\nReturn your solution in this exact format:\n"
@@ -371,6 +371,28 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 {repo_summary}
 
 # IMPLEMENTATION GUIDELINES
+
+## !!! CRITICAL: DSL TUPLE VALIDATION MUST BE IN THIS ORDER !!!
+**If you see constants like `NODE, EDGE, ATTR = range(3)`, YOU MUST validate in this EXACT order:**
+
+```python
+# WRONG ORDER CAUSES WRONG ERRORS! Check len FIRST before accessing item[0]
+for item in data:
+    # Step 1: FIRST check completeness (TypeError)
+    if len(item) < 2:  # Can't even access item[0] if len < 1
+        raise TypeError("Graph item incomplete")  # NOT "X is malformed"!
+    
+    # Step 2: Then check type is valid (ValueError) 
+    if item[0] not in [NODE, EDGE, ATTR]:
+        raise ValueError("Unknown item")
+    
+    # Step 3: Then check type-specific length (ValueError)
+    if item[0] == ATTR and len(item) != 3:
+        raise ValueError("Attribute is malformed")
+    # ... etc for NODE, EDGE
+```
+
+**WHY:** Empty `()` has len=0, can't check `item[0]`. Incomplete `(ATTR,)` has len=1, should be "incomplete" NOT "malformed".
 
 ## 0. APPROACH: CORRECT LOGIC FIRST, THEN VALIDATION
 **The #1 priority is implementing the CORRECT core logic. Validation comes second.**
@@ -406,17 +428,17 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 ### Mental testing (CRITICAL):
 - Pick 2-3 examples from spec and trace through your logic
-- Check: start → middle → end states
+- Check: start ? middle ? end states
 - Verify boundary conditions: first, last, empty inputs
 - If you can't trace it in your head, simplify!
 
 ### Special cases:
 - Look for keywords: "special", "except", "however", "but", "otherwise", "bonus", "final"
 - **Implement special cases EXPLICITLY** - don't assume a loop handles them
-- Example: "The 10th frame is special" → implement frame 10 separately
+- Example: "The 10th frame is special" ? implement frame 10 separately
 - **Visual layouts with indentation/spacing**: Often encode structure (e.g., hex grids, trees)
   - Don't ignore the visual formatting - it's usually meaningful
-  - If examples show increasing indentation per row → likely a hex/offset grid
+  - If examples show increasing indentation per row ? likely a hex/offset grid
 
 ## 2. VALIDATION (AFTER CORE LOGIC WORKS)
 **Add validation AFTER the basic functionality is correct.**
@@ -430,7 +452,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 ### Key points:
 - **Use EXACT error messages if spec provides them** (copy verbatim)
 - TypeError vs ValueError: TypeError = wrong type/structure; ValueError = wrong values
-- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` → malformed)
+- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` ? malformed)
 
 ### Dependent/Sequential Validation:
 **For sequential inputs (methods called multiple times), later inputs may depend on earlier ones.**
@@ -438,7 +460,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 **Key concept: Constraint resets vs. cumulative constraints**
 - **Cumulative**: "If you knocked down 6, you can't knock down more than 4 remaining" (same phase)
 - **Resets**: "After a strike, you get fresh pins" (new phase - constraints reset!)
-- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" → indicates phase boundary
+- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" ? indicates phase boundary
 
 **Implementation tip**:
 ```python
@@ -485,8 +507,8 @@ for item in data:
 ```
 
 **WHY THIS ORDER MATTERS:**
-- `()` has len=0, can't even check `item[0]` → must check length FIRST
-- `(ATTR,)` has len=1, `item[0]` exists but missing args → "incomplete" not "malformed"
+- `()` has len=0, can't even check `item[0]` ? must check length FIRST
+- `(ATTR,)` has len=1, `item[0]` exists but missing args ? "incomplete" not "malformed"
 - Only after confirming completeness can you safely check type-specific requirements
 
 ### State management for stateful classes:
@@ -501,7 +523,7 @@ for item in data:
 - **Over-complicating completion logic**: Understand what "complete" means, don't make up restrictions
 - **DSL tuple validation - WRONG ORDER = WRONG ERROR**:
   - **CRITICAL**: Check tuple completeness (length) BEFORE checking type-specific validation
-  - Empty `()` or incomplete `(TYPE,)` → TypeError: "incomplete" (NOT ValueError: "malformed")
+  - Empty `()` or incomplete `(TYPE,)` ? TypeError: "incomplete" (NOT ValueError: "malformed")
   - Must check `len(item) < min_length` FIRST, before accessing `item[0]`
   - See Section 2 for complete code example showing correct validation order
 - **Cumulative constraints across phases**: Don't apply unless in same phase (watch for "new", "fresh", "bonus")
@@ -514,7 +536,7 @@ for item in data:
   - **Parsing strategy**: Remove leading spaces from each row, track the offset per row
   - **Adjacency depends on row offset**: For offset grids, neighbors differ by row (even vs odd)
   - **MUST test adjacency with examples**: Pick a cell in the middle, manually verify its neighbors match expected
-  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids → wrong connectivity
+  - **Common mistake**: Using standard 4-way or 8-way adjacency on hex grids ? wrong connectivity
 
 ## 4. FINAL VERIFICATION
 Mentally trace through your code:
@@ -522,7 +544,7 @@ Mentally trace through your code:
 2. Does it handle ALL special cases from the spec?
 3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)?
 4. For validation: Did I use EXACT error messages if provided?
-5. **For DSL/tuple validation**: Did I validate in the correct order (completeness → type valid → length → element types)?
+5. **For DSL/tuple validation**: Did I validate in the correct order (completeness ? type valid ? length ? element types)?
 6. For sequential inputs: Did I identify phase boundaries where constraints reset?
 7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly?
 8. Can I explain the logic in 2-3 simple sentences?
