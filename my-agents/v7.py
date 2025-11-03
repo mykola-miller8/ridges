@@ -178,17 +178,22 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # Construct system prompt emphasizing correctness and edge cases
+    # Construct system prompt with strong emphasis on validation and exceptions
     system_msg = (
         "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
         "CRITICAL REQUIREMENTS:\n"
-        "- Read the problem statement CAREFULLY, especially special cases and boundary conditions\n"
-        "- Implement ALL required methods/functions with complete logic\n"
-        "- Pay close attention to state management and state transitions\n"
-        "- Handle ALL edge cases, corner cases, and special scenarios mentioned\n"
-        "- Validate inputs rigorously and raise exceptions with meaningful messages\n"
+        "- Read the ENTIRE problem statement carefully, especially validation rules and exception requirements\n"
+        "- Implement ALL required methods/functions with complete, correct logic\n"
+        "- Handle ALL edge cases, corner cases, boundary conditions, and special scenarios\n"
+        "- Implement RIGOROUS input validation - check every constraint mentioned\n"
+        "- Raise exceptions with meaningful messages for ALL invalid inputs and rule violations\n"
+        "- Pay special attention to state management and state transitions\n"
         "- Write deterministic code with no infinite loops or undefined behavior\n"
         "- Do NOT modify tests.py if present\n\n"
+        "VALIDATION AND EXCEPTIONS:\n"
+        "- If the problem mentions validation rules or constraints, implement them ALL\n"
+        "- Every validation rule must raise an appropriate exception with a descriptive message\n"
+        "- Test your logic mentally against edge cases before finalizing\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
         "Start with '# main.py' as the first line.\n"
@@ -199,8 +204,7 @@ def agent_main(
     user_msg = (
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
-        "Implement a complete, correct solution. "
-        "Pay special attention to any special cases, boundary conditions, or state transitions described."
+        "Implement a complete, correct solution that handles ALL cases and validation rules."
     )
 
     messages = [
@@ -236,36 +240,40 @@ def agent_main(
                         break
                     continue
                 
-                # Step 2: Self-review for logic and edge cases
-                # Only do review on first few attempts to save time
+                # Step 2: Self-review for correctness, edge cases, and validation
+                # Only do review on first pass through models to balance quality vs speed
                 if attempt < len(AGENT_MODELS):
                     review_messages = [
                         {"role": "system", "content": (
-                            "You are a code reviewer. Review the following code for correctness.\n"
-                            "Check if it handles ALL requirements, edge cases, and special conditions.\n"
-                            "Respond with 'APPROVED' if the code is correct, or describe specific issues."
+                            "You are a meticulous code reviewer. Your job is to find ANY issues.\n"
+                            "Focus especially on: validation logic, edge cases, exception handling, and state management."
                         )},
                         {"role": "user", "content": (
                             f"# Problem Statement\n{problem_statement[:15000]}\n\n"
                             f"# Proposed Code\n```python\n{code}\n```\n\n"
-                            "Does this code correctly handle all requirements and edge cases? "
-                            "Check especially for: state management, boundary conditions, special cases, "
-                            "input validation, and exception handling."
+                            "Review this code thoroughly. Check:\n"
+                            "1. Does it implement ALL validation rules and constraints mentioned?\n"
+                            "2. Does it raise exceptions for ALL invalid inputs as required?\n"
+                            "3. Does it handle ALL edge cases and special scenarios correctly?\n"
+                            "4. Is the state management and logic flow correct for all cases?\n"
+                            "5. Are there any missing validation checks or exception raises?\n\n"
+                            "Respond with 'APPROVED' if perfect, or list specific issues found."
                         )}
                     ]
                     
                     try:
                         review_response = _call_llm(review_messages, run_id, attempt, 120)
                         
-                        # If review finds issues, ask for refinement
+                        # If review finds issues, request refinement
                         if review_response and "APPROVED" not in review_response.upper():
                             if attempt < max_attempts - 1:
                                 messages.append({"role": "assistant", "content": response})
                                 messages.append({
                                     "role": "user",
                                     "content": (
-                                        f"Code review identified issues:\n{review_response}\n\n"
-                                        "Revise the code to address these issues.\n"
+                                        f"Code review found issues:\n{review_response}\n\n"
+                                        "Revise the code to fix ALL issues identified. "
+                                        "Ensure EVERY validation rule is implemented.\n"
                                         "Format: ```python\\n# main.py\\n[revised code]\\n```"
                                     )
                                 })
