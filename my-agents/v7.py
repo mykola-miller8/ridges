@@ -73,6 +73,15 @@ def _extract_main_py(response: str) -> str:
     return m2[0].strip() if m2 and m2[0].strip() else ""
 
 
+def _validate_python_syntax(code: str) -> bool:
+    """Check if code is valid Python syntax."""
+    try:
+        compile(code, "<string>", "exec")
+        return True
+    except SyntaxError:
+        return False
+
+
 def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
@@ -128,28 +137,36 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     summary = "\n\n".join(parts)
 
     system_msg = (
-        "You are a senior Python engineer.\n"
+        "You are a senior Python engineer who writes robust, production-quality code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
         + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
         "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Deterministic code."
+        "No prose. No explanations outside the code block."
     )
     user_msg = (
-        f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
+        f"Problem Statement:\n{problem_statement[:15000]}\n\n"
         f"Repository Summary:\n{summary}\n\n"
-        "Implement strictly so all tests (if present) pass."
+        "CRITICAL REQUIREMENTS:\n"
+        "1. Read ALL special cases, edge conditions, and boundary rules in the problem statement carefully\n"
+        "2. Implement complete state tracking for any stateful operations\n"
+        "3. Add proper validation for all inputs and state transitions\n"
+        "4. Handle all edge cases mentioned (empty inputs, boundary conditions, special frames/phases)\n"
+        "5. If exceptions are required, raise them with meaningful messages as specified\n"
+        "6. Add brief comments for complex logic to ensure correctness\n"
+        "7. Test your logic mentally against the examples provided in the problem statement\n\n"
+        "Implement a complete, correct solution that handles ALL cases."
     )
     messages = [
         {"role": "system", "content": system_msg},
         {"role": "user", "content": user_msg},
     ]
 
-    # Try a few models and accept the first valid main.py block
+    # Try a few models and accept the first valid main.py block with correct syntax
     for attempt in range(len(AGENT_MODELS)):
         try:
             resp = _call_llm(messages, run_id, attempt, 300)
             main_src = _extract_main_py(resp)
-            if main_src:
+            if main_src and _validate_python_syntax(main_src):
                 return _build_single_file_patch("main.py", main_src)
         except Exception:
             continue
