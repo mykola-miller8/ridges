@@ -147,10 +147,17 @@ Repository:
 
 Implement complete solution following these rules:
 
-1. For list[str] returns: Each element is ONE line, not multiple lines joined with \\n
-2. Test edge cases: first item, last item, empty inputs
-3. For tuple validation: len(item) < 2 catches both empty and incomplete (not len < 1)
-4. Match error messages and exception types exactly as specified
+1. AVOID INFINITE LOOPS: In while loops with continue statements, ensure loop variable advances!
+   Bad: while i < len(items): ... if cond: continue  # i never increments!
+   Good: while i < len(items): ... if cond: i += 1; continue
+
+2. For list[str] returns: Each element is ONE line, not multiple lines joined with \\n
+
+3. Test edge cases: first item, last item, empty inputs
+
+4. For tuple validation: len(item) < 2 catches both empty and incomplete (not len < 1)
+
+5. Match error messages and exception types exactly as specified
 
 Implement now."""
 
