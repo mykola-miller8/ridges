@@ -17,6 +17,8 @@ RESULTS_DIR = f"{ROOT}/test_agent_results"
 TEST_AGENT_CLI = f"{ROOT}/test_agent.py"
 INFERENCE_URL = os.getenv("INFERENCE_URL", "http://172.17.0.1:1234")
 PROBLEM_SET = os.getenv("PROBLEM_SET", "all-polyglot")
+SOURCE_BRANCH = "cursor-work"
+TARGET_BRANCH = "cursor-work-2"
 
 # v7 solving uses the inference gateway (set in test_agent CLI). For rewriting v7 itself,
 # we use the Cursor API only (no public LLM).
@@ -223,10 +225,10 @@ def _genericity_checks(code: str) -> bool:
     return True
 
 
-def _launch_initial_cursor_agent(client: CursorAPIClient, current_v7: str) -> Tuple[str, str, str]:
+def _launch_initial_cursor_agent(client: CursorAPIClient, current_v7: str) -> str:
     """Launch the initial Cursor agent for v7 evolution.
     
-    Returns (agent_id, source_branch, target_branch).
+    Returns the agent_id.
     """
     initial_prompt = (
         "You are tasked with continuously improving my-agents/v7.py, a generic code-solving agent. "
@@ -260,8 +262,8 @@ def _launch_initial_cursor_agent(client: CursorAPIClient, current_v7: str) -> Tu
         prompt_text=initial_prompt,
         skip_reviewer_request=True,
         auto_create_pr=True,
-        source_branch='cursor-work',
-        target_branch='cursor-work-1'
+        source_branch=SOURCE_BRANCH,
+        target_branch=TARGET_BRANCH
     )
     
     agent_id = launch_data.get("id") or launch_data.get("agent_id") or launch_data.get("agentId")
@@ -269,9 +271,7 @@ def _launch_initial_cursor_agent(client: CursorAPIClient, current_v7: str) -> Tu
         raise ValueError("No agent ID returned from launch")
     
     print(f"[BUILDER] Agent launched with ID: {agent_id}")
-    source_branch = 'cursor-work'
-    target_branch = 'cursor-work-1'
-    return agent_id, source_branch, target_branch
+    return agent_id
 
 
 def _add_followup_with_failure_context(
@@ -355,9 +355,23 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
         default_repo_url=None,
     )
     
+    # Git add, commit, and push at the beginning
+    print("[GIT] Staging, committing, and pushing initial state...")
+    try:
+        subprocess.run(["git", "add", "."], cwd=ROOT, check=False)
+        subprocess.run(
+            ["git", "commit", "-m", "auto-evolve: initial state before evolution"],
+            cwd=ROOT,
+            check=False,
+        )
+        subprocess.run(["git", "push"], cwd=ROOT, check=False)
+        print("[GIT] Initial git operations completed")
+    except Exception as e:
+        print(f"[WARN] Git operations failed: {e}")
+    
     # Launch initial agent
     current_v7 = _read(AGENT_PATH)
-    agent_id, source_branch, target_branch = _launch_initial_cursor_agent(client, current_v7)
+    agent_id = _launch_initial_cursor_agent(client, current_v7)
     
     problem_names = _load_problem_set(PROBLEM_SET)
     if not problem_names:
@@ -394,38 +408,49 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
             agent_logs = _read_agent_logs_tail(run_dir, max_chars=10000)
             eval_logs = _read_eval_logs_tail(run_dir, max_chars=8000)
             
-            # Checkout agent file from target_branch and apply it
-            print(f"[CHECKOUT] Checking out {AGENT_PATH} from branch '{target_branch}'...")
+            # Add follow-up and wait for completion
+            _add_followup_with_failure_context(
+                client=client,
+                agent_id=agent_id,
+                problem_name=name,
+                agent_logs=agent_logs,
+                eval_logs=eval_logs,
+                problem_statement=problem_statement,
+                tests_py=tests_py,
+                metrics=metrics,
+                failures=failures,
+            )
+            
+            # After follow-up completes, checkout agent file from target_branch and apply it
+            print(f"[CHECKOUT] Follow-up completed; checking out {AGENT_PATH} from branch '{TARGET_BRANCH}'...")
             try:
-                # Get the file content from target_branch (use relative path for git show)
                 agent_rel_path = os.path.relpath(AGENT_PATH, ROOT)
                 result = subprocess.run(
-                    ["git", "show", f"{target_branch}:{agent_rel_path}"],
+                    ["git", "show", f"{TARGET_BRANCH}:{agent_rel_path}"],
                     cwd=ROOT,
                     capture_output=True,
                     text=True,
                     check=True
                 )
                 proposal = result.stdout
-                
-                if not proposal:
-                    print(f"[WARN] File not found in branch '{target_branch}'; stopping evolution for this problem")
-                    break
-                
-                if not _genericity_checks(proposal):
-                    print("[REJECT] File from target branch contains non-generic/problem-specific content; skipping")
-                    break
-                
-                # Apply the proposal
-                _write(AGENT_PATH, proposal)
-                current_v7 = proposal  # Update for next iteration
-                
             except subprocess.CalledProcessError as e:
-                print(f"[WARN] Failed to checkout from branch '{target_branch}': {e}; stopping evolution for this problem")
+                print(f"[WARN] Failed to checkout from branch '{TARGET_BRANCH}': {e}; stopping evolution for this problem")
                 break
             except Exception as e:
                 print(f"[WARN] Error during checkout: {e}; stopping evolution for this problem")
                 break
+            
+            if not proposal:
+                print("[WARN] No proposal available; stopping evolution for this problem")
+                break
+            
+            if not _genericity_checks(proposal):
+                print("[REJECT] Proposed v7 contains non-generic/problem-specific content; skipping")
+                break
+            
+            # Apply the proposal
+            _write(AGENT_PATH, proposal)
+            current_v7 = proposal  # Update for next iteration
             
             try:
                 subprocess.run(["git", "add", AGENT_PATH], cwd=ROOT, check=False)
@@ -434,6 +459,7 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
                     cwd=ROOT,
                     check=False,
                 )
+                subprocess.run(["git", "push"], cwd=ROOT, check=False)
             except Exception:
                 pass
 
