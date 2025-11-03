@@ -13,7 +13,7 @@ import requests
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
-# - Includes self-review iteration and syntax validation
+# - Includes multi-iteration self-review and syntax validation
 
 
 DEFAULT_PROXY_URL = (
@@ -123,10 +123,10 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     """
     Entry point required by the evaluation harness.
     
-    Generates a complete solution with self-review iteration:
+    Generates a complete solution with multi-iteration self-review:
     1. Generate initial solution
     2. Validate syntax
-    3. Self-review and refine if needed
+    3. Self-review and refine multiple times
     4. Return unified diff patch that fully replaces main.py
     """
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
@@ -196,40 +196,69 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     if not best_code:
         return ""
 
-    # Self-review iteration: ask LLM to review and refine the code
-    try:
-        review_system = (
-            "You are a senior Python code reviewer. Review the provided code for correctness.\n"
-            "Check for logic errors, edge cases, off-by-one errors, state management issues, etc.\n"
-            "If the code is correct, respond with 'APPROVED' and nothing else.\n"
-            "If there are issues, provide a corrected version with:\n```python\n# main.py\n[corrected code]\n```"
-        )
-        
-        review_user = (
-            f"Problem Statement:\n{problem_statement[:8000]}\n\n"
-            f"Generated Code:\n```python\n{best_code}\n```\n\n"
-            "Review this code carefully. Does it correctly handle all cases including edge cases? "
-            "Are there any logic errors, incorrect state tracking, or boundary issues?"
-        )
-        
-        review_messages = [
-            {"role": "system", "content": review_system},
-            {"role": "user", "content": review_user},
-        ]
-        
-        review_resp = _call_llm(review_messages, run_id, best_attempt, 300)
-        
-        # Check if reviewer approved or provided corrections
-        if "APPROVED" not in review_resp:
+    # Multi-iteration self-review: perform 2 review passes to catch subtle bugs
+    for iteration in range(2):
+        try:
+            # Alternate between different review strategies
+            if iteration == 0:
+                # First pass: deep logic analysis
+                review_system = (
+                    "You are an expert code reviewer. Analyze the code for correctness.\n"
+                    "Check: logic errors, off-by-one bugs, state management, boundary conditions, algorithm correctness.\n"
+                    "If correct, respond ONLY with: APPROVED\n"
+                    "If there are bugs, provide corrected code:\n```python\n# main.py\n[corrected code]\n```"
+                )
+                review_user = (
+                    f"Problem:\n{problem_statement[:8000]}\n\n"
+                    f"Code to review:\n```python\n{best_code}\n```\n\n"
+                    "Trace through the logic step-by-step. Check if it correctly handles:\n"
+                    "- All examples in the problem statement\n"
+                    "- Edge cases (empty input, single element, maximum size)\n"
+                    "- Boundary conditions and state transitions\n"
+                    "Are there any logic errors or incorrect assumptions?"
+                )
+            else:
+                # Second pass: focus on missed edge cases and algorithm validation
+                review_system = (
+                    "You are a thorough code auditor. Your job is to find remaining bugs.\n"
+                    "Focus on: algorithm correctness, hidden edge cases, incorrect data structure usage.\n"
+                    "If the code is now correct, respond ONLY with: APPROVED\n"
+                    "If bugs remain, provide fixed code:\n```python\n# main.py\n[fixed code]\n```"
+                )
+                review_user = (
+                    f"Problem:\n{problem_statement[:6000]}\n\n"
+                    f"Current code:\n```python\n{best_code}\n```\n\n"
+                    "This code passed initial review. Do a final check:\n"
+                    "- Validate the algorithm's correctness against problem requirements\n"
+                    "- Check for subtle bugs in loops, recursion, or data structure operations\n"
+                    "- Verify all edge cases are handled properly\n"
+                    "Any remaining issues?"
+                )
+            
+            review_messages = [
+                {"role": "system", "content": review_system},
+                {"role": "user", "content": review_user},
+            ]
+            
+            # Use different model for diversity in second iteration
+            review_attempt = (best_attempt + iteration + 1) % len(AGENT_MODELS)
+            review_resp = _call_llm(review_messages, run_id, review_attempt, 300)
+            
+            # Check if reviewer approved or provided corrections
+            if "APPROVED" in review_resp.upper():
+                # Code passed this review iteration
+                break
+            
             refined_code = _extract_main_py(review_resp)
             if refined_code:
                 # Validate refined code syntax
                 syntax_err = _validate_syntax(refined_code)
                 if not syntax_err:
                     best_code = refined_code
-    
-    except Exception:
-        # If review fails, continue with best_code from initial generation
-        pass
+                    # Continue to next review iteration
+        
+        except Exception:
+            # If review fails, continue with current best_code
+            pass
 
     return _build_single_file_patch("main.py", best_code)
