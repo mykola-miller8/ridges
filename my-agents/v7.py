@@ -13,7 +13,7 @@ import requests
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
-# - Multi-model generation with robust validation
+# - Multi-model generation with robust error handling validation
 
 
 DEFAULT_PROXY_URL = (
@@ -149,12 +149,12 @@ def _extract_examples_from_problem(problem_statement: str) -> str:
 
 def _review_code(code: str, problem_statement: str, examples: str, run_id: str, attempt: int) -> Tuple[bool, str]:
     """
-    Review code for correctness with example-based validation.
+    Review code for correctness with emphasis on error handling and edge cases.
     Returns (approved, refined_code) where refined_code is the corrected version if not approved.
     """
     review_system = (
-        "You are an expert code reviewer who validates correctness through concrete examples.\n"
-        "Your task: trace through the code with examples to find bugs.\n\n"
+        "You are an expert code reviewer who validates correctness through concrete testing.\n"
+        "Focus especially on error handling, validation logic, and edge cases.\n\n"
         "If the code is CORRECT, respond ONLY with: APPROVED\n"
         "If you find bugs, provide FIXED code:\n```python\n# main.py\n[fixed code]\n```"
     )
@@ -164,12 +164,16 @@ def _review_code(code: str, problem_statement: str, examples: str, run_id: str, 
     review_user = (
         f"Problem:\n{problem_statement[:8000]}\n{examples_section}\n"
         f"Code to validate:\n```python\n{code}\n```\n\n"
-        "Validation checklist:\n"
-        "1. Trace through with a concrete example - does output match expected?\n"
-        "2. Check edge cases: empty input, single element, max size\n"
-        "3. Look for: off-by-one errors, wrong loop conditions, incorrect operators\n"
-        "4. Verify algorithm correctness against problem requirements\n\n"
-        "Is this code correct?"
+        "Critical validation checklist:\n"
+        "1. TRACE through with concrete examples - verify output matches expected\n"
+        "2. ERROR HANDLING: Do validation checks catch ALL invalid inputs correctly?\n"
+        "   - Check error messages match requirements exactly\n"
+        "   - Verify validation logic handles edge cases (empty, incomplete, malformed)\n"
+        "   - Ensure correct exception types (TypeError vs ValueError, etc.)\n"
+        "3. EDGE CASES: empty input, single element, boundary values, special values\n"
+        "4. LOGIC: off-by-one errors, wrong comparisons, incorrect operators\n"
+        "5. ALGORITHM: does the approach correctly solve the problem?\n\n"
+        "Does this code handle ALL cases correctly, especially error conditions?"
     )
     
     review_messages = [
@@ -198,9 +202,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     """
     Entry point required by the evaluation harness.
     
-    Multi-model approach with validation:
+    Multi-model approach with error handling validation:
     1. Try multiple models to generate solutions
-    2. Review and refine each solution
+    2. Review with emphasis on error handling and edge cases
     3. If review makes changes, do second validation pass
     4. Return the best validated solution
     """
@@ -228,13 +232,14 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     # Extract examples from problem for validation
     examples = _extract_examples_from_problem(problem_statement)
 
-    # System message emphasizing simplicity
+    # System message emphasizing simplicity and correctness
     system_msg = (
         "You are a senior Python engineer who writes SIMPLE, CORRECT code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
         + "CRITICAL: Write the SIMPLEST solution that correctly solves the problem.\n"
+        "Pay special attention to error handling and validation logic.\n"
         "Return ONLY one code block:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Focus on correctness and clarity."
+        "No prose. Focus on correctness, clarity, and proper error handling."
     )
     
     user_msg = (
@@ -242,8 +247,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         f"Repository Summary:\n{summary}\n\n"
         "Implement a complete, correct solution.\n"
         "- Use the SIMPLEST approach that works\n"
-        "- Handle all edge cases\n"
-        "- Write clear code"
+        "- Handle ALL edge cases correctly\n"
+        "- Implement precise error handling and validation\n"
+        "- Write clear, readable code"
     )
 
     messages = [
@@ -268,7 +274,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             if syntax_err:
                 continue
             
-            # Review and validate with examples
+            # Review and validate with emphasis on error handling
             approved, reviewed_code = _review_code(main_src, problem_statement, examples, run_id, attempt)
             
             if not approved and reviewed_code != main_src:
