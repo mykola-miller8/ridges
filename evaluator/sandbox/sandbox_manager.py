@@ -28,6 +28,7 @@ class SandboxManager:
     def __init__(self, inference_gateway_url: str):
         # Setup inference gateway
         self._check_inference_gateway(inference_gateway_url)
+        self.inference_gateway_url = inference_gateway_url
 
         # Setup Docker
         stop_and_delete_all_docker_containers()

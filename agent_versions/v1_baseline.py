@@ -160,292 +160,60 @@ class AgentPool:
 # Global agent pool instance
 _agent_pool = AgentPool()
 
-class ProblemInvestigator:
-    """Lightweight repository investigator for screener/validator/polyglot signals.
-
-    Produces a compact summary string that can be appended to prompts to guide LLM.
-    Uses only filesystem and simple heuristics; no external dependencies.
-    """
-    @staticmethod
-    def _safe_read(path: str, limit_chars: int = 4000) -> str:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return f.read()[:limit_chars]
-        except Exception:
-            return ""
-
-    @staticmethod
-    def analyze_repo(root: str = ".") -> dict:
-        summary: dict = {
-            "python_files": 0,
-            "test_files": 0,
-            "validator_config_present": False,
-            "polyglot_hint": False,
-            "dataset_hints": [],
-            "notable_paths": [],
-        }
-        for dirpath, _, filenames in os.walk(root):
-            # skip hidden and .git
-            if any(part.startswith('.') for part in Path(dirpath).parts):
-                continue
-            if ".git" in dirpath:
-                continue
-            for fn in filenames:
-                fp = os.path.join(dirpath, fn)
-                if fn.endswith(".py"):
-                    summary["python_files"] += 1
-                    if fn.startswith("test_") or fn.endswith("_test.py"):
-                        summary["test_files"] += 1
-                if fp.endswith(os.path.join("validator", "config.py")):
-                    summary["validator_config_present"] = True
-                    summary["notable_paths"].append(fp)
-                if "polyglot" in fp.lower():
-                    summary["polyglot_hint"] = True
-                if os.path.join("evaluator", "datasets") in fp:
-                    # capture dataset file id/path hints
-                    summary["dataset_hints"].append(os.path.relpath(fp))
-                    if len(summary["dataset_hints"]) > 10:
-                        # keep short
-                        summary["dataset_hints"] = summary["dataset_hints"][:10]
-        return summary
-
-    @staticmethod
-    def to_prompt(summary: dict) -> str:
-        if not summary:
-            return ""
-        parts = []
-        parts.append("# Repo Investigation Summary")
-        parts.append(f"Python files: {summary.get('python_files',0)}; Test files: {summary.get('test_files',0)}")
-        parts.append(f"Validator config present: {summary.get('validator_config_present', False)}")
-        parts.append(f"Polyglot hint: {summary.get('polyglot_hint', False)}")
-        ds = summary.get("dataset_hints", [])
-        if ds:
-            parts.append("Dataset-related files (truncated):")
-            parts.extend([f"- {p}" for p in ds])
-        npths = summary.get("notable_paths", [])
-        if npths:
-            parts.append("Notable paths:")
-            parts.extend([f"- {p}" for p in npths])
-        return "\n".join(parts)
-
-class IntelligentModelSelector:
-    """Heuristic first-choice model selector that preserves existing proxy rotation logic.
-
-    We only influence the initial order of AGENT_MODELS; requests still flow via the
-    same /api/inference and rotation behavior as in Network.make_request.
-    """
-    @staticmethod
-    def reorder_models(problem_statement: str) -> None:
-        global AGENT_MODELS
-        ps = (problem_statement or "").lower()
-        # derive simple signals
-        code_signals = any(k in ps for k in ["traceback", "stack", "refactor", "compile", "runtime", "function", "class", "test"])
-        reasoning_signals = any(k in ps for k in ["prove", "reason", "math", "theorem", "derive", "formal"])
-        instruction_signals = any(k in ps for k in ["follow instructions", "steps", "rename", "simple task", "format", "instructions"]) 
-
-        preferred: list[str] = []
-        # Prefer code-specialized first
-        if code_signals:
-            preferred.append(QWEN_MODEL_NAME)
-        # Prefer strong reasoning
-        if reasoning_signals:
-            preferred.append(DEEPSEEK_MODEL_NAME)
-        # Prefer instruction-following for simple tasks
-        if instruction_signals:
-            preferred.append(KIMI_MODEL_NAME)
-        # GLM as balanced default
-        preferred.append(GLM_MODEL_NAME)
-
-        # Build new order keeping only whitelisted and deduped, then append any remaining
-        seen = set()
-        new_order = []
-        for m in preferred + [m for m in AGENT_MODELS if m not in preferred]:
-            if m in (GLM_MODEL_NAME, QWEN_MODEL_NAME, KIMI_MODEL_NAME, DEEPSEEK_MODEL_NAME) and m not in seen:
-                new_order.append(m)
-                seen.add(m)
-        AGENT_MODELS = new_order
-
-class SimpleCursorAgent:
-    """Minimal, from-scratch Cursor-like agent that proposes a unified diff.
-
-    - Uses only whitelisted models through the existing proxy (/api/inference)
-    - Builds a compact repo summary and asks for a strict unified diff
-    - Optionally dry-runs the patch for validity (no changes applied)
-    """
-    OUTPUT_RULES = (
-        "You MUST return only a raw unified diff patch. No Markdown, no fences, no prose.\n"
-        "The diff must start with 'diff --git a/<path> b/<path>' and include '---'/'+++' headers and @@ hunks.\n"
-        "Every changed file needs its own header block. End with a trailing newline."
-    )
-
-    def __init__(self, problem_statement: str, top_k: int = 30):
-        self.problem_statement = problem_statement or ""
-        self.top_k = top_k
-
-    def _collect_python_files(self, root: str = ".") -> list[tuple[str, str]]:
-        files: list[tuple[str, str]] = []
-        for dirpath, _, filenames in os.walk(root):
-            if any(part.startswith('.') for part in Path(dirpath).parts):
-                continue
-            if dirpath.endswith(("__pycache__", ".git")):
-                continue
-            for fn in filenames:
-                if not fn.endswith('.py'):
-                    continue
-                fp = os.path.join(dirpath, fn)
-                try:
-                    with open(fp, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    files.append((fp, content))
-                except Exception:
-                    continue
-        return files
-
-    def _score_files(self, files: list[tuple[str, str]]) -> list[tuple[str, str]]:
-        prob_words = set(self.problem_statement.lower().split())
-        def score(text: str) -> float:
-            words = set(text.lower().split())
-            if not words:
-                return 0.0
-            return len(prob_words & words) / max(1, len(prob_words))
-        scored = sorted(files, key=lambda kv: -score(kv[1]))
-        return scored[: self.top_k]
-
-    def _build_repo_summary(self, files: list[tuple[str, str]]) -> str:
-        parts: list[str] = []
-        for fp, content in files:
-            body = content[:4000]
-            tag = "python"
-            header = f"### {fp}"
-            parts.append(f"{header}\n```{tag}\n{body}\n```")
-        return "\n\n".join(parts)
-
-    @staticmethod
-    def _strip_fences(text: str) -> str:
-        if not text:
-            return ""
-        t = text.strip()
-        if t.startswith("```") and t.endswith("```"):
-            t = t.strip("`")
-            t = re.sub(r"^\w+\n", "", t)
-        return t.strip()
-
-    @staticmethod
-    def _dry_run_patch(patch_text: str) -> tuple[bool, str]:
-        try:
-            tmp = ".temp_patch"
-            with open(tmp, "w", encoding="utf-8") as f:
-                f.write(patch_text)
-            res = subprocess.run(["git", "apply", "--check", tmp], capture_output=True, text=True, timeout=30)
-            return res.returncode == 0, res.stderr
-        except Exception as e:
-            return False, str(e)
-        finally:
-            try:
-                os.remove(".temp_patch")
-            except Exception:
-                pass
-
-    def _build_messages(self, repo_summary: str) -> list[dict]:
-        sys = (
-            "You are an autonomous senior software engineer.\n"
-            "Analyze the problem and repository summary.\n"
-            + self.OUTPUT_RULES
-        )
-        user = (
-            f"Problem Statement:\n{self.problem_statement}\n\n"
-            f"Repository summary (top files):\n\n{repo_summary}\n\n"
-            "Return ONLY the unified diff (no extra text)."
-        )
-        return [
-            {"role": "system", "content": sys},
-            {"role": "user", "content": user},
-        ]
-
-    def _request_llm(self, messages: list[dict], max_retries: int = 4) -> str:
-        url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
-        headers = {"Content-Type": "application/json"}
-        run_id = os.getenv("RUN_ID", "nocache-1")
-        raw_text = ""
-        for attempt in range(max_retries):
-            model = AGENT_MODELS[attempt % len(AGENT_MODELS)]
-            body = {
-                "run_id": run_id,
-                "messages": messages,
-                "temperature": 0.0,
-                "agent_id": AGENT_ID,
-                "model": model,
-            }
-            resp = requests.post(url, json=body, headers=headers, timeout=120)
-            resp.raise_for_status()
-            data = resp.json()
-            if isinstance(data, dict) and data.get("choices") and data["choices"][0].get("message"):
-                raw_text = data["choices"][0]["message"]["content"]
-            elif isinstance(data, str):
-                raw_text = data
-            else:
-                raw_text = json.dumps(data)
-            if raw_text:
-                return raw_text
-        return raw_text
-
-    def propose_patch(self) -> str:
-        files = self._collect_python_files(".")
-        top_files = self._score_files(files)
-        repo_summary = self._build_repo_summary(top_files)
-        messages = self._build_messages(repo_summary)
-        raw = self._request_llm(messages)
-        patch = self._strip_fences(raw)
-        ok, err = self._dry_run_patch(patch)
-        if not ok:
-            heal_user = (
-                "The previous patch failed to apply with: " + (err or "unknown error") +
-                "\nPlease return a corrected unified diff ONLY."
-            )
-            messages.append({"role": "assistant", "content": patch})
-            messages.append({"role": "user", "content": heal_user})
-            raw2 = self._request_llm(messages)
-            patch2 = self._strip_fences(raw2)
-            return patch2 or patch
-        return patch
-
 def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bool = False):
-    """
-    Entry point for your agent. This is the function the validator calls when running your code.
-
-    Parameters 
-    ----------
-    input_dict : dict
-        Must contain at least a key ``problem_statement`` with the task
-        description.  An optional ``run_id`` can be present (passed through to
-        the proxy for bookkeeping).
-    
-    Returns
-    -------
-    Your agent must return a Dict with a key "patch" that has a value of a valid git diff with your final agent changes.
-    """
+    """Legacy interface wrapper for backwards compatibility."""
     global DEFAULT_PROXY_URL, REPO_DIR, DEFAULT_TIMEOUT, MAX_TEST_PATCH_TIMEOUT, RUN_ID
-    RUN_ID = input_dict.get("run_id", os.getenv("RUN_ID", "nocache-1"))
+    RUN_ID = os.getenv("RUN_ID", "nocache-1")
     REPO_DIR = repo_dir
-    if repo_dir not in sys.path:
     sys.path.insert(0, repo_dir)
 
     if os.path.exists(repo_dir):
         os.chdir(repo_dir)
 
     ensure_git_initialized()
+
     set_env_for_agent()
 
-    try:
-        IntelligentModelSelector.reorder_models(input_dict.get("problem_statement", ""))
-    except Exception:
-        pass
+    # Check problem type first
+    problem_type = asyncio.run(ProblemTypeClassifierAgent.check_problem_type(input_dict.get("problem_statement")))
+    
+    if problem_type == ProblemTypeClassifierAgent.PROBLEM_TYPE_FIX:
+       fix_prb_task=BugFixSolver(input_dict.get("problem_statement")).solve_problem()
+       try:
+           result=asyncio.run(asyncio.wait_for(fix_prb_task, timeout=2280))
+       except asyncio.TimeoutError as e:
+           logger.error(f"Timed out after 2280 seconds..")
+           result=FixTaskEnhancedToolManager.get_final_git_patch(initial_checkpoint="initial_commit")
+           if not DISABLE_TEST_FILE_REMOVAL:
+               FixTaskEnhancedToolManager.remove_any_generated_test_files()
+       except Exception as e:
+           logger.error(f"Error: {e}")
+           result=FixTaskEnhancedToolManager.get_final_git_patch(initial_checkpoint="initial_commit")
+           if not DISABLE_TEST_FILE_REMOVAL:
+               FixTaskEnhancedToolManager.remove_any_generated_test_files()
+    else:
+        # Use traditional approach for CREATE tasks
+        solve_prb_task=CreateProblemSolver(input_dict.get("problem_statement")).solve_problem()
+        try:
+            result=asyncio.run(asyncio.wait_for(solve_prb_task, timeout=2280))
+        except asyncio.TimeoutError as e:
+            logger.error(f"Timed out after 60 seconds..")
+            result=FixTaskEnhancedToolManager.get_final_git_patch()
+            
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            result=FixTaskEnhancedToolManager.get_final_git_patch()
+            
+        
 
-    problem_statement = (input_dict or {}).get("problem_statement", "")
-    agent = SimpleCursorAgent(problem_statement, top_k=30)
-    patch = agent.propose_patch()
-    logger.info("patch length: {}".format(len(patch or "")))
-    return {"patch": patch or ""}
+    if not DISABLE_TEST_FILE_REMOVAL:
+        os.system("git reset --hard")
+    logger.info("patch returned: {}".format(result))
+    logger.info("JSON_LLM_USED: {}".format(JSON_LLM_USED))
+    logger.info("JSON_LITERAL_USED: {}".format(JSON_LITERAL_USED))
+    logger.info("MARKDOWN_FAILED: {}".format(MARKDOWN_FAILED))
+    logger.info("TOO_MANY_SECTIONS_FOUND: {}".format(TOO_MANY_SECTIONS_FOUND))
+    return result
     
  
 
@@ -1178,16 +946,7 @@ class BugFixSolver:
         
         logger.info(f"Starting main agent execution...")
         
-        # Investigate repo and feed a compact brief to the agent as additional context
-        try:
-            inv = ProblemInvestigator.analyze_repo(".")
-            inv_prompt = ProblemInvestigator.to_prompt(inv)
-        except Exception:
-            inv_prompt = ""
-        
         instance_prompt = self.FIX_TASK_INSTANCE_PROMPT_TEMPLATE.format(problem_statement=self.problem_statement)
-        if inv_prompt:
-            instance_prompt = instance_prompt + "\n\n" + inv_prompt
         # save initial state for comparision later...
         st=create_checkpoint(".","initial_commit")
         if st.get("status")=="success":
