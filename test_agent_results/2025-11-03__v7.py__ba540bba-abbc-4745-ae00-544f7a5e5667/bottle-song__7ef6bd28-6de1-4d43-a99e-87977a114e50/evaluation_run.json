@@ -1,0 +1,52 @@
+{
+    "evaluation_run_id": "7ef6bd28-6de1-4d43-a99e-87977a114e50",
+    "evaluation_id": "ba540bba-abbc-4745-ae00-544f7a5e5667",
+    "problem_name": "bottle-song",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,41 @@\n-def recite(start: int, take: int = 1) -> list[str]:\n-    pass\n+def recite(start: int, take: int = 1) -> list[str]:\n+    # Number to word mapping\n+    number_words = {\n+        10: \"Ten\",\n+        9: \"Nine\",\n+        8: \"Eight\",\n+        7: \"Seven\",\n+        6: \"Six\",\n+        5: \"Five\",\n+        4: \"Four\",\n+        3: \"Three\",\n+        2: \"Two\",\n+        1: \"One\",\n+        0: \"no\"\n+    }\n+    \n+    result = []\n+    \n+    for i in range(take):\n+        current_bottles = start - i\n+        \n+        # First two lines\n+        bottle_word = \"bottle\" if current_bottles == 1 else \"bottles\"\n+        line1 = f\"{number_words[current_bottles]} green {bottle_word} hanging on the wall,\"\n+        line2 = f\"{number_words[current_bottles]} green {bottle_word} hanging on the wall,\"\n+        \n+        # Third line\n+        line3 = \"And if one green bottle should accidentally fall,\"\n+        \n+        # Fourth line\n+        next_bottles = current_bottles - 1\n+        next_bottle_word = \"bottle\" if next_bottles == 1 else \"bottles\"\n+        line4 = f\"There'll be {number_words[next_bottles].lower()} green {next_bottle_word} hanging on the wall.\"\n+        \n+        result.extend([line1, line2, line3, line4])\n+        \n+        # Add empty line between verses except after the last verse\n+        if i < take - 1:\n+            result.append(\"\")\n+    \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_all_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_first_generic_verse",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_first_two_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_last_generic_verse",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_last_three_verses",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_verse_with_1_bottle",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_verse_with_2_bottles",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T15:54:06.371547",
+    "started_initializing_agent_at": "2025-11-03T15:54:06.371667",
+    "started_running_agent_at": "2025-11-03T15:54:06.718585",
+    "started_initializing_eval_at": "2025-11-03T15:54:13.673493",
+    "started_running_eval_at": "2025-11-03T15:54:14.017718",
+    "finished_or_errored_at": "2025-11-03T15:54:14.274474"
+}
