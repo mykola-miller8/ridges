@@ -349,9 +349,14 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
     system_msg = (
         "You are an expert Python engineer. Your task is to write production-quality, "
-        "bug-free Python code that correctly implements the given specification.\n"
-        + ("IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
-        + "Return your solution in this exact format:\n"
+        "bug-free Python code that correctly implements the given specification.\n\n"
+        "CRITICAL REQUIREMENTS:\n"
+        "- Follow the specification EXACTLY - do not deviate or add assumptions\n"
+        "- If error messages are specified, use them VERBATIM (exact wording)\n"
+        "- If validation is required, implement ALL validation cases completely\n"
+        "- Pay attention to type signatures, constants, and structure definitions\n"
+        + ("- IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
+        + "\nReturn your solution in this exact format:\n"
         "```python\n# main.py\n<your complete implementation here>\n```"
     )
     
@@ -443,6 +448,9 @@ Examples:
    - Look for: "raise", "exception", "error", "invalid", "malformed"
    - Note EXACT error types: TypeError, ValueError, etc.
    - Note EXACT error messages if provided
+   - **TypeError vs ValueError distinction**:
+     - TypeError: Wrong input type or structural problems (not a list, empty tuple, missing elements)
+     - ValueError: Wrong values or content problems (invalid constant, wrong field types, out of range)
 
 2. **Validate in the correct order (fail fast principle)**
    - Type checks first (is it the right type? list vs dict vs str vs int)
@@ -452,12 +460,25 @@ Examples:
 3. **Common validation patterns**
    - **Type validation**: `if not isinstance(data, expected_type): raise TypeError("...")`
    - **Structure validation**: Check tuple length, dict keys, list elements
+     - **For DSLs with tuple-based syntax**: Each tuple type has an expected length
+     - Example: If spec shows `(TYPE, arg1, arg2)`, tuples must have exactly 3 elements
+     - Check: `if len(item) != expected_length: raise ...("... incomplete/malformed")`
    - **Content validation**: Check value ranges, string formats, relationships
    - **Completeness validation**: Check for missing required fields
 
 4. **Be explicit about what's wrong**
    - If spec provides exact messages, use them verbatim
    - Otherwise, make messages descriptive but consistent with the spec's tone
+
+5. **DSL and parser problems - special attention**
+   - **Look for constant definitions** at the top of main.py (e.g., `NODE, EDGE, ATTR = range(3)`)
+   - **These constants identify different data types** in the input
+   - **Each type usually has a specific structure**: (TYPE_CONSTANT, ...required args...)
+   - **Validation must check**:
+     1. Is the type constant valid/recognized?
+     2. Does the tuple have the right number of elements for that type?
+     3. Are the element types correct (str, dict, int, etc.)?
+   - **Read all examples in the spec** to understand the expected structure for each type
 
 ### State management for classes:
 - **Validate preconditions** in all state-modifying methods
