@@ -392,6 +392,15 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
    - Test edge cases: 0, 1, 2, boundary values
    - Don't guess at formatting - use the examples as ground truth
 
+5. **CRITICAL: EXACT ERROR MESSAGES**
+   - **If the spec explicitly provides error/exception messages, COPY THEM EXACTLY**
+   - Look for sections like "Exception messages", "Error handling", "raise statement"
+   - Common patterns: `raise TypeError("exact message here")` or `raise ValueError("exact message")`
+   - **DO NOT paraphrase or reword specified error messages**
+   - Tests often verify both the exception type AND the exact message text
+   - Example: If spec says `raise ValueError("Edge is malformed")`, use that EXACT string
+   - Search for keywords: "raise", "exception", "error message", "message text"
+
 ## 1. SIMPLICITY IS CRITICAL
 **The #1 cause of bugs is unnecessary complexity.**
 - Use the MINIMUM state variables needed (each extra variable = exponentially more bugs)
@@ -426,8 +435,31 @@ Examples:
 - "Except for the last element" ? Process n-1 items in loop, then handle last specially
 - "Bonus rolls if spare/strike" ? Add conditional logic after main processing
 
-## 4. STATE MANAGEMENT FOR CLASSES
-For classes with mutable state (games, parsers, accumulators):
+## 4. INPUT VALIDATION AND ERROR HANDLING
+**Many problems require strict input validation with specific error types and messages.**
+
+### Validation strategy:
+1. **Check the specification for validation requirements**
+   - Look for: "raise", "exception", "error", "invalid", "malformed"
+   - Note EXACT error types: TypeError, ValueError, etc.
+   - Note EXACT error messages if provided
+
+2. **Validate in the correct order (fail fast principle)**
+   - Type checks first (is it the right type? list vs dict vs str vs int)
+   - Structure checks next (right length? right format?)
+   - Content checks last (valid values? constraints met?)
+
+3. **Common validation patterns**
+   - **Type validation**: `if not isinstance(data, expected_type): raise TypeError("...")`
+   - **Structure validation**: Check tuple length, dict keys, list elements
+   - **Content validation**: Check value ranges, string formats, relationships
+   - **Completeness validation**: Check for missing required fields
+
+4. **Be explicit about what's wrong**
+   - If spec provides exact messages, use them verbatim
+   - Otherwise, make messages descriptive but consistent with the spec's tone
+
+### State management for classes:
 - **Validate preconditions** in all state-modifying methods
   - Check: Is this operation allowed in the current state?
   - **CRITICAL**: Before accepting input, verify the operation is still valid
@@ -483,12 +515,14 @@ Before submitting, mentally trace through your code:
 1. Does it handle the basic/normal case?
 2. Does it handle ALL special cases mentioned in the spec?
 3. Did I match the example output EXACTLY (punctuation, capitalization, spacing)?
-4. Did I use the minimum state needed?
-5. Can I explain the logic in 2-3 simple sentences?
-6. Are there off-by-one errors in my indexing?
-7. Do all state-modifying methods validate preconditions?
-8. **For games/processes with fixed length**: Does it prevent operations after completion?
-9. **For string generation**: Did I test singular/plural forms and edge cases?
+4. **If error messages are specified**: Did I use the EXACT error messages verbatim?
+5. **If validation is required**: Did I validate input type, structure, and content correctly?
+6. Did I use the minimum state needed?
+7. Can I explain the logic in 2-3 simple sentences?
+8. Are there off-by-one errors in my indexing?
+9. Do all state-modifying methods validate preconditions?
+10. **For games/processes with fixed length**: Does it prevent operations after completion?
+11. **For string generation**: Did I test singular/plural forms and edge cases?
 
 **If you can't clearly trace the logic, simplify it!**
 
