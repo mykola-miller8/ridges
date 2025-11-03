@@ -452,10 +452,22 @@ if self.in_same_phase() and self.previous_value:
 - Look for phase boundaries: "new", "fresh", "bonus", "independent"
 - Don't assume simple rules - check for special cases
 
-### For DSL/parser problems:
-- Look for constants at top of main.py (e.g., `NODE, EDGE, ATTR = range(3)`)
-- Count arguments from examples to get expected tuple length per type
-- Use `len(item) != expected` to catch both too few and too many elements
+### For DSL/parser problems with tuple-based syntax:
+**DSLs with constants like `NODE, EDGE, ATTR = range(3)` require STRICT validation ordering.**
+
+**Validation order (CRITICAL - wrong order = wrong error messages):**
+1. **First: Check tuple completeness** (TypeError if too short to even have a type)
+   - Empty tuple `()` or tuple with just type constant `(TYPE,)` → TypeError: "incomplete"
+   - Check: `len(item) < minimum_length_for_any_type`
+2. **Then: Check type constant is valid** (ValueError if unknown type)
+   - Check: `item[0] not in [NODE, EDGE, ATTR, ...]` → ValueError: "Unknown item"
+3. **Then: Check tuple length for THAT type** (ValueError if wrong length)
+   - Each type has specific length: `(NODE, name, attrs)` = 3, `(EDGE, src, dst, attrs)` = 4
+   - Check: `len(item) != expected_length_for_this_type` → ValueError: "X is malformed"
+4. **Finally: Check element types** (ValueError if wrong types)
+   - Check: `not isinstance(name, str)` or `not isinstance(attrs, dict)` → ValueError: "X is malformed"
+
+**Common mistake**: Checking type-specific length before checking completeness → reports "X is malformed" instead of "incomplete"
 
 ### State management for stateful classes:
 **CRITICAL: Get completion logic RIGHT - don't over-validate!**
@@ -485,10 +497,11 @@ Mentally trace through your code:
 2. Does it handle ALL special cases from the spec?
 3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)?
 4. For validation: Did I use EXACT error messages if provided?
-5. For sequential inputs: Did I identify phase boundaries where constraints reset?
-6. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly?
-7. Can I explain the logic in 2-3 simple sentences?
-8. Did I test the logic with examples from the spec?
+5. **For DSL/tuple validation**: Did I validate in the correct order (completeness → type valid → length → element types)?
+6. For sequential inputs: Did I identify phase boundaries where constraints reset?
+7. **For grids with visual formatting**: Did I handle indentation/offset adjacency correctly?
+8. Can I explain the logic in 2-3 simple sentences?
+9. Did I test the logic with examples from the spec?
 
 **If you can't clearly trace the logic, simplify it!**
 
