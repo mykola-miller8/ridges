@@ -178,7 +178,7 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # Construct system prompt with strong emphasis on correctness
+    # Construct system prompt balancing correctness with robustness
     system_msg = (
         "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
         "CRITICAL REQUIREMENTS:\n"
@@ -187,19 +187,18 @@ def agent_main(
         "- Implement ALL required methods/functions with complete, correct logic\n"
         "- Choose the right algorithms and data structures for the problem\n"
         "- Handle ALL edge cases, corner cases, boundary conditions, and special scenarios\n"
-        "- Implement RIGOROUS input validation - check every constraint mentioned\n"
-        "- Raise exceptions with meaningful messages for ALL invalid inputs and rule violations\n"
-        "- Pay special attention to state management and state transitions\n"
         "- Write deterministic code with no infinite loops or undefined behavior\n"
         "- Do NOT modify tests.py if present\n\n"
         "ALGORITHM CORRECTNESS:\n"
         "- Think through the algorithm carefully before implementing\n"
         "- Mentally trace through examples to verify your approach works\n"
         "- Ensure your implementation matches the problem's requirements exactly\n\n"
-        "VALIDATION AND EXCEPTIONS:\n"
-        "- If the problem mentions validation rules or constraints, implement them ALL\n"
-        "- Every validation rule must raise an appropriate exception with a descriptive message\n"
-        "- Test your logic mentally against edge cases before finalizing\n\n"
+        "INPUT HANDLING & VALIDATION:\n"
+        "- Be ROBUST to different input formats - handle whitespace flexibly (strip, split, etc.)\n"
+        "- Parse inputs tolerantly - focus on extracting meaningful data, not strict character validation\n"
+        "- Validate business rules and constraints as specified in the problem\n"
+        "- Only raise exceptions for truly invalid business logic, not formatting issues\n"
+        "- When exceptions are required by the problem, include meaningful error messages\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
         "Start with '# main.py' as the first line.\n"
@@ -210,8 +209,9 @@ def agent_main(
     user_msg = (
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
-        "Implement a complete, correct solution that handles ALL cases and validation rules.\n"
-        "If examples are provided in the problem statement, ensure your solution produces correct results for them."
+        "Implement a complete, correct solution.\n"
+        "Be robust to input formatting (whitespace, line breaks, etc.) while validating business logic.\n"
+        "If examples are provided, ensure your solution produces correct results for them."
     )
 
     messages = [
@@ -247,25 +247,24 @@ def agent_main(
                         break
                     continue
                 
-                # Step 2: Self-review for correctness, algorithms, and validation
+                # Step 2: Self-review for correctness and robustness
                 # Only do review on first pass through models to balance quality vs speed
                 if attempt < len(AGENT_MODELS):
                     review_messages = [
                         {"role": "system", "content": (
                             "You are a meticulous code reviewer. Your job is to find ANY issues.\n"
-                            "Focus especially on: algorithm correctness, logic errors, edge cases, "
-                            "validation, and exception handling."
+                            "Focus on: algorithm correctness, logic errors, edge cases, input parsing robustness."
                         )},
                         {"role": "user", "content": (
                             f"# Problem Statement\n{problem_statement[:15000]}\n\n"
                             f"# Proposed Code\n```python\n{code}\n```\n\n"
                             "Review this code thoroughly. Check:\n"
-                            "1. ALGORITHM: Is the core algorithm/logic correct? Trace through the logic step-by-step.\n"
+                            "1. ALGORITHM: Is the core algorithm/logic correct? Trace through it step-by-step.\n"
                             "2. EXAMPLES: If the problem includes examples, would this code handle them correctly?\n"
-                            "3. VALIDATION: Does it implement ALL validation rules and raise exceptions as required?\n"
-                            "4. EDGE CASES: Does it handle ALL edge cases and special scenarios correctly?\n"
-                            "5. STATE MANAGEMENT: Is the state management and control flow correct for all cases?\n\n"
-                            "If there are examples in the problem, mentally trace through them to verify correctness.\n"
+                            "3. INPUT PARSING: Does it parse inputs robustly (handle whitespace, various formats)?\n"
+                            "4. VALIDATION: Does it validate business rules appropriately without being overly strict?\n"
+                            "5. EDGE CASES: Does it handle ALL edge cases and special scenarios correctly?\n\n"
+                            "If there are examples in the problem, mentally trace through them.\n"
                             "Respond with 'APPROVED' if the code is correct, or list specific issues found."
                         )}
                     ]
@@ -281,8 +280,7 @@ def agent_main(
                                     "role": "user",
                                     "content": (
                                         f"Code review found issues:\n{review_response}\n\n"
-                                        "Revise the code to fix ALL issues identified. "
-                                        "Pay special attention to algorithm correctness and logic errors.\n"
+                                        "Revise the code to fix ALL issues identified.\n"
                                         "Format: ```python\\n# main.py\\n[revised code]\\n```"
                                     )
                                 })
