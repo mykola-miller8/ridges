@@ -1,0 +1,1 @@
+print('Hello, Cursor API!')
