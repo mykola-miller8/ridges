@@ -4,7 +4,7 @@ import ast
 import json
 import uuid
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
@@ -13,7 +13,7 @@ import requests
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
-# - Includes example-based validation and simplicity-focused approach
+# - Multi-model generation with robust validation
 
 
 DEFAULT_PROXY_URL = (
@@ -121,13 +121,12 @@ def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout
 
 def _extract_examples_from_problem(problem_statement: str) -> str:
     """Extract example sections from problem statement for validation."""
-    # Look for common example markers
     examples = []
     lines = problem_statement.split('\n')
     in_example = False
     current_example = []
     
-    for i, line in enumerate(lines):
+    for line in lines:
         lower = line.lower()
         # Start of example section
         if any(marker in lower for marker in ['example', 'for example', 'here is', 'consider']):
@@ -145,18 +144,65 @@ def _extract_examples_from_problem(problem_statement: str) -> str:
     if current_example:
         examples.append('\n'.join(current_example))
     
-    return '\n\n'.join(examples[:3]) if examples else ""  # Return up to 3 examples
+    return '\n\n'.join(examples[:3]) if examples else ""
+
+
+def _review_code(code: str, problem_statement: str, examples: str, run_id: str, attempt: int) -> Tuple[bool, str]:
+    """
+    Review code for correctness with example-based validation.
+    Returns (approved, refined_code) where refined_code is the corrected version if not approved.
+    """
+    review_system = (
+        "You are an expert code reviewer who validates correctness through concrete examples.\n"
+        "Your task: trace through the code with examples to find bugs.\n\n"
+        "If the code is CORRECT, respond ONLY with: APPROVED\n"
+        "If you find bugs, provide FIXED code:\n```python\n# main.py\n[fixed code]\n```"
+    )
+    
+    examples_section = f"\n\nExamples from problem:\n{examples}\n" if examples else ""
+    
+    review_user = (
+        f"Problem:\n{problem_statement[:8000]}\n{examples_section}\n"
+        f"Code to validate:\n```python\n{code}\n```\n\n"
+        "Validation checklist:\n"
+        "1. Trace through with a concrete example - does output match expected?\n"
+        "2. Check edge cases: empty input, single element, max size\n"
+        "3. Look for: off-by-one errors, wrong loop conditions, incorrect operators\n"
+        "4. Verify algorithm correctness against problem requirements\n\n"
+        "Is this code correct?"
+    )
+    
+    review_messages = [
+        {"role": "system", "content": review_system},
+        {"role": "user", "content": review_user},
+    ]
+    
+    try:
+        review_resp = _call_llm(review_messages, run_id, attempt, 300)
+        
+        if "APPROVED" in review_resp.upper():
+            return True, code
+        
+        refined_code = _extract_main_py(review_resp)
+        if refined_code:
+            syntax_err = _validate_syntax(refined_code)
+            if not syntax_err:
+                return False, refined_code
+    except Exception:
+        pass
+    
+    return True, code  # If review fails, approve current code
 
 
 def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bool = False) -> str:
     """
     Entry point required by the evaluation harness.
     
-    Generates a complete solution with example-based validation:
-    1. Generate simple, correct solution emphasizing clarity
-    2. Validate syntax
-    3. Review by tracing through examples from problem statement
-    4. Return unified diff patch that fully replaces main.py
+    Multi-model approach with validation:
+    1. Try multiple models to generate solutions
+    2. Review and refine each solution
+    3. If review makes changes, do second validation pass
+    4. Return the best validated solution
     """
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
 
@@ -171,7 +217,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     if mode not in ("spec_only", "tests_available"):
         mode = "tests_available" if os.path.exists("tests.py") else "spec_only"
 
-    # Compact repository summary for context (generic, no problem-specific assumptions)
+    # Compact repository summary for context
     parts: List[str] = []
     for name in ("main.py", "tests.py"):
         content = _read(name)
@@ -182,13 +228,12 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     # Extract examples from problem for validation
     examples = _extract_examples_from_problem(problem_statement)
 
-    # Initial system message emphasizing simplicity and correctness
+    # System message emphasizing simplicity
     system_msg = (
         "You are a senior Python engineer who writes SIMPLE, CORRECT code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
-        + "CRITICAL: Prefer simple, straightforward solutions over complex clever ones.\n"
-        "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
-        "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
+        + "CRITICAL: Write the SIMPLEST solution that correctly solves the problem.\n"
+        "Return ONLY one code block:\n```python\n# main.py\n[complete code]\n```\n"
         "No prose. Focus on correctness and clarity."
     )
     
@@ -196,21 +241,22 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         f"Problem Statement:\n{problem_statement[:12000]}\n\n"
         f"Repository Summary:\n{summary}\n\n"
         "Implement a complete, correct solution.\n"
-        "- Use the SIMPLEST approach that correctly solves the problem\n"
-        "- Handle all edge cases and boundary conditions\n"
-        "- Write clear, readable code that obviously works"
+        "- Use the SIMPLEST approach that works\n"
+        "- Handle all edge cases\n"
+        "- Write clear code"
     )
 
-    # Try multiple models to generate initial solution
+    messages = [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg},
+    ]
+
     best_code = ""
-    best_attempt = 0
     
-    for attempt in range(len(AGENT_MODELS)):
+    # Try up to 2 models to generate and validate solutions
+    for attempt in range(min(2, len(AGENT_MODELS))):
         try:
-            messages = [
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": user_msg},
-            ]
+            # Generate solution
             resp = _call_llm(messages, run_id, attempt, 300)
             main_src = _extract_main_py(resp)
             
@@ -220,58 +266,39 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             # Validate syntax
             syntax_err = _validate_syntax(main_src)
             if syntax_err:
-                continue  # Try next model
-                
-            best_code = main_src
-            best_attempt = attempt
-            break
+                continue
             
+            # Review and validate with examples
+            approved, reviewed_code = _review_code(main_src, problem_statement, examples, run_id, attempt)
+            
+            if not approved and reviewed_code != main_src:
+                # Review made changes - do a second validation pass
+                second_approved, final_code = _review_code(
+                    reviewed_code, problem_statement, examples, run_id, 
+                    (attempt + 1) % len(AGENT_MODELS)
+                )
+                best_code = final_code
+            else:
+                best_code = reviewed_code
+            
+            # If we have a validated solution, use it
+            if best_code:
+                break
+                
         except Exception:
             continue
 
+    # Fallback: if no validated solution, try remaining models
     if not best_code:
-        return ""
+        for attempt in range(2, len(AGENT_MODELS)):
+            try:
+                resp = _call_llm(messages, run_id, attempt, 300)
+                main_src = _extract_main_py(resp)
+                
+                if main_src and not _validate_syntax(main_src):
+                    best_code = main_src
+                    break
+            except Exception:
+                continue
 
-    # Example-based validation review
-    try:
-        review_system = (
-            "You are an expert code reviewer who validates correctness by tracing examples.\n"
-            "Your task: manually trace through the code with concrete examples to find bugs.\n"
-            "If the code is CORRECT for all examples, respond ONLY with: APPROVED\n"
-            "If you find bugs, provide CORRECTED code:\n```python\n# main.py\n[corrected code]\n```"
-        )
-        
-        examples_section = f"\n\nExamples from problem:\n{examples}\n" if examples else ""
-        
-        review_user = (
-            f"Problem:\n{problem_statement[:8000]}\n{examples_section}\n"
-            f"Code to validate:\n```python\n{best_code}\n```\n\n"
-            "Manually trace through the code with the examples above:\n"
-            "1. Walk through the logic step-by-step with a concrete example\n"
-            "2. Check if the output matches the expected result\n"
-            "3. Verify edge cases: empty input, single element, boundary values\n"
-            "4. Look for off-by-one errors, incorrect loop conditions, wrong comparisons\n\n"
-            "Does the code produce correct results for ALL examples?"
-        )
-        
-        review_messages = [
-            {"role": "system", "content": review_system},
-            {"role": "user", "content": review_user},
-        ]
-        
-        review_resp = _call_llm(review_messages, run_id, best_attempt, 300)
-        
-        # Check if reviewer approved or provided corrections
-        if "APPROVED" not in review_resp.upper():
-            refined_code = _extract_main_py(review_resp)
-            if refined_code:
-                # Validate refined code syntax
-                syntax_err = _validate_syntax(refined_code)
-                if not syntax_err:
-                    best_code = refined_code
-    
-    except Exception:
-        # If review fails, continue with best_code from initial generation
-        pass
-
-    return _build_single_file_patch("main.py", best_code)
+    return _build_single_file_patch("main.py", best_code) if best_code else ""
