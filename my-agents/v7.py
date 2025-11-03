@@ -1,10 +1,10 @@
 import os
 import re
+import ast
 import json
 import uuid
 import time
-import subprocess
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -13,6 +13,7 @@ import requests
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
+# - Includes self-review iteration and syntax validation
 
 
 DEFAULT_PROXY_URL = (
@@ -30,11 +31,26 @@ AGENT_MODELS: List[str] = [
 
 
 def _read(path: str) -> str:
+    """Read a file and return its contents, or empty string if not found."""
     try:
         with open(path, "r", encoding="utf-8") as f:
             return f.read()
     except Exception:
         return ""
+
+
+def _validate_syntax(code: str) -> Optional[str]:
+    """
+    Validate Python syntax of the given code.
+    Returns None if valid, or an error message if invalid.
+    """
+    try:
+        ast.parse(code)
+        return None
+    except SyntaxError as e:
+        return f"Syntax error at line {e.lineno}: {e.msg}"
+    except Exception as e:
+        return f"Parse error: {str(e)}"
 
 
 def _build_single_file_patch(filename: str, new_content: str) -> str:
@@ -62,6 +78,7 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
 
 
 def _extract_main_py(response: str) -> str:
+    """Extract Python code from LLM response, preferring blocks with '# main.py' header."""
     if not response:
         return ""
     # Prefer explicitly headed block
@@ -74,6 +91,7 @@ def _extract_main_py(response: str) -> str:
 
 
 def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
+    """Call the inference gateway with retry logic."""
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
     model = AGENT_MODELS[attempt % len(AGENT_MODELS)]
@@ -102,9 +120,14 @@ def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout
 
 
 def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bool = False) -> str:
-    """Entry point required by the evaluation harness.
-
-    Returns a unified diff patch that fully replaces main.py.
+    """
+    Entry point required by the evaluation harness.
+    
+    Generates a complete solution with self-review iteration:
+    1. Generate initial solution
+    2. Validate syntax
+    3. Self-review and refine if needed
+    4. Return unified diff patch that fully replaces main.py
     """
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
 
@@ -127,31 +150,86 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
     summary = "\n\n".join(parts)
 
+    # Initial system message for solution generation
     system_msg = (
-        "You are a senior Python engineer.\n"
+        "You are a senior Python engineer who writes correct, robust code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
         + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
         "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Deterministic code."
+        "No prose. Write careful, deterministic code that handles all edge cases correctly."
     )
+    
     user_msg = (
-        f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
+        f"Problem Statement:\n{problem_statement[:12000]}\n\n"
         f"Repository Summary:\n{summary}\n\n"
-        "Implement strictly so all tests (if present) pass."
+        "Implement a complete, correct solution. Handle all edge cases, error conditions, and boundary scenarios."
     )
-    messages = [
-        {"role": "system", "content": system_msg},
-        {"role": "user", "content": user_msg},
-    ]
 
-    # Try a few models and accept the first valid main.py block
+    # Try multiple models to generate initial solution
+    best_code = ""
+    best_attempt = 0
+    
     for attempt in range(len(AGENT_MODELS)):
         try:
+            messages = [
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_msg},
+            ]
             resp = _call_llm(messages, run_id, attempt, 300)
             main_src = _extract_main_py(resp)
-            if main_src:
-                return _build_single_file_patch("main.py", main_src)
+            
+            if not main_src:
+                continue
+                
+            # Validate syntax
+            syntax_err = _validate_syntax(main_src)
+            if syntax_err:
+                continue  # Try next model
+                
+            best_code = main_src
+            best_attempt = attempt
+            break
+            
         except Exception:
             continue
 
-    return ""
+    if not best_code:
+        return ""
+
+    # Self-review iteration: ask LLM to review and refine the code
+    try:
+        review_system = (
+            "You are a senior Python code reviewer. Review the provided code for correctness.\n"
+            "Check for logic errors, edge cases, off-by-one errors, state management issues, etc.\n"
+            "If the code is correct, respond with 'APPROVED' and nothing else.\n"
+            "If there are issues, provide a corrected version with:\n```python\n# main.py\n[corrected code]\n```"
+        )
+        
+        review_user = (
+            f"Problem Statement:\n{problem_statement[:8000]}\n\n"
+            f"Generated Code:\n```python\n{best_code}\n```\n\n"
+            "Review this code carefully. Does it correctly handle all cases including edge cases? "
+            "Are there any logic errors, incorrect state tracking, or boundary issues?"
+        )
+        
+        review_messages = [
+            {"role": "system", "content": review_system},
+            {"role": "user", "content": review_user},
+        ]
+        
+        review_resp = _call_llm(review_messages, run_id, best_attempt, 300)
+        
+        # Check if reviewer approved or provided corrections
+        if "APPROVED" not in review_resp:
+            refined_code = _extract_main_py(review_resp)
+            if refined_code:
+                # Validate refined code syntax
+                syntax_err = _validate_syntax(refined_code)
+                if not syntax_err:
+                    best_code = refined_code
+    
+    except Exception:
+        # If review fails, continue with best_code from initial generation
+        pass
+
+    return _build_single_file_patch("main.py", best_code)
