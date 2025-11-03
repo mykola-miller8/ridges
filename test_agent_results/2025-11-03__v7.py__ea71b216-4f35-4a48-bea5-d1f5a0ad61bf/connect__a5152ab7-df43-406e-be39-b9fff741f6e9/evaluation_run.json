@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "a5152ab7-df43-406e-be39-b9fff741f6e9",
+    "evaluation_id": "ea71b216-4f35-4a48-bea5-d1f5a0ad61bf",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,94 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+from collections import deque\n+\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        # Parse the board, removing leading spaces and creating a uniform grid\n+        lines = board.strip().split('\\n')\n+        self.board = []\n+        for line in lines:\n+            # Remove leading spaces and split into individual cells\n+            cleaned_line = line.strip().replace(' ', '')\n+            self.board.append(list(cleaned_line))\n+        \n+        self.rows = len(self.board)\n+        self.cols = len(self.board[0]) if self.rows > 0 else 0\n+\n+    def get_winner(self) -> str:\n+        # Check if O has won (top to bottom connection)\n+        if self._has_connected_path('O', 'top-bottom'):\n+            return 'O'\n+        \n+        # Check if X has won (left to right connection)\n+        if self._has_connected_path('X', 'left-right'):\n+            return 'X'\n+        \n+        # No winner\n+        return ''\n+\n+    def _get_neighbors(self, row, col):\n+        \"\"\"Get valid neighboring positions in hex grid\"\"\"\n+        if not (0 <= row < self.rows and 0 <= col < self.cols):\n+            return []\n+        \n+        neighbors = []\n+        # Basic 6-directional connectivity for hex grid\n+        directions = [\n+            (-1, 0),  # up\n+            (1, 0),   # down\n+            (0, -1),  # left\n+            (0, 1),   # right\n+            (-1, 1),  # up-right\n+            (1, -1)   # down-left\n+        ]\n+        \n+        for dr, dc in directions:\n+            new_row, new_col = row + dr, col + dc\n+            if 0 <= new_row < self.rows and 0 <= new_col < self.cols:\n+                neighbors.append((new_row, new_col))\n+        \n+        return neighbors\n+\n+    def _has_connected_path(self, player, direction):\n+        \"\"\"Check if player has a connected path in the specified direction\"\"\"\n+        if self.rows == 0 or self.cols == 0:\n+            return False\n+            \n+        visited = set()\n+        queue = deque()\n+        \n+        # Initialize starting positions based on player and direction\n+        if direction == 'top-bottom' and player == 'O':\n+            # O needs to connect top to bottom\n+            # Start from top row\n+            for col in range(self.cols):\n+                if self.board[0][col] == player:\n+                    queue.append((0, col))\n+                    visited.add((0, col))\n+        elif direction == 'left-right' and player == 'X':\n+            # X needs to connect left to right\n+            # Start from left column\n+            for row in range(self.rows):\n+                if self.board[row][0] == player:\n+                    queue.append((row, 0))\n+                    visited.add((row, 0))\n+        \n+        # BFS to find connected path\n+        while queue:\n+            row, col = queue.popleft()\n+            \n+            # Check if we've reached the target side\n+            if direction == 'top-bottom' and player == 'O':\n+                if row == self.rows - 1:  # Reached bottom row\n+                    return True\n+            elif direction == 'left-right' and player == 'X':\n+                if col == self.cols - 1:  # Reached right column\n+                    return True\n+            \n+            # Explore neighbors\n+            for new_row, new_col in self._get_neighbors(row, col):\n+                if (new_row, new_col) not in visited:\n+                    if self.board[new_row][new_col] == player:\n+                        visited.add((new_row, new_col))\n+                        queue.append((new_row, new_col))\n+        \n+        return False\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T16:46:27.255971",
+    "started_initializing_agent_at": "2025-11-03T16:46:27.256067",
+    "started_running_agent_at": "2025-11-03T16:46:27.582597",
+    "started_initializing_eval_at": "2025-11-03T16:46:36.944551",
+    "started_running_eval_at": "2025-11-03T16:46:37.266602",
+    "finished_or_errored_at": "2025-11-03T16:46:37.514233"
+}

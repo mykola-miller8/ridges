@@ -454,10 +454,19 @@ For classes with mutable state (games, parsers, accumulators):
   - `len(item) < 1` only catches empty
 - **Return types**: If returning `list[str]`, each element is ONE line (not multi-line with \\n)
 - **String formatting**: Don't add extra spaces, newlines, or punctuation not in the spec
-- **Grid/graph adjacency**: Don't over-complicate neighbor relationships
-  - For standard grids: use fixed direction lists (e.g., `[(0,1), (1,0), (0,-1), (-1,0)]`)
-  - Check bounds, not complex offset logic
-  - Simple adjacency rules are usually correct
+- **Grid/graph adjacency and connectivity problems**:
+  - **Don't assume standard adjacency**: Not all grids use 4-way or 8-way adjacency
+  - **Parse visual layout carefully**: Indentation and spacing often encode the structure
+    - If rows are indented differently, this usually indicates a hex/diamond grid
+    - The visual spacing shows which cells are actually adjacent
+  - **Verify adjacency with examples**: Trace through the examples to understand which cells connect
+  - **For hex grids**: 6 neighbors (not 4 or 8), and diagonals are often NOT valid connections
+  - **Parsing strategy**: Often the simplest approach is to normalize the input
+    - Remove leading spaces from each row to get the logical grid
+    - The column index in the parsed grid corresponds to the cell's position
+    - Don't overthink row offset patterns - test with examples first
+  - **For connectivity/path-finding**: Use proper BFS/DFS, but FIRST ensure adjacency is correct
+  - **Test your adjacency function**: Mentally verify neighbors for a cell in the middle of the grid
 
 ## 6. EDGE CASES CHECKLIST
 Always handle:

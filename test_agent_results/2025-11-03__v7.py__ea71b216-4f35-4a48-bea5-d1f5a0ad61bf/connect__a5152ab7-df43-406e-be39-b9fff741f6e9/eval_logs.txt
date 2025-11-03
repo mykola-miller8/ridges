@@ -8,10 +8,23 @@
 [POLYGLOT_TEST_RUNNER] [1/10] Running test_an_empty_board_has_no_winner...
 [POLYGLOT_TEST_RUNNER] test_an_empty_board_has_no_winner: PASSED
 [POLYGLOT_TEST_RUNNER] [2/10] Running test_illegal_diagonal_does_not_make_a_winner...
-[POLYGLOT_TEST_RUNNER] test_illegal_diagonal_does_not_make_a_winner: FAILED - 'X' != ''
-- X
-+ 
-
+[POLYGLOT_TEST_RUNNER] test_illegal_diagonal_does_not_make_a_winner: PASSED
+[POLYGLOT_TEST_RUNNER] [3/10] Running test_nobody_wins_crossing_adjacent_angles...
+[POLYGLOT_TEST_RUNNER] test_nobody_wins_crossing_adjacent_angles: PASSED
+[POLYGLOT_TEST_RUNNER] [4/10] Running test_o_can_win_on_a_1x1_board...
+[POLYGLOT_TEST_RUNNER] test_o_can_win_on_a_1x1_board: PASSED
+[POLYGLOT_TEST_RUNNER] [5/10] Running test_o_wins_crossing_from_top_to_bottom...
+[POLYGLOT_TEST_RUNNER] test_o_wins_crossing_from_top_to_bottom: PASSED
+[POLYGLOT_TEST_RUNNER] [6/10] Running test_only_edges_does_not_make_a_winner...
+[POLYGLOT_TEST_RUNNER] test_only_edges_does_not_make_a_winner: PASSED
+[POLYGLOT_TEST_RUNNER] [7/10] Running test_x_can_win_on_a_1x1_board...
+[POLYGLOT_TEST_RUNNER] test_x_can_win_on_a_1x1_board: PASSED
+[POLYGLOT_TEST_RUNNER] [8/10] Running test_x_wins_crossing_from_left_to_right...
+[POLYGLOT_TEST_RUNNER] test_x_wins_crossing_from_left_to_right: PASSED
+[POLYGLOT_TEST_RUNNER] [9/10] Running test_x_wins_using_a_convoluted_path...
+[POLYGLOT_TEST_RUNNER] test_x_wins_using_a_convoluted_path: PASSED
+[POLYGLOT_TEST_RUNNER] [10/10] Running test_x_wins_using_a_spiral_path...
+[POLYGLOT_TEST_RUNNER] test_x_wins_using_a_spiral_path: PASSED
 [POLYGLOT_TEST_RUNNER] Test results:
 [
   {
@@ -22,50 +35,50 @@
   {
     "name": "test_illegal_diagonal_does_not_make_a_winner",
     "category": "default",
-    "status": "fail"
+    "status": "pass"
   },
   {
     "name": "test_nobody_wins_crossing_adjacent_angles",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_o_can_win_on_a_1x1_board",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_o_wins_crossing_from_top_to_bottom",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_only_edges_does_not_make_a_winner",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_x_can_win_on_a_1x1_board",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_x_wins_crossing_from_left_to_right",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_x_wins_using_a_convoluted_path",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   },
   {
     "name": "test_x_wins_using_a_spiral_path",
     "category": "default",
-    "status": "skip"
+    "status": "pass"
   }
 ]
-[POLYGLOT_TEST_RUNNER] Test summary: 1 passed, 1 failed, 8 skipped
+[POLYGLOT_TEST_RUNNER] Test summary: 10 passed, 0 failed, 0 skipped
 [POLYGLOT_TEST_RUNNER] Writing output.json
 [POLYGLOT_TEST_RUNNER] Wrote output.json
 [POLYGLOT_TEST_RUNNER] Exiting main()
