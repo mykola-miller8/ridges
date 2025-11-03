@@ -1,0 +1,57 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: BottleSongTest
+[POLYGLOT_TEST_RUNNER] Found 7 test methods
+[POLYGLOT_TEST_RUNNER] [1/7] Running test_all_verses...
+[POLYGLOT_TEST_RUNNER] test_all_verses: FAILED - Lists differ: ['Ten[141 chars]l be Nine green bottles hanging on the wall.",[1772 chars]ll."] != ['Ten[141 chars]l be nine green bottles hanging on the wall.",[1772 chars]ll."]
+
+First differing element 3:
+"There'll be Nine green bottles hanging on the wall."
+"There'll be nine green bottles hanging on the wall."
+
+Diff is 2979 characters long. Set self.maxDiff to None to see it.
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_all_verses",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_first_generic_verse",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_first_two_verses",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_last_generic_verse",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_last_three_verses",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_verse_with_1_bottle",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_verse_with_2_bottles",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 0 passed, 1 failed, 6 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()
