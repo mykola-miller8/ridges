@@ -412,6 +412,10 @@ for item in data:
 - **Match return type format**: `list[str]` = one line per element; `str` = may have `\n`
 - **Identify patterns**: pluralization, number words, special cases
 - **Use examples as ground truth** - don't guess
+- **For cumulative/repetitive text**: Study which parts repeat and which don't
+  - Don't assume uniformity - check EVERY line in examples
+  - Some elements may include extra info, some may not
+  - The pattern may not be as simple as it first appears
 
 ### For error messages and validation:
 - **If spec provides exact error messages, COPY THEM VERBATIM**
@@ -439,6 +443,9 @@ for item in data:
 - **Visual layouts with indentation/spacing**: Often encode structure (e.g., hex grids, trees)
   - Don't ignore the visual formatting - it's usually meaningful
   - If examples show increasing indentation per row ? likely a hex/offset grid
+- **Repetitive/cumulative patterns**: Don't assume uniformity - check examples line-by-line
+  - What repeats exactly vs what varies
+  - Some lines may have extra elements, others may not
 
 ## 2. VALIDATION (AFTER CORE LOGIC WORKS)
 **Add validation AFTER the basic functionality is correct.**
