@@ -502,6 +502,14 @@ for item in data:
 - Verify boundary conditions: first, last, empty inputs
 - If you can't trace it in your head, simplify!
 
+### For observer/reactive patterns (listeners, callbacks, dependencies):
+- **Avoid circular dependencies**: If A depends on B and B depends on A, you'll get infinite loops
+- **Initialize before registering**: Create objects fully before adding observers/callbacks
+- **Store callbacks in lists, not sets**: Order matters, callbacks should be called in registration order
+- **Keep it simple**: Don't over-engineer - basic list of observers/callbacks usually sufficient
+- **Propagation pattern**: When value changes → notify observers → observers update themselves
+- **Callback removal**: Store callbacks by identity (use list, support removal by reference)
+
 ### For sparse/vague specifications:
 - **If spec is very short (<500 chars) or lacks detail, be EXTRA careful**
 - **Think through edge cases explicitly**: What happens with ties→ Empty input→ Boundary conditions→
@@ -637,6 +645,8 @@ for item in data:
 - Store previous values if needed for dependent validation
 
 ## 3. COMMON PITFALLS
+- **Circular dependencies**: In reactive/observer patterns, avoid A→B→A dependency chains
+- **Initialization order**: Initialize all attributes in __init__ before registering observers
 - **Over-complicating completion logic**: Understand what "complete" means, don't make up restrictions
 - **DSL tuple validation - WRONG ORDER = WRONG ERROR**:
   - **CRITICAL**: Check tuple completeness (length) BEFORE checking type-specific validation
@@ -667,9 +677,10 @@ Mentally trace through your code:
 8. **For interpreters/DSLs with definitions**: When redefining `X` to use `X`, did I capture the old definition first→
 9. **For coordinate systems**: Did I verify x/y map correctly to rows/columns using spec examples→
 10. **For comparison/ranking problems**: Did I handle ties correctly (return ALL items with best score)→
-11. **If spec is sparse**: Did I think through edge cases explicitly→
-12. Can I explain the logic in 2-3 simple sentences→
-13. Did I test the logic with examples from the spec→
+11. **For observer/reactive patterns**: Did I avoid circular dependencies and initialize before registering→
+12. **If spec is sparse**: Did I think through edge cases explicitly→
+13. Can I explain the logic in 2-3 simple sentences→
+14. Did I test the logic with examples from the spec→
 
 **If you can't clearly trace the logic, simplify it!**
 
