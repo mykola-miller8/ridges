@@ -1,0 +1,91 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: GoCountingTest
+[POLYGLOT_TEST_RUNNER] Found 11 test methods
+[POLYGLOT_TEST_RUNNER] [1/11] Running test_a_stone_and_not_a_territory_on_5x5_board...
+[POLYGLOT_TEST_RUNNER] test_a_stone_and_not_a_territory_on_5x5_board: PASSED
+[POLYGLOT_TEST_RUNNER] [2/11] Running test_black_corner_territory_on_5x5_board...
+[POLYGLOT_TEST_RUNNER] test_black_corner_territory_on_5x5_board: PASSED
+[POLYGLOT_TEST_RUNNER] [3/11] Running test_invalid_because_x_is_too_high_for_5x5_board...
+[POLYGLOT_TEST_RUNNER] test_invalid_because_x_is_too_high_for_5x5_board: PASSED
+[POLYGLOT_TEST_RUNNER] [4/11] Running test_invalid_because_x_is_too_low_for_5x5_board...
+[POLYGLOT_TEST_RUNNER] test_invalid_because_x_is_too_low_for_5x5_board: PASSED
+[POLYGLOT_TEST_RUNNER] [5/11] Running test_invalid_because_y_is_too_high_for_5x5_board...
+[POLYGLOT_TEST_RUNNER] test_invalid_because_y_is_too_high_for_5x5_board: PASSED
+[POLYGLOT_TEST_RUNNER] [6/11] Running test_invalid_because_y_is_too_low_for_5x5_board...
+[POLYGLOT_TEST_RUNNER] test_invalid_because_y_is_too_low_for_5x5_board: PASSED
+[POLYGLOT_TEST_RUNNER] [7/11] Running test_one_territory_is_the_whole_board...
+[POLYGLOT_TEST_RUNNER] test_one_territory_is_the_whole_board: PASSED
+[POLYGLOT_TEST_RUNNER] [8/11] Running test_open_corner_territory_on_5x5_board...
+[POLYGLOT_TEST_RUNNER] test_open_corner_territory_on_5x5_board: PASSED
+[POLYGLOT_TEST_RUNNER] [9/11] Running test_two_region_rectangular_board...
+[POLYGLOT_TEST_RUNNER] test_two_region_rectangular_board: PASSED
+[POLYGLOT_TEST_RUNNER] [10/11] Running test_two_territory_rectangular_board...
+[POLYGLOT_TEST_RUNNER] test_two_territory_rectangular_board: PASSED
+[POLYGLOT_TEST_RUNNER] [11/11] Running test_white_center_territory_on_5x5_board...
+[POLYGLOT_TEST_RUNNER] test_white_center_territory_on_5x5_board: PASSED
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_a_stone_and_not_a_territory_on_5x5_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_black_corner_territory_on_5x5_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_invalid_because_x_is_too_high_for_5x5_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_invalid_because_x_is_too_low_for_5x5_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_invalid_because_y_is_too_high_for_5x5_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_invalid_because_y_is_too_low_for_5x5_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_one_territory_is_the_whole_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_open_corner_territory_on_5x5_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_two_region_rectangular_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_two_territory_rectangular_board",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_white_center_territory_on_5x5_board",
+    "category": "default",
+    "status": "pass"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 11 passed, 0 failed, 0 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()
