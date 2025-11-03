@@ -205,6 +205,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 - Check: start state ? middle state ? end state
 - Verify boundary conditions: first item, last item, empty input
 - Watch for off-by-one errors in loops and indices
+- **For grids/graphs**: Test your adjacency rules with actual positions
+  - Pick a cell and list its neighbors - are they correct?
+  - Check if your rules are the same for ALL cells (they should be!)
 - If you can't trace it easily in your head, it's too complex!
 
 ## 3. IDENTIFY SPECIAL CASES
@@ -249,9 +252,11 @@ For classes with mutable state (games, parsers, accumulators):
   - `len(item) < 1` only catches empty
 - **Return types**: If returning `list[str]`, each element is ONE line (not multi-line with \\n)
 - **Grid/graph adjacency**: Don't over-complicate neighbor relationships
-  - For standard grids: use fixed direction lists (e.g., `[(0,1), (1,0), (0,-1), (-1,0)]`)
-  - Check bounds, not complex offset logic
-  - Simple adjacency rules are usually correct
+  - Use FIXED direction lists that apply to ALL cells equally
+  - Example: `directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]` for all cells
+  - **NEVER use row-dependent, column-dependent, or parity-based adjacency**
+  - **NEVER check `if row % 2 == 0` to change neighbors** - this is over-engineering
+  - One simple direction list for the entire grid - that's it!
 
 ## 6. EDGE CASES CHECKLIST
 Always handle:
