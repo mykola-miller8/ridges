@@ -221,10 +221,16 @@ Examples:
 For classes with mutable state (games, parsers, accumulators):
 - **Validate preconditions** in all state-modifying methods
   - Check: Is this operation allowed in the current state?
-  - Example: game.roll() should validate game isn't finished
+  - **CRITICAL**: Before accepting input, verify the operation is still valid
+  - Example: game.roll() must check if game is complete and reject if so
   - Raise clear exceptions when preconditions fail
+- **Track completion for fixed-length games/processes**
+  - If there's a fixed number of rounds/frames/steps, track progress
+  - Check "are we done?" before accepting more input
+  - **Variable-length final rounds**: Some games have special last rounds (e.g., bonus balls)
+    - Track the round number AND what makes that round complete
+    - Don't just count rolls - check logical completion conditions
 - **Test state transitions**: mentally trace start ? middle ? end
-- **Watch for completion logic**: Ensure "is done" checks cover ALL completion scenarios
 - **Avoid state redundancy**: Don't track the same information multiple ways
 
 ## 5. COMMON PITFALLS TO AVOID
@@ -256,6 +262,7 @@ Before submitting, mentally trace through your code:
 4. Can I explain the logic in 2-3 simple sentences?
 5. Are there off-by-one errors in my indexing?
 6. Do all state-modifying methods validate preconditions?
+7. **For games/processes with fixed length**: Does it prevent operations after completion?
 
 **If you can't clearly trace the logic, simplify it!**
 
