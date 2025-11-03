@@ -36,13 +36,23 @@ def main():
         agent_main_return_value = agent_module.agent_main(input_data)
         print("[AGENT_RUNNER] Exited agent's agent_main()")
 
-        # Make sure agent_main_return_value is a string
-        if not isinstance(agent_main_return_value, str):
-            raise Exception("agent_main() function returned a non-string value")
+        # Handle both string and dict returns (production compatibility)
+        if isinstance(agent_main_return_value, str):
+            patch = agent_main_return_value
+            print("[AGENT_RUNNER] Agent returned string patch")
+        elif isinstance(agent_main_return_value, dict) and "patch" in agent_main_return_value:
+            patch = agent_main_return_value["patch"]
+            print("[AGENT_RUNNER] Agent returned dict with patch key")
+        else:
+            raise Exception(f"agent_main() function returned invalid value: {type(agent_main_return_value)}. Expected string or dict with 'patch' key.")
+
+        # Ensure patch is a string
+        if not isinstance(patch, str):
+            raise Exception(f"Patch must be a string, got {type(patch)}")
 
         output = {
             "success": True,
-            "output": agent_main_return_value
+            "output": patch
         }
 
         print("[AGENT_RUNNER] Writing output.json")
