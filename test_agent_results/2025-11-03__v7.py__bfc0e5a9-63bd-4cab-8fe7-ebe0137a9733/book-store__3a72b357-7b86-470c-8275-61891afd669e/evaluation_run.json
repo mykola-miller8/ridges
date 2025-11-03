@@ -1,0 +1,117 @@
+{
+    "evaluation_run_id": "3a72b357-7b86-470c-8275-61891afd669e",
+    "evaluation_id": "bfc0e5a9-63bd-4cab-8fe7-ebe0137a9733",
+    "problem_name": "book-store",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,65 @@\n-def total(basket: list[int]) -> int: # in cents\n-    pass\n+from functools import lru_cache\n+from collections import Counter\n+\n+def total(basket: list[int]) -> int: # in cents\n+    # Count how many of each book we have\n+    counts = Counter(basket)\n+    # Convert to list and sort in descending order for consistent state representation\n+    books = sorted(counts.values(), reverse=True) + [0] * (5 - len(counts))\n+    \n+    # Price per book in cents\n+    BOOK_PRICE = 800\n+    \n+    # Discount percentages for group sizes\n+    DISCOUNTS = {0: 0, 1: 0, 2: 5, 3: 10, 4: 20, 5: 25}\n+    \n+    @lru_cache(maxsize=None)\n+    def calculate_min_cost(books_tuple):\n+        # Convert tuple back to list\n+        books = list(books_tuple)\n+        \n+        # Remove zeros\n+        books = [b for b in books if b > 0]\n+        \n+        # Base case: no books left\n+        if not books:\n+            return 0\n+        \n+        # Sort in descending order for consistent state\n+        books.sort(reverse=True)\n+        \n+        min_cost = float('inf')\n+        \n+        # Try all possible group sizes (1 to min(5, number of different books))\n+        max_group_size = min(5, len(books))\n+        \n+        # Generate all possible ways to form a group\n+        # We'll try forming groups by taking one book from the first k different books\n+        for group_size in range(1, max_group_size + 1):\n+            # Create a new state by reducing count of first 'group_size' books by 1\n+            new_books = books[:]\n+            valid_group = True\n+            \n+            # Check if we can form a group of this size\n+            for i in range(group_size):\n+                if i >= len(new_books) or new_books[i] <= 0:\n+                    valid_group = False\n+                    break\n+                new_books[i] -= 1\n+            \n+            if valid_group:\n+                # Remove zeros\n+                new_books = [b for b in new_books if b > 0]\n+                # Calculate cost for this path\n+                group_price = group_size * BOOK_PRICE * (100 - DISCOUNTS[group_size]) // 100\n+                remaining_cost = calculate_min_cost(tuple(new_books))\n+                total_cost = group_price + remaining_cost\n+                min_cost = min(min_cost, total_cost)\n+        \n+        return min_cost if min_cost != float('inf') else 0\n+    \n+    # Handle empty basket\n+    if not basket:\n+        return 0\n+    \n+    return calculate_min_cost(tuple(books))\n",
+    "test_results": [
+        {
+            "name": "test_check_that_groups_of_four_are_created_properly_even_when_there_are_more_groups_of_three_than_groups_of_five",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_empty_basket",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_five_different_books",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_four_different_books",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_four_groups_of_four_are_cheaper_than_two_groups_each_of_five_and_three",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_group_of_four_plus_group_of_two_is_cheaper_than_two_groups_of_three",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_group_of_one_and_four_is_cheaper_than_one_group_of_two_and_three",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_group_of_one_and_two_plus_three_groups_of_four_is_cheaper_than_one_group_of_each_size",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_only_a_single_book",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_shuffled_book_order",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_three_copies_of_first_book_and_two_each_of_remaining",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_three_different_books",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_three_each_of_first_two_books_and_two_each_of_remaining_books",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_copies_of_each_book",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_different_books",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_each_of_first_four_books_and_one_copy_each_of_rest",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_groups_of_four_and_a_group_of_five",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_groups_of_four_is_cheaper_than_group_of_five_plus_group_of_three",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_groups_of_four_is_cheaper_than_groups_of_five_and_three",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_of_the_same_book",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T16:38:40.012638",
+    "started_initializing_agent_at": "2025-11-03T16:38:40.012757",
+    "started_running_agent_at": "2025-11-03T16:38:40.447342",
+    "started_initializing_eval_at": "2025-11-03T16:38:51.885822",
+    "started_running_eval_at": "2025-11-03T16:38:52.198123",
+    "finished_or_errored_at": "2025-11-03T16:38:52.461234"
+}
