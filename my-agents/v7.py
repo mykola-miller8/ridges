@@ -178,18 +178,24 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # Construct system prompt with strong emphasis on validation and exceptions
+    # Construct system prompt with strong emphasis on correctness
     system_msg = (
         "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
         "CRITICAL REQUIREMENTS:\n"
-        "- Read the ENTIRE problem statement carefully, especially validation rules and exception requirements\n"
+        "- Study the ENTIRE problem statement carefully, including all examples and explanations\n"
+        "- If examples are provided, understand exactly how they work before coding\n"
         "- Implement ALL required methods/functions with complete, correct logic\n"
+        "- Choose the right algorithms and data structures for the problem\n"
         "- Handle ALL edge cases, corner cases, boundary conditions, and special scenarios\n"
         "- Implement RIGOROUS input validation - check every constraint mentioned\n"
         "- Raise exceptions with meaningful messages for ALL invalid inputs and rule violations\n"
         "- Pay special attention to state management and state transitions\n"
         "- Write deterministic code with no infinite loops or undefined behavior\n"
         "- Do NOT modify tests.py if present\n\n"
+        "ALGORITHM CORRECTNESS:\n"
+        "- Think through the algorithm carefully before implementing\n"
+        "- Mentally trace through examples to verify your approach works\n"
+        "- Ensure your implementation matches the problem's requirements exactly\n\n"
         "VALIDATION AND EXCEPTIONS:\n"
         "- If the problem mentions validation rules or constraints, implement them ALL\n"
         "- Every validation rule must raise an appropriate exception with a descriptive message\n"
@@ -204,7 +210,8 @@ def agent_main(
     user_msg = (
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
-        "Implement a complete, correct solution that handles ALL cases and validation rules."
+        "Implement a complete, correct solution that handles ALL cases and validation rules.\n"
+        "If examples are provided in the problem statement, ensure your solution produces correct results for them."
     )
 
     messages = [
@@ -240,24 +247,26 @@ def agent_main(
                         break
                     continue
                 
-                # Step 2: Self-review for correctness, edge cases, and validation
+                # Step 2: Self-review for correctness, algorithms, and validation
                 # Only do review on first pass through models to balance quality vs speed
                 if attempt < len(AGENT_MODELS):
                     review_messages = [
                         {"role": "system", "content": (
                             "You are a meticulous code reviewer. Your job is to find ANY issues.\n"
-                            "Focus especially on: validation logic, edge cases, exception handling, and state management."
+                            "Focus especially on: algorithm correctness, logic errors, edge cases, "
+                            "validation, and exception handling."
                         )},
                         {"role": "user", "content": (
                             f"# Problem Statement\n{problem_statement[:15000]}\n\n"
                             f"# Proposed Code\n```python\n{code}\n```\n\n"
                             "Review this code thoroughly. Check:\n"
-                            "1. Does it implement ALL validation rules and constraints mentioned?\n"
-                            "2. Does it raise exceptions for ALL invalid inputs as required?\n"
-                            "3. Does it handle ALL edge cases and special scenarios correctly?\n"
-                            "4. Is the state management and logic flow correct for all cases?\n"
-                            "5. Are there any missing validation checks or exception raises?\n\n"
-                            "Respond with 'APPROVED' if perfect, or list specific issues found."
+                            "1. ALGORITHM: Is the core algorithm/logic correct? Trace through the logic step-by-step.\n"
+                            "2. EXAMPLES: If the problem includes examples, would this code handle them correctly?\n"
+                            "3. VALIDATION: Does it implement ALL validation rules and raise exceptions as required?\n"
+                            "4. EDGE CASES: Does it handle ALL edge cases and special scenarios correctly?\n"
+                            "5. STATE MANAGEMENT: Is the state management and control flow correct for all cases?\n\n"
+                            "If there are examples in the problem, mentally trace through them to verify correctness.\n"
+                            "Respond with 'APPROVED' if the code is correct, or list specific issues found."
                         )}
                     ]
                     
@@ -273,7 +282,7 @@ def agent_main(
                                     "content": (
                                         f"Code review found issues:\n{review_response}\n\n"
                                         "Revise the code to fix ALL issues identified. "
-                                        "Ensure EVERY validation rule is implemented.\n"
+                                        "Pay special attention to algorithm correctness and logic errors.\n"
                                         "Format: ```python\\n# main.py\\n[revised code]\\n```"
                                     )
                                 })
