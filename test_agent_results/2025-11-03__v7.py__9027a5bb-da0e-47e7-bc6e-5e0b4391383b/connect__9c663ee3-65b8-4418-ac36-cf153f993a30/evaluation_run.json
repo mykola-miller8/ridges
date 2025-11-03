@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "9c663ee3-65b8-4418-ac36-cf153f993a30",
+    "evaluation_id": "9027a5bb-da0e-47e7-bc6e-5e0b4391383b",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,75 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+from collections import deque\n+\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        # Parse the board into a 2D grid\n+        lines = board.strip().split('\\n')\n+        self.board = []\n+        for line in lines:\n+            # Remove leading spaces and split by spaces\n+            row = line.strip().split()\n+            self.board.append(row)\n+        \n+        self.rows = len(self.board)\n+        self.cols = len(self.board[0]) if self.rows > 0 else 0\n+    \n+    def get_winner(self) -> str:\n+        # Check if player 'O' has won (top to bottom)\n+        if self._has_winning_path('O'):\n+            return 'O'\n+        \n+        # Check if player 'X' has won (left to right)\n+        if self._has_winning_path('X'):\n+            return 'X'\n+        \n+        # No winner\n+        return ''\n+    \n+    def _has_winning_path(self, player: str) -> bool:\n+        if player == 'O':\n+            # Player O connects top to bottom\n+            # Start from all positions in the top row that belong to O\n+            starts = [(0, c) for c in range(len(self.board[0])) if self.board[0][c] == player]\n+            return self._bfs_path(player, starts, 'bottom')\n+        else:  # player == 'X'\n+            # Player X connects left to right\n+            # Start from all positions in the leftmost column that belong to X\n+            starts = [(r, 0) for r in range(self.rows) if self.board[r][0] == player]\n+            return self._bfs_path(player, starts, 'right')\n+    \n+    def _bfs_path(self, player: str, starts: list, target_side: str) -> bool:\n+        if not starts:\n+            return False\n+            \n+        visited = set()\n+        queue = deque(starts)\n+        \n+        # Define hexagonal neighbors\n+        # In this representation, each row is offset, so neighbors are:\n+        # For a cell at (r, c):\n+        # Same row: (r, c-1), (r, c+1)\n+        # Row above: (r-1, c-1), (r-1, c)\n+        # Row below: (r+1, c), (r+1, c+1)\n+        directions = [(-1, -1), (-1, 0), (0, -1), (0, 1), (1, 0), (1, 1)]\n+        \n+        while queue:\n+            r, c = queue.popleft()\n+            \n+            # Check if we reached the target side\n+            if target_side == 'bottom' and r == self.rows - 1:\n+                return True\n+            if target_side == 'right' and c == len(self.board[0]) - 1:\n+                return True\n+            \n+            # Explore neighbors\n+            for dr, dc in directions:\n+                nr, nc = r + dr, c + dc\n+                \n+                # Check bounds\n+                if 0 <= nr < self.rows and 0 <= nc < len(self.board[nr]):\n+                    # Check if it's the player's piece and not visited\n+                    if (nr, nc) not in visited and self.board[nr][nc] == player:\n+                        visited.add((nr, nc))\n+                        queue.append((nr, nc))\n+        \n+        return False\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T16:42:18.733788",
+    "started_initializing_agent_at": "2025-11-03T16:42:18.733922",
+    "started_running_agent_at": "2025-11-03T16:42:19.075665",
+    "started_initializing_eval_at": "2025-11-03T16:42:28.064821",
+    "started_running_eval_at": "2025-11-03T16:42:28.389326",
+    "finished_or_errored_at": "2025-11-03T16:42:28.639779"
+}
