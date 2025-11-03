@@ -189,27 +189,42 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 Write a complete, correct implementation following these critical rules:
 
-1. **Loop Safety**: In while loops with continue, ensure the loop variable advances before continue!
+1. **Simplicity First**: Keep implementations as simple as possible. Avoid complex state tracking with multiple variables.
+   - For stateful classes: Use minimal state variables. More state = more bugs.
+   - Prefer simple data structures (lists, counters) over complex tracking logic
+   - Think: "What's the simplest way to solve this?"
+
+2. **State Management**: For classes with state (e.g., games, parsers):
+   - Carefully consider ALL state transitions and boundary conditions
+   - Test your logic mentally: what happens at start, middle, end?
+   - For completion/validation checks: ensure conditions cover ALL cases
+   - Avoid duplicate or conflicting state (e.g., tracking same info in 2+ variables)
+
+3. **Loop Safety**: In while loops with continue, ensure the loop variable advances before continue!
    - Wrong: `while i < n: if cond: continue` (infinite loop - i never increments)
    - Correct: `while i < n: if cond: i += 1; continue`
 
-2. **Return Types**: For functions returning list[str], each element is a single line, not multiple lines joined with \\n
+4. **Return Types**: For functions returning list[str], each element is a single line, not multiple lines joined with \\n
 
-3. **Edge Cases**: Always handle:
+5. **Edge Cases**: Always handle:
    - Empty inputs (empty strings, empty lists)
    - First and last elements in sequences
    - Single-element collections
    - Boundary conditions
+   - Initial state vs final state
 
-4. **Validation**: For tuple/list validation, use appropriate length checks:
+6. **Validation**: For tuple/list validation, use appropriate length checks:
    - Use `len(item) < 2` to catch both empty and single-element cases
    - Not `len(item) < 1` which only catches empty
 
-5. **Exceptions**: Match error messages and exception types exactly as specified in the problem statement
+7. **Exceptions**: Match error messages and exception types exactly as specified in the problem statement
 
-6. **Imports**: Include all necessary imports at the top of the file
+8. **Imports**: Include all necessary imports at the top of the file
 
-7. **Logic**: Ensure your implementation handles all cases described in the problem statement
+9. **Logic Verification**: Before finalizing, trace through your logic:
+   - Does it handle the basic case correctly?
+   - Does it handle all special cases mentioned in the problem?
+   - Are there any assumptions that might break?
 
 Provide your complete implementation now."""
 
