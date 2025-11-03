@@ -31,9 +31,14 @@ def _verbose_log(step: str, details: Any = None, level: str = "INFO") -> None:
     if details is not None:
         if isinstance(details, (dict, list)):
             details_str = json.dumps(details, indent=2, default=str)
+            # Truncate very long details
+            if len(details_str) > 2000:
+                details_str = details_str[:2000] + "... [truncated]"
             log_line += f"\n{details_str}"
         else:
             details_str = str(details)
+            if len(details_str) > 1000:
+                details_str = details_str[:1000] + "... [truncated]"
             log_line += f": {details_str}"
     print(log_line, flush=True)
 
@@ -48,7 +53,7 @@ def _read(path: str) -> str:
                 "path": path,
                 "size_bytes": len(content),
                 "size_lines": len(content.splitlines()),
-                "content": content
+                "preview": content[:200] + "..." if len(content) > 200 else content
             })
             return content
     except Exception as e:
@@ -123,7 +128,7 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
     _verbose_log("PATCH_BUILD: Patch built successfully", {
         "patch_size": len(patch),
         "patch_lines": len(patch.splitlines()),
-        "patch": patch
+        "preview": patch[:500] + "..." if len(patch) > 500 else patch
     })
     return patch
 
@@ -132,7 +137,7 @@ def _extract_main_py(response: str) -> str:
     """Extract Python code from LLM response using multiple strategies."""
     _verbose_log("CODE_EXTRACTION: Starting code extraction", {
         "response_length": len(response),
-        "response": response
+        "response_preview": response[:300] + "..." if len(response) > 300 else response
     })
     if not response:
         _verbose_log("CODE_EXTRACTION: Empty response, returning empty", level="WARN")
@@ -145,7 +150,7 @@ def _extract_main_py(response: str) -> str:
         _verbose_log("CODE_EXTRACTION: Strategy 1 succeeded (explicit main.py)", {
             "extracted_length": len(extracted),
             "extracted_lines": len(extracted.splitlines()),
-            "extracted_code": extracted
+            "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
         })
         return extracted
     
@@ -158,7 +163,7 @@ def _extract_main_py(response: str) -> str:
                 _verbose_log("CODE_EXTRACTION: Strategy 2 succeeded (python block)", {
                     "extracted_length": len(extracted),
                     "extracted_lines": len(extracted.splitlines()),
-                    "extracted_code": extracted
+                    "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
                 })
                 return extracted
     
@@ -172,7 +177,7 @@ def _extract_main_py(response: str) -> str:
                 _verbose_log("CODE_EXTRACTION: Strategy 3 succeeded (generic code block)", {
                     "extracted_length": len(extracted),
                     "extracted_lines": len(extracted.splitlines()),
-                    "extracted_code": extracted
+                    "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
                 })
                 return extracted
     
@@ -235,13 +240,13 @@ def _call_llm(
                 content = (data["choices"][0].get("message", {}) or {}).get("content") or ""
                 _verbose_log("LLM_CALL: Response extracted from choices", {
                     "content_length": len(content),
-                    "content": content
+                    "content_preview": content[:300] + "..." if len(content) > 300 else content
                 })
                 return content
             if isinstance(data, str):
                 _verbose_log("LLM_CALL: Response is string", {
                     "content_length": len(data),
-                    "content": data
+                    "content_preview": data[:300] + "..." if len(data) > 300 else data
                 })
                 return data
             _verbose_log("LLM_CALL: Converting response to JSON string", {
@@ -308,7 +313,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     problem_statement = (input_dict or {}).get("problem_statement", "") or ""
     _verbose_log("AGENT_MAIN: Problem statement loaded", {
         "statement_length": len(problem_statement),
-        "problem_statement": problem_statement
+        "statement_preview": problem_statement[:300] + "..." if len(problem_statement) > 300 else problem_statement
     })
     
     mode = (input_dict or {}).get("problem_category", None)
@@ -431,9 +436,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 **Implement special cases EXPLICITLY - don't assume a uniform loop will handle them!**
 
 Examples:
-- "The 10th frame is special" ? Handle frame 10 separately with different logic
-- "Except for the last element" ? Process n-1 items in loop, then handle last specially
-- "Bonus rolls if spare/strike" ? Add conditional logic after main processing
+- "The 10th frame is special" → Handle frame 10 separately with different logic
+- "Except for the last element" → Process n-1 items in loop, then handle last specially
+- "Bonus rolls if spare/strike" → Add conditional logic after main processing
 
 ## 4. INPUT VALIDATION AND ERROR HANDLING
 **Many problems require strict input validation with specific error types and messages.**
@@ -470,23 +475,27 @@ Examples:
    - **These constants identify different data types** in the input
    - **Each type usually has a specific structure**: (TYPE_CONSTANT, ...required args...)
    - **CRITICAL: Count arguments from examples to determine exact tuple length per type**
-     - Example: If spec shows (NODE, "a", dict) ? NODE tuples must have exactly 3 elements
-     - Example: If spec shows (EDGE, "a", "b", dict) ? EDGE tuples must have exactly 4 elements
+     - Example: If spec shows (NODE, "a", dict) → NODE tuples must have exactly 3 elements
+     - Example: If spec shows (EDGE, "a", "b", dict) → EDGE tuples must have exactly 4 elements
      - **Different types can have different lengths!** Don't use a single length check for all
    - **Validation must check (in order)**:
-     1. Is the tuple empty or too short to even have a type? ? "Graph item incomplete"
-     2. Is the type constant valid/recognized? ? "Unknown item"  
-     3. Does the tuple have the RIGHT NUMBER of elements for THAT SPECIFIC type? ? "X is malformed"
-     4. Are the element types correct (str, dict, int, etc.)? ? "X is malformed"
+     1. Is the tuple empty or too short to even have a type? → "Graph item incomplete"
+     2. Is the type constant valid/recognized? → "Unknown item"  
+     3. Does the tuple have **EXACTLY** the right number of elements? Use `len(item) != expected` not `<` or `>`
+        - Catches BOTH too few AND too many elements → "X is malformed"
+     4. Are the element types correct (str, dict, int, etc.)? → "X is malformed"
    - **Read ALL examples in the spec** to determine the expected length for EACH type
-   - **Use if/elif/else to handle each type separately** with its own length check
+   - **Use if/elif/else to handle each type separately** with its own length AND type checks
    - **Example validation structure**:
      ```python
      if item[0] == TYPE_A:
          if len(item) != 3: raise ValueError("Type A is malformed")
+         if not isinstance(item[1], str): raise ValueError("Type A is malformed")
      elif item[0] == TYPE_B:
          if len(item) != 4: raise ValueError("Type B is malformed")
+         if not isinstance(item[1], str): raise ValueError("Type B is malformed")
      ```
+   - **CRITICAL**: Use `!=` for length check (catches too many AND too few), then validate each element type
 
 ### State management for classes:
 - **Validate preconditions** in all state-modifying methods
