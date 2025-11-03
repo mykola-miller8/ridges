@@ -175,100 +175,48 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # Enhanced system prompt with extreme attention to detail for spatial/graph problems
+    # Balanced system prompt - concise but comprehensive
     system_msg = (
         "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
-        "CRITICAL WORKFLOW - FOLLOW EVERY STEP METICULOUSLY:\n\n"
-        "STEP 1: DEEP UNDERSTANDING\n"
-        "- Read the COMPLETE problem statement multiple times\n"
-        "- Identify the core task, requirements, constraints, and rules\n"
-        "- If examples are provided, study EACH ONE in detail:\n"
-        "  * What is the exact input format? How is it structured?\n"
-        "  * What is the expected output?\n"
-        "  * WHY does that input produce that output? What's the logic?\n"
-        "  * What pattern connects inputs to outputs?\n"
-        "- Study MULTIPLE examples to find patterns and edge cases\n\n"
-        "STEP 2: PROBLEM DECOMPOSITION\n"
-        "- Break the problem into clear sub-tasks\n"
-        "- Plan to use helper methods for complex operations\n"
-        "- Identify required data structures\n"
-        "- Plan your algorithm approach\n\n"
-        "STEP 3: ALGORITHM DESIGN (CRITICAL FOR CORRECTNESS)\n"
-        "- Choose the RIGHT algorithm:\n"
-        "  * Graph connectivity: BFS or DFS to find paths\n"
-        "  * Grid problems: Model coordinates accurately\n"
-        "  * Spatial/neighbor problems: Get adjacency relationships EXACTLY right\n"
-        "  * Parsing: Handle format precisely (whitespace, delimiters, structure)\n"
-        "- For grid/spatial problems with non-standard layouts:\n"
-        "  * CAREFULLY determine neighbor relationships\n"
-        "  * Consider offset patterns, hexagonal/diagonal adjacency\n"
-        "  * Test neighbor calculation mentally on paper\n"
-        "  * Double-check coordinate system and indexing\n"
-        "- For graph traversal:\n"
-        "  * Identify starting points (all cells on one edge)\n"
-        "  * Identify goal condition (reaching opposite edge)\n"
-        "  * Use proper visited tracking to avoid cycles\n"
-        "  * Ensure you explore ALL reachable neighbors\n\n"
-        "STEP 4: MENTAL VERIFICATION (MANDATORY)\n"
-        "- Trace through MULTIPLE examples mentally:\n"
-        "  * Start with a simple example first\n"
-        "  * Then trace through a complex example\n"
-        "  * For each example:\n"
-        "    - Parse the input into your data structures\n"
-        "    - Walk through your algorithm step-by-step\n"
-        "    - Track visited nodes, current state, decisions\n"
-        "    - Verify you get the expected output\n"
-        "- If your trace reveals an error, STOP and redesign\n"
-        "- Pay special attention to:\n"
-        "  * Boundary conditions (edges of grids)\n"
-        "  * Coordinate calculations (no off-by-one errors)\n"
-        "  * Neighbor relationships (all valid neighbors included)\n"
-        "  * Termination conditions (when to stop)\n\n"
-        "STEP 5: IMPLEMENTATION\n"
-        "- Write clean, well-structured code:\n"
-        "  * Use helper methods for complex sub-tasks\n"
-        "  * Use descriptive variable names\n"
-        "  * Add comments for non-obvious logic\n"
-        "  * Handle all edge cases explicitly\n"
-        "- Implement ALL required methods completely (no 'pass' stubs)\n"
-        "- For grid/graph problems:\n"
-        "  * Implement neighbor calculation very carefully\n"
-        "  * Double-check coordinate math and boundary checks\n"
-        "  * Use proper BFS/DFS with visited tracking\n"
-        "  * Test starting and ending conditions carefully\n"
+        "APPROACH:\n"
+        "1. Read the entire problem carefully, including all examples\n"
+        "2. If examples exist, trace through them to understand the required logic\n"
+        "3. Design your algorithm before coding:\n"
+        "   - Choose appropriate data structures\n"
+        "   - For graphs/grids: plan traversal strategy (BFS/DFS)\n"
+        "   - For spatial problems: carefully model coordinates and neighbors\n"
+        "   - For parsing: handle the exact input format\n"
+        "4. Implement complete, working code with all methods fully implemented\n"
+        "5. Mentally verify against examples to catch logic errors\n\n"
+        "CRITICAL REQUIREMENTS:\n"
+        "- Implement ALL methods completely (never leave empty or with just 'pass')\n"
         "- Parse input formats exactly as specified\n"
-        "- Validate inputs and raise exceptions for violations\n"
-        "- Return output in exact format required\n\n"
-        "CRITICAL CORRECTNESS RULES:\n"
-        "- NEVER leave method bodies empty or with just 'pass'\n"
-        "- For spatial problems: Get neighbor relationships EXACTLY right\n"
-        "- For grid problems: Test coordinate calculations carefully\n"
-        "- For graph traversal: Explore ALL valid neighbors, not just some\n"
-        "- For parsing: Handle whitespace and structure precisely\n"
-        "- Trace through at least 2 examples mentally before finalizing\n"
-        "- If a problem involves complex spatial relationships (hex grids, offset grids, etc.):\n"
-        "  * Be EXTRA careful with neighbor calculation\n"
-        "  * Consider how indentation/offset affects coordinates\n"
-        "  * Draw it out mentally or on paper if needed\n\n"
+        "- For graph/grid problems: get neighbor relationships right, use proper BFS/DFS\n"
+        "- For spatial problems: calculate coordinates carefully (watch for offsets, indexing)\n"
+        "- Handle all edge cases (empty inputs, boundaries, single elements)\n"
+        "- Implement validation rules and raise exceptions as needed\n"
+        "- Verify your logic works for the provided examples\n\n"
+        "COMMON PITFALLS TO AVOID:\n"
+        "- Incorrect neighbor calculation in grids (especially hex/offset grids)\n"
+        "- Off-by-one errors in coordinates or boundaries\n"
+        "- Not exploring all valid neighbors in graph traversal\n"
+        "- Incorrect parsing of formatted input (missing whitespace handling)\n"
+        "- Missing edge cases\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
         "Start with '# main.py' as the first line.\n"
         "Format: ```python\\n# main.py\\n[complete code]\\n```\n"
-        "No explanations, no prose, no incomplete implementations."
+        "No explanations or prose."
     )
 
     user_msg = (
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
-        "IMPLEMENT A COMPLETE, CORRECT SOLUTION:\n"
-        "1. Study the problem and ALL examples thoroughly\n"
-        "2. Design your algorithm carefully - get neighbor relationships right!\n"
-        "3. Mentally trace through MULTIPLE examples to verify correctness\n"
-        "4. Break complex logic into helper methods\n"
-        "5. Implement ALL methods with complete, correct logic\n"
-        "6. For spatial/grid problems: Be extra careful with coordinate calculations\n"
-        "7. Handle all edge cases and validation\n\n"
-        "Your solution must be COMPLETE and CORRECT for ALL cases."
+        "Implement a complete, correct solution that:\n"
+        "- Handles all examples correctly\n"
+        "- Implements all methods fully (no empty implementations)\n"
+        "- Handles all edge cases\n"
+        "- Uses appropriate algorithms and data structures"
     )
 
     messages = [
@@ -305,102 +253,72 @@ def agent_main(
                     continue
                 
                 # Check for incomplete implementations (empty methods)
-                if "pass" in code:
-                    try:
-                        tree = ast.parse(code)
-                        has_empty_methods = False
-                        for node in ast.walk(tree):
-                            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                                # Check if function body is just 'pass'
-                                if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
-                                    has_empty_methods = True
-                                    break
-                        
-                        if has_empty_methods:
-                            if attempt < max_attempts - 1:
-                                messages.append({"role": "assistant", "content": response})
-                                messages.append({
-                                    "role": "user",
-                                    "content": (
-                                        "ERROR: The code contains empty method bodies (just 'pass').\n\n"
-                                        "You MUST implement ALL methods with complete logic. "
-                                        "No method should be left as just 'pass'.\n\n"
-                                        "Implement the complete solution with full logic in every method.\n"
-                                        "Format: ```python\\n# main.py\\n[complete implementation]\\n```"
-                                    )
-                                })
+                try:
+                    tree = ast.parse(code)
+                    has_empty_methods = False
+                    for node in ast.walk(tree):
+                        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                            # Check if function body is just 'pass'
+                            if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
+                                has_empty_methods = True
                                 break
-                    except Exception:
-                        pass
+                    
+                    if has_empty_methods:
+                        if attempt < max_attempts - 1:
+                            messages.append({"role": "assistant", "content": response})
+                            messages.append({
+                                "role": "user",
+                                "content": (
+                                    "The code has empty method bodies. Implement ALL methods with complete logic.\n"
+                                    "Format: ```python\\n# main.py\\n[complete implementation]\\n```"
+                                )
+                            })
+                            break
+                except Exception:
+                    pass
                 
-                # Step 2: Self-review with emphasis on correctness
-                # Only do review on first pass through models
+                # Step 2: Self-review (only on first pass)
                 if attempt < len(AGENT_MODELS):
                     review_messages = [
                         {"role": "system", "content": (
-                            "You are a meticulous code reviewer who finds subtle bugs through careful analysis.\n"
-                            "Focus on: algorithm correctness, coordinate calculations, neighbor relationships, "
-                            "input parsing, edge cases, and logic errors."
+                            "You are a code reviewer who finds bugs through careful analysis."
                         )},
                         {"role": "user", "content": (
-                            f"# Problem Statement\n{problem_statement[:15000]}\n\n"
-                            f"# Proposed Code\n```python\n{code}\n```\n\n"
-                            "Review this code with EXTREME attention to detail:\n\n"
-                            "1. COMPLETENESS: Are ALL methods fully implemented?\n"
-                            "2. INPUT PARSING: Does it correctly parse the input?\n"
-                            "   - Handle whitespace, indentation, delimiters?\n"
-                            "   - Build correct data structures?\n"
-                            "3. SPATIAL/NEIGHBOR RELATIONSHIPS (CRITICAL):\n"
-                            "   - For grid/graph problems: Are neighbor calculations EXACTLY right?\n"
-                            "   - Are coordinates calculated correctly (no off-by-one)?\n"
-                            "   - For offset/hex grids: Is the offset pattern handled correctly?\n"
-                            "   - Are boundary checks correct?\n"
-                            "4. ALGORITHM LOGIC:\n"
-                            "   - For graph traversal: Does it explore ALL valid neighbors?\n"
-                            "   - Are starting and ending conditions correct?\n"
-                            "   - Is visited tracking correct?\n"
-                            "5. EXAMPLE VERIFICATION: Trace through a complex example:\n"
-                            "   - Parse the input step by step\n"
-                            "   - Execute the algorithm step by step\n"
-                            "   - Does it produce the correct output?\n"
-                            "   - Are there any logic errors in the trace?\n"
-                            "6. EDGE CASES: Empty inputs, single elements, boundaries?\n\n"
-                            "Respond with 'APPROVED' if the code is complete and correct, "
-                            "or list specific issues with line numbers and details."
+                            f"# Problem\n{problem_statement[:15000]}\n\n"
+                            f"# Code\n```python\n{code}\n```\n\n"
+                            "Review for:\n"
+                            "1. Are all methods fully implemented?\n"
+                            "2. Does input parsing handle the format correctly?\n"
+                            "3. For graphs/grids: Are neighbors calculated correctly? Is traversal sound?\n"
+                            "4. Trace through an example: Does it produce correct output?\n"
+                            "5. Are edge cases handled?\n\n"
+                            "Reply 'APPROVED' if correct, or list specific issues."
                         )}
                     ]
                     
                     try:
                         review_response = _call_llm(review_messages, run_id, attempt, 120)
                         
-                        # If review finds issues, request refinement
                         if review_response and "APPROVED" not in review_response.upper():
                             if attempt < max_attempts - 1:
                                 messages.append({"role": "assistant", "content": response})
                                 messages.append({
                                     "role": "user",
                                     "content": (
-                                        f"Code review found issues:\n{review_response}\n\n"
-                                        "Revise the code to fix ALL issues:\n"
-                                        "- Fix any neighbor calculation or coordinate errors\n"
-                                        "- Correct algorithm logic errors\n"
-                                        "- Ensure parsing is accurate\n"
-                                        "- Verify correctness against examples\n"
-                                        "- Double-check spatial relationships and boundaries\n\n"
-                                        "Format: ```python\\n# main.py\\n[revised complete code]\\n```"
+                                        f"Review found issues:\n{review_response}\n\n"
+                                        "Fix all issues and return corrected code.\n"
+                                        "Format: ```python\\n# main.py\\n[corrected code]\\n```"
                                     )
                                 })
-                                break  # Retry with feedback
+                                break
                     except Exception:
-                        # Review failed, but code is syntactically valid, so accept it
                         pass
                 
-                # Code is syntactically valid and passed review (or review skipped)
+                # Code passed validation and review
                 return _build_single_file_patch("main.py", code)
             
         except Exception:
-            # LLM call failed, try next model
             continue
 
-    # All attempts exhausted, return empty patch
+    # All attempts exhausted
     return ""
