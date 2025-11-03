@@ -17,7 +17,7 @@ TEST_AGENT_CLI = f"{ROOT}/test_agent.py"
 INFERENCE_URL = os.getenv("INFERENCE_URL", "http://172.17.0.1:1234")
 PROBLEM_SET = os.getenv("PROBLEM_SET", "all-polyglot")
 SOURCE_BRANCH = "cursor-work"
-TARGET_BRANCH = "cursor-work-9"
+TARGET_BRANCH = "cursor-work-10"
 
 # v7 solving uses the inference gateway (set in test_agent CLI). For rewriting v7 itself,
 # we use the Cursor API only (no public LLM).
@@ -377,6 +377,9 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
         while attempts < max_attempts_per_problem:
             attempts += 1
             print(f"[LOOP] Attempt {attempts}/{max_attempts_per_problem}")
+
+            # delete test_agent_results directory
+            subprocess.run(["rm", "-rf", f"{ROOT}/test_agent_results"], cwd=ROOT, check=False)
             
             # Run the problem
             eval_dir = _run_single_problem(INFERENCE_URL, name)
