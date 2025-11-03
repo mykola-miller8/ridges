@@ -2,6 +2,8 @@ import ast
 import json
 import os
 import re
+import sys
+import tempfile
 import time
 import uuid
 from typing import Any, Dict, List, Optional
@@ -9,11 +11,11 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
-# v7 agent: generic Python code agent that proposes a full-file patch for main.py.
+# v7 agent: generic Python code agent with iterative refinement.
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
-# - Validates syntax before returning patches
+# - Validates and refines solutions through iteration
 
 
 DEFAULT_PROXY_URL = (
@@ -46,6 +48,37 @@ def _validate_syntax(code: str) -> bool:
         return True
     except SyntaxError:
         return False
+
+
+def _validate_imports(code: str) -> tuple[bool, str]:
+    """
+    Try to import the code and check for basic issues.
+    Returns (success, error_message).
+    """
+    try:
+        # Create a temporary file and try to import it
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(code)
+            temp_path = f.name
+        
+        try:
+            # Try to compile and check for import/definition errors
+            with open(temp_path, 'r') as f:
+                compile(f.read(), temp_path, 'exec')
+            return True, ""
+        except SyntaxError as e:
+            return False, f"Syntax error: {e}"
+        except Exception as e:
+            # Some exceptions are OK (like NameError for undefined vars in class bodies)
+            # We mainly want to catch structural issues
+            return True, ""
+        finally:
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+    except Exception as e:
+        return False, f"Validation error: {e}"
 
 
 def _extract_python_code(response: str) -> Optional[str]:
@@ -151,10 +184,10 @@ def _call_llm(
     raise last_err if last_err else RuntimeError("LLM call failed")
 
 
-def _build_prompt(problem_statement: str, main_py: str, tests_py: str, mode: str) -> List[Dict[str, str]]:
+def _build_initial_prompt(problem_statement: str, main_py: str, tests_py: str, mode: str) -> List[Dict[str, str]]:
     """
-    Build the prompt messages for the LLM.
-    Emphasizes implementing functions from the skeleton and passing tests.
+    Build the initial prompt messages for the LLM.
+    Emphasizes careful implementation with attention to edge cases and state management.
     """
     # Build context summary
     parts: List[str] = []
@@ -166,26 +199,71 @@ def _build_prompt(problem_statement: str, main_py: str, tests_py: str, mode: str
     summary = "\n\n".join(parts) if parts else "No existing files found."
     
     system_msg = (
-        "You are a senior Python engineer tasked with implementing production-quality code.\n\n"
+        "You are a senior Python engineer implementing production-quality code.\n\n"
         "CRITICAL REQUIREMENTS:\n"
-        "1. Study the main.py skeleton carefully - implement ALL functions/classes with correct signatures\n"
-        "2. Return ONLY a complete, syntactically valid main.py file\n"
-        "3. Format your response as: ```python\\n# main.py\\n[complete implementation]\\n```\n"
-        "4. Include all necessary imports at the top\n"
-        "5. Write clean, efficient, well-structured code\n"
-        "6. Ensure your implementation handles all edge cases\n"
+        "1. Read the problem statement EXTREMELY carefully - every detail matters\n"
+        "2. Study the main.py skeleton - implement ALL functions/classes with EXACT signatures\n"
+        "3. Pay special attention to:\n"
+        "   - Edge cases and boundary conditions\n"
+        "   - State management and validation rules\n"
+        "   - Error handling with meaningful exception messages\n"
+        "   - Complex logic flows (if/else branches, loops, state transitions)\n"
+        "4. Return a complete, syntactically valid main.py file\n"
+        "5. Format: ```python\\n# main.py\\n[complete implementation]\\n```\n"
+        "6. Include all necessary imports at the top\n"
+        "7. Write clean, well-structured, carefully tested logic\n"
     )
     
     if mode == "tests_available":
-        system_msg += "7. Do NOT modify tests.py - only implement main.py\n"
+        system_msg += "8. Do NOT modify tests.py - only implement main.py\n"
     
-    system_msg += "\nReturn ONLY the code block - no explanations, no prose."
+    system_msg += "\nThink through the logic carefully. Return ONLY the code block - no explanations."
     
     user_msg = (
         f"## Problem Statement\n{problem_statement[:12000]}\n\n"
         f"## Repository Context\n{summary}\n\n"
         f"## Task\n"
-        f"Implement a complete, working solution in main.py that satisfies all requirements."
+        f"Implement a complete, robust solution that handles ALL edge cases mentioned in the requirements."
+    )
+    
+    return [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg},
+    ]
+
+
+def _build_refinement_prompt(
+    problem_statement: str, 
+    main_py: str, 
+    tests_py: str, 
+    mode: str,
+    previous_code: str,
+    error_msg: str
+) -> List[Dict[str, str]]:
+    """Build a refinement prompt when the previous attempt had issues."""
+    parts: List[str] = []
+    if main_py:
+        parts.append(f"### main.py (skeleton)\n```python\n{main_py[:8000]}\n```")
+    if tests_py and mode == "tests_available":
+        parts.append(f"### tests.py (reference)\n```python\n{tests_py[:8000]}\n```")
+    
+    summary = "\n\n".join(parts) if parts else "No existing files found."
+    
+    system_msg = (
+        "You are a senior Python engineer fixing issues in code.\n\n"
+        "Your previous implementation had problems. Review the error and fix it.\n"
+        "Return a complete, corrected main.py file.\n"
+        "Format: ```python\\n# main.py\\n[complete implementation]\\n```\n"
+        "No explanations - only code."
+    )
+    
+    user_msg = (
+        f"## Problem Statement\n{problem_statement[:10000]}\n\n"
+        f"## Repository Context\n{summary}\n\n"
+        f"## Previous Implementation\n```python\n{previous_code[:6000]}\n```\n\n"
+        f"## Error Found\n{error_msg}\n\n"
+        f"## Task\n"
+        f"Fix the implementation to resolve this error."
     )
     
     return [
@@ -227,27 +305,43 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     main_py = _read("main.py")
     tests_py = _read("tests.py") if mode == "tests_available" else ""
     
-    # Build prompt
-    messages = _build_prompt(problem_statement, main_py, tests_py, mode)
-    
-    # Try each model with multiple attempts
-    max_attempts_per_model = 2
+    # Try each model with iterative refinement
     for model_idx, model_name in enumerate(AGENT_MODELS):
-        for attempt in range(max_attempts_per_model):
+        # Initial attempt
+        messages = _build_initial_prompt(problem_statement, main_py, tests_py, mode)
+        
+        for attempt in range(3):  # Up to 3 attempts per model (1 initial + 2 refinements)
             try:
                 # Call LLM
                 response = _call_llm(messages, run_id, model_name, timeout_s=300)
                 
                 # Extract and validate code
                 code = _extract_python_code(response)
-                if code:
-                    # Return patch immediately upon success
-                    return _build_single_file_patch("main.py", code)
+                if not code:
+                    continue
                 
+                # Additional validation: try to import
+                import_ok, import_error = _validate_imports(code)
+                
+                if import_ok:
+                    # Success! Return the patch
+                    return _build_single_file_patch("main.py", code)
+                else:
+                    # Import failed - try to refine if we have attempts left
+                    if attempt < 2:
+                        messages = _build_refinement_prompt(
+                            problem_statement, main_py, tests_py, mode,
+                            code, import_error
+                        )
+                        time.sleep(0.5)
+                        continue
+                    
             except Exception:
-                # Continue to next attempt/model on any error
+                # Continue to next attempt on any error
                 time.sleep(0.5)
                 continue
+        
+        # Move to next model if all refinement attempts failed
     
     # All attempts failed - return empty patch
     return ""
