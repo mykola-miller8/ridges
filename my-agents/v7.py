@@ -350,15 +350,13 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     system_msg = (
         "You are an expert Python engineer. Your task is to write production-quality, "
         "bug-free Python code that correctly implements the given specification.\n\n"
-        "CRITICAL REQUIREMENTS:\n"
-        "- Follow the specification EXACTLY - do not deviate or add assumptions\n"
-        "- READ THE ENTIRE SPEC 2-3 TIMES to catch ALL rules, constraints, and validation requirements\n"
-        "- If error messages are specified, use them VERBATIM (exact wording)\n"
-        "- If validation is required, implement ALL validation cases completely\n"
-        "- For sequential inputs: implement ALL dependent validation rules (input N based on input N-1)\n"
-        "- IMPORTANT: Watch for phase boundaries where constraints RESET (keywords: 'new', 'fresh', 'bonus')\n"
-        "- Pay attention to type signatures, constants, and structure definitions\n"
-        + ("- IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
+        "CRITICAL PRIORITIES:\n"
+        "1. GET THE CORE LOGIC CORRECT FIRST - focus on basic functionality working properly\n"
+        "2. THEN add validation - don't over-validate or make up restrictions not in the spec\n"
+        "3. Follow the specification EXACTLY - do not deviate or add assumptions\n"
+        "4. If error messages are specified, use them VERBATIM (exact wording)\n"
+        "5. For sequential inputs: watch for phase boundaries where constraints RESET ('new', 'fresh', 'bonus')\n"
+        + ("6. IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
         + "\nReturn your solution in this exact format:\n"
         "```python\n# main.py\n<your complete implementation here>\n```"
     )
@@ -373,297 +371,114 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 # IMPLEMENTATION GUIDELINES
 
-## 0. READ THE SPECIFICATION CAREFULLY AND COMPLETELY
-**Many problems require EXACT string matching, specific output format, AND comprehensive validation.**
+## 0. APPROACH: CORRECT LOGIC FIRST, THEN VALIDATION
+**The #1 priority is implementing the CORRECT core logic. Validation comes second.**
 
-### READ THE ENTIRE SPEC 2-3 TIMES:
-1. **First read**: Understand the overall goal and basic behavior
-2. **Second read**: Identify ALL validation rules, constraints, edge cases, and error conditions
-3. **Third read**: Look for subtle dependencies, special cases, and "gotcha" rules
+**WARNING: Don't over-engineer or over-validate!** Many failures come from:
+- Implementing overly strict/incorrect completion logic
+- Making up restrictions not in the spec
+- Getting distracted by edge cases before basic logic works
 
-### When the spec shows example output:
-1. **Study the examples CHARACTER BY CHARACTER**
-   - Exact punctuation: commas, periods, colons, quotes
-   - Exact capitalization: "Ten" not "ten", "The" not "the"
-   - Exact spacing: single spaces, no trailing spaces
-   - Line structure: where do lines break?
+### Three-step approach:
+1. **Understand the problem**: Read the spec 2-3 times to understand what the code should DO
+2. **Implement correct core logic**: Focus on getting the basic behavior right
+3. **Add validation**: Then implement error checking, edge cases, and constraints
 
-2. **Identify patterns in the examples**
-   - Pluralization rules: "bottle" vs "bottles", "is" vs "are"
-   - Number representations: numeric (1, 2, 3) vs words ("one", "two", "three")
-   - Special cases in wording: "no items" vs "zero items", "a" vs "an"
-   - Formatting patterns: separators between items, empty lines between blocks
+### For exact output matching (strings, lists, etc.):
+- **Study examples CHARACTER BY CHARACTER**: punctuation, capitalization, spacing
+- **Match return type format**: `list[str]` = one line per element; `str` = may have `\n`
+- **Identify patterns**: pluralization, number words, special cases
+- **Use examples as ground truth** - don't guess
 
-3. **Match the return type format PRECISELY**
-   - `list[str]`: Each element is ONE complete line (no embedded \\n characters)
-   - `str`: May contain newlines (\\n) to separate lines
-   - Empty strings in a list often represent blank lines
+### For error messages and validation:
+- **If spec provides exact error messages, COPY THEM VERBATIM**
+- Look for keywords: "raise", "exception", "error message", "must", "cannot"
+- Tests verify both exception type AND exact message text
 
-4. **For string generation tasks:**
-   - Build helper functions/dictionaries for conversions (numbers to words, etc.)
-   - Handle singular/plural forms explicitly
-   - Test edge cases: 0, 1, 2, boundary values
-   - Don't guess at formatting - use the examples as ground truth
+## 1. SIMPLICITY + CORRECTNESS = SUCCESS
+**Get the basic logic working correctly with minimum complexity.**
 
-5. **CRITICAL: EXACT ERROR MESSAGES**
-   - **If the spec explicitly provides error/exception messages, COPY THEM EXACTLY**
-   - Look for sections like "Exception messages", "Error handling", "raise statement"
-   - Common patterns: `raise TypeError("exact message here")` or `raise ValueError("exact message")`
-   - **DO NOT paraphrase or reword specified error messages**
-   - Tests often verify both the exception type AND the exact message text
-   - Example: If spec says `raise ValueError("Edge is malformed")`, use that EXACT string
-   - Search for keywords: "raise", "exception", "error message", "message text"
-
-## 1. SIMPLICITY IS CRITICAL
-**The #1 cause of bugs is unnecessary complexity.**
-- Use the MINIMUM state variables needed (each extra variable = exponentially more bugs)
+- Use MINIMUM state variables needed
 - Prefer simple, direct logic over clever abstractions
-- Before coding, ask: "What's the SIMPLEST approach that could work?"
 - For stateful classes: Track only what you absolutely need
-- Avoid redundant or derived state (don't store what you can compute)
-- **Input parsing**: Don't over-engineer! Whitespace/formatting is often just visual
-  - Try the simplest approach: remove spaces, split lines, strip
-  - Complex parsing logic = more bugs
-  - If simple parsing works, don't build elaborate parsers
+- Don't over-engineer - try the simplest approach first
 
-## 2. TRACE YOUR LOGIC BEFORE CODING
-**Test your approach mentally with concrete examples BEFORE writing code.**
-- Pick 2-3 test cases from the spec and trace through your planned logic
-- Check: start state ? middle state ? end state
-- Verify boundary conditions: first item, last item, empty input
-- Watch for off-by-one errors in loops and indices
-- If you can't trace it easily in your head, it's too complex!
+### Mental testing (CRITICAL):
+- Pick 2-3 examples from spec and trace through your logic
+- Check: start → middle → end states
+- Verify boundary conditions: first, last, empty inputs
+- If you can't trace it in your head, simplify!
 
-## 3. IDENTIFY SPECIAL CASES
-**Scan the ENTIRE specification for exceptions to general rules:**
-- Keywords: "special", "except", "however", "note that", "but", "otherwise"
-- Positional: "first", "last", "final", "10th", specific indices
-- Conditional: "if X then Y", "only when", "unless"
-- Extra handling: "bonus", "fill", "additional"
+### Special cases:
+- Look for keywords: "special", "except", "however", "but", "otherwise", "bonus", "final"
+- **Implement special cases EXPLICITLY** - don't assume a loop handles them
+- Example: "The 10th frame is special" → implement frame 10 separately
 
-**Implement special cases EXPLICITLY - don't assume a uniform loop will handle them!**
+## 2. VALIDATION (AFTER CORE LOGIC WORKS)
+**Add validation AFTER the basic functionality is correct.**
 
-Examples:
-- "The 10th frame is special" ? Handle frame 10 separately with different logic
-- "Except for the last element" ? Process n-1 items in loop, then handle last specially
-- "Bonus rolls if spare/strike" ? Add conditional logic after main processing
+### Validation order (fail fast):
+1. Type checks first (TypeError: wrong type, structural problems)
+2. Structure checks (right length/format?)
+3. Content checks (valid values, ranges)
+4. Dependent checks last (constraints based on previous inputs - see below)
 
-## 4. INPUT VALIDATION AND ERROR HANDLING
-**Many problems require strict input validation with specific error types and messages.**
+### Key points:
+- **Use EXACT error messages if spec provides them** (copy verbatim)
+- TypeError vs ValueError: TypeError = wrong type/structure; ValueError = wrong values
+- For DSLs with tuples: Check tuple length matches expected (e.g., `len(item) != 3` → malformed)
 
-### Validation strategy:
-1. **Check the specification for validation requirements**
-   - Look for: "raise", "exception", "error", "invalid", "malformed"
-   - Note EXACT error types: TypeError, ValueError, etc.
-   - Note EXACT error messages if provided
-   - **TypeError vs ValueError distinction**:
-     - TypeError: Wrong input type or structural problems (not a list, empty tuple, missing elements)
-     - ValueError: Wrong values or content problems (invalid constant, wrong field types, out of range)
+### Dependent/Sequential Validation:
+**For sequential inputs (methods called multiple times), later inputs may depend on earlier ones.**
 
-2. **Validate in the correct order (fail fast principle)**
-   - Type checks first (is it the right type? list vs dict vs str vs int)
-   - Structure checks next (right length? right format?)
-   - Content checks (valid values? constraints met?)
-   - **Dependent checks last**: Constraints based on previous inputs/state (see section below)
+**Key concept: Constraint resets vs. cumulative constraints**
+- **Cumulative**: "If you knocked down 6, you can't knock down more than 4 remaining" (same phase)
+- **Resets**: "After a strike, you get fresh pins" (new phase - constraints reset!)
+- **Keywords**: Look for "new", "fresh", "reset", "bonus", "extra" → indicates phase boundary
 
-3. **Common validation patterns**
-   - **Type validation**: `if not isinstance(data, expected_type): raise TypeError("...")`
-   - **Structure validation**: Check tuple length, dict keys, list elements
-     - **For DSLs with tuple-based syntax**: Each tuple type has an expected length
-     - Example: If spec shows `(TYPE, arg1, arg2)`, tuples must have exactly 3 elements
-     - Check: `if len(item) != expected_length: raise ...("... incomplete/malformed")`
-   - **Content validation**: Check value ranges, string formats, relationships
-   - **Completeness validation**: Check for missing required fields
+**Implementation tip**:
+```python
+# Only apply cumulative constraints WITHIN the same phase
+if self.in_same_phase() and self.previous_value:
+    if value + self.previous_value > 10:
+        raise Exception("Exceeds limit")
+```
 
-4. **Be explicit about what's wrong**
-   - If spec provides exact messages, use them verbatim
-   - Otherwise, make messages descriptive but consistent with the spec's tone
+**How to find rules**:
+- Read spec 2-3 times looking for: "cannot", "must not", "only if", "depends on"
+- Look for phase boundaries: "new", "fresh", "bonus", "independent"
+- Don't assume simple rules - check for special cases
 
-### CRITICAL: Sequential/Dependent Validation
-**For problems with sequential inputs, later inputs often have constraints based on earlier inputs.**
+### For DSL/parser problems:
+- Look for constants at top of main.py (e.g., `NODE, EDGE, ATTR = range(3)`)
+- Count arguments from examples to get expected tuple length per type
+- Use `len(item) != expected` to catch both too few and too many elements
 
-**Pattern: Input N depends on Input N-1 (or earlier inputs)**
+### State management for stateful classes:
+**CRITICAL: Get completion logic RIGHT - don't over-validate!**
+- Understand what "complete" means by reading the spec carefully
+- Example: 10 frames with 2 rolls each = 20 rolls (unless bonus rounds)
+- Test your completion check mentally with examples from the spec
+- Only reject input when truly invalid (don't make up extra restrictions)
+- Store previous values if needed for dependent validation
 
-1. **Identify sequential input problems**:
-   - Methods called multiple times with related inputs (game.roll(), parser.add(), etc.)
-   - Each call modifies state that affects what future calls can accept
-   - Look for phrases: "cannot exceed", "depends on", "only if previous", "remaining"
-
-2. **Types of dependent constraints**:
-   - **Physical/logical limits**: "If you knocked down 6 pins, you can't knock down more than 4 remaining"
-   - **State-based limits**: "Cannot roll after game is complete"
-   - **Cumulative limits**: "Sum of X and Y cannot exceed Z"
-   - **Conditional rules**: "If previous input was A, current can only be B or C"
-
-3. **CRITICAL: Recognize constraint resets (phases/boundaries)**:
-   Many problems have "phases" where dependent constraints RESET:
-   - **Keywords to watch for**: "new", "fresh", "reset", "bonus", "extra", "next set", "another chance"
-   - **Example patterns**:
-     - "After a strike, you get fresh pins" ? Constraint resets, new phase begins
-     - "Bonus rounds with new resources" ? New phase, don't carry over limits from previous phase
-     - "Each section is independent" ? No dependency across section boundaries
-   - **Implementation**: Track which "phase" or "context" you're in
-     - Cumulative constraints apply WITHIN a phase
-     - Constraints RESET at phase boundaries
-     - Don't incorrectly apply cross-phase constraints
-
-4. **Implementation pattern**:
-   ```python
-   def accept_input(self, value):
-       # 1. Basic validation (type, range)
-       if value < 0 or value > 10:
-           raise ValueError("Value must be 0-10")
-       
-       # 2. State-based validation
-       if self.is_complete:
-           raise Exception("Cannot accept more input")
-       
-       # 3. DEPENDENT VALIDATION - but check if constraints apply
-       # Only apply cumulative constraints WITHIN the same phase
-       if self.in_same_phase() and self.previous_value is not None:
-           # Example: remaining capacity constraint (SAME phase only!)
-           if value + self.previous_value > 10:
-               raise Exception("Exceeds limit")
-       
-       # 4. Conditional constraint (may span phases depending on rules)
-       if self.previous_value is not None:
-           if self.previous_value < 10 and value == 10:
-               # Check if this rule applies across phase boundaries
-               raise Exception("Not allowed after non-max value")
-   ```
-
-5. **How to find these rules in the spec**:
-   - Read the ENTIRE spec 2-3 times carefully
-   - Look for sections on "validation", "constraints", "rules", "exceptions"
-   - Look for phrases: "cannot", "must not", "only if", "unless", "depends on"
-   - **Also look for resets**: "new", "fresh", "bonus", "extra", "independent"
-   - Check all test scenarios - they often reveal subtle constraints
-   - **Don't assume simple rules** - complex problems often have special cases
-
-6. **Common scenarios**:
-   - **Game scoring with multiple rounds**: Later rounds may have special rules AND phase boundaries
-   - **Parsers with state**: What's valid depends on what was parsed before
-   - **Resource allocation**: Can't allocate more than remaining capacity
-   - **Sequential construction**: Each piece must be compatible with previous pieces
-   - **Bonus/extra attempts**: Often get fresh resources, constraints reset
-
-**CRITICAL: Test your validation mentally**
-For each input-accepting method:
-- "What are ALL the ways this input could be invalid?"
-- "Does validity depend on previous inputs? If so, what are ALL those rules?"
-- "Are there phases/boundaries where constraints reset?"
-- "Are there special cases for the first/last input?"
-- "Did I implement EVERY constraint mentioned in the spec?"
-
-5. **DSL and parser problems - special attention**
-   - **Look for constant definitions** at the top of main.py (e.g., `NODE, EDGE, ATTR = range(3)`)
-   - **These constants identify different data types** in the input
-   - **Each type usually has a specific structure**: (TYPE_CONSTANT, ...required args...)
-   - **CRITICAL: Count arguments from examples to determine exact tuple length per type**
-     - Example: If spec shows (NODE, "a", dict) ? NODE tuples must have exactly 3 elements
-     - Example: If spec shows (EDGE, "a", "b", dict) ? EDGE tuples must have exactly 4 elements
-     - **Different types can have different lengths!** Don't use a single length check for all
-   - **Validation must check (in order)**:
-     1. Is the tuple empty or too short to even have a type? ? "Graph item incomplete"
-     2. Is the type constant valid/recognized? ? "Unknown item"  
-     3. Does the tuple have **EXACTLY** the right number of elements? Use `len(item) != expected` not `<` or `>`
-        - Catches BOTH too few AND too many elements ? "X is malformed"
-     4. Are the element types correct (str, dict, int, etc.)? ? "X is malformed"
-   - **Read ALL examples in the spec** to determine the expected length for EACH type
-   - **Use if/elif/else to handle each type separately** with its own length AND type checks
-   - **Example validation structure**:
-     ```python
-     if item[0] == TYPE_A:
-         if len(item) != 3: raise ValueError("Type A is malformed")
-         if not isinstance(item[1], str): raise ValueError("Type A is malformed")
-     elif item[0] == TYPE_B:
-         if len(item) != 4: raise ValueError("Type B is malformed")
-         if not isinstance(item[1], str): raise ValueError("Type B is malformed")
-     ```
-   - **CRITICAL**: Use `!=` for length check (catches too many AND too few), then validate each element type
-
-### State management for classes:
-- **Validate ALL preconditions** in all state-modifying methods
-  - Check: Is this operation allowed in the current state?
-  - **CRITICAL**: Before accepting input, verify the operation is still valid
-  - Example: game.roll() must check if game is complete and reject if so
-  - **Check dependent constraints**: Does this input violate constraints based on previous inputs?
-  - Raise clear exceptions when preconditions fail
-- **Track completion for fixed-length games/processes**
-  - If there's a fixed number of rounds/frames/steps, track progress
-  - Check "are we done?" before accepting more input
-  - **Variable-length final rounds**: Some games have special last rounds (e.g., bonus balls)
-    - Track the round number AND what makes that round complete
-    - Don't just count rolls - check logical completion conditions
-    - **Last round often has special rules**: Extra inputs allowed, different constraints
-    - Implement last round validation separately from normal rounds
-- **Store what you need for dependent validation**
-  - If later inputs depend on earlier ones, store enough history to validate
-  - Example: If current input cannot exceed (10 - previous_input), store previous_input
-- **Test state transitions**: mentally trace start ? middle ? end
-- **Avoid state redundancy**: Don't track the same information multiple ways
-
-## 5. COMMON PITFALLS TO AVOID
-- **Dependent validation without recognizing resets**: 
-  - **CRITICAL**: Don't apply cumulative constraints across phase boundaries
-  - Look for keywords: "new", "fresh", "bonus", "extra", "reset"
-  - Example: "After a strike, you get fresh pins" means pin count constraints reset
-  - Track which phase/context you're in; only apply cumulative constraints within the same phase
-- **Off-by-one errors**: Double-check loop bounds and index arithmetic
-  - Is it `range(n)` or `range(n+1)`?
-  - Is frame 10 at index 9 or 10?
+## 3. COMMON PITFALLS
+- **Over-complicating completion logic**: Understand what "complete" means, don't make up restrictions
+- **Cumulative constraints across phases**: Don't apply unless in same phase (watch for "new", "fresh", "bonus")
+- **Off-by-one errors**: Check loop bounds and index arithmetic
 - **Loop safety**: In `while` loops with `continue`, increment BEFORE continue
-  - Wrong: `while i < n: if cond: continue` (infinite loop!)
-  - Right: `while i < n: if cond: i += 1; continue`
-- **Validation**: Use correct checks for edge cases
-  - `len(item) < 2` catches empty AND single-element
-  - `len(item) < 1` only catches empty
-- **Return types**: If returning `list[str]`, each element is ONE line (not multi-line with \\n)
-- **String formatting**: Don't add extra spaces, newlines, or punctuation not in the spec
-- **Grid/graph adjacency and connectivity problems**:
-  - **Don't assume standard adjacency**: Not all grids use 4-way or 8-way adjacency
-  - **Parse visual layout carefully**: Indentation and spacing often encode the structure
-    - If rows are indented differently, this usually indicates a hex/diamond grid
-    - The visual spacing shows which cells are actually adjacent
-  - **Verify adjacency with examples**: Trace through the examples to understand which cells connect
-  - **For hex grids**: 6 neighbors (not 4 or 8), and diagonals are often NOT valid connections
-  - **Parsing strategy**: Often the simplest approach is to normalize the input
-    - Remove leading spaces from each row to get the logical grid
-    - The column index in the parsed grid corresponds to the cell's position
-    - Don't overthink row offset patterns - test with examples first
-  - **For connectivity/path-finding**: Use proper BFS/DFS, but FIRST ensure adjacency is correct
-  - **Test your adjacency function**: Mentally verify neighbors for a cell in the middle of the grid
+- **Return types**: `list[str]` = one line per element (no embedded `\n`)
+- **Grid adjacency**: Don't assume 4-way/8-way - verify with examples
 
-## 6. EDGE CASES CHECKLIST
-Always handle:
-- Empty inputs (empty strings, empty lists, zero values)
-- Single-element collections (often requires singular forms)
-- First element in a sequence
-- Last element in a sequence  
-- Boundary values (min, max)
-- Initial state before any operations
-- **Zero vs "no"**: Check if 0 should be "zero", "no", or something else
-
-## 7. FINAL VERIFICATION
-Before submitting, mentally trace through your code:
-1. Does it handle the basic/normal case?
-2. Does it handle ALL special cases mentioned in the spec?
-3. Did I match the example output EXACTLY (punctuation, capitalization, spacing)?
-4. **If error messages are specified**: Did I use the EXACT error messages verbatim?
-5. **If validation is required**: Did I validate input type, structure, content, AND dependencies correctly?
-6. **For sequential input problems**: Did I implement ALL dependent validation rules?
-   - Does input N check constraints based on input N-1?
-   - Are there cumulative constraints (sum, capacity, etc.)?
-   - **Did I identify phase boundaries where constraints reset?** (look for "new", "fresh", "bonus")
-   - Are cumulative constraints only applied WITHIN a phase, not across phases?
-   - Did I handle special rules for first/last inputs?
-7. Did I use the minimum state needed?
-8. Can I explain the logic in 2-3 simple sentences?
-9. Are there off-by-one errors in my indexing?
-10. Do all state-modifying methods validate ALL preconditions (state + dependencies)?
-11. **For games/processes with fixed length**: Does it prevent operations after completion?
-12. **For string generation**: Did I test singular/plural forms and edge cases?
-13. **Did I read the ENTIRE spec thoroughly?** (2-3+ times to catch all rules)
+## 4. FINAL VERIFICATION
+Mentally trace through your code:
+1. Does it handle the basic case correctly?
+2. Does it handle ALL special cases from the spec?
+3. For output: Did I match examples EXACTLY (punctuation, capitalization, spacing)?
+4. For validation: Did I use EXACT error messages if provided?
+5. For sequential inputs: Did I identify phase boundaries where constraints reset?
+6. Can I explain the logic in 2-3 simple sentences?
+7. Did I test completion logic with examples from the spec?
 
 **If you can't clearly trace the logic, simplify it!**
 
