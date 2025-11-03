@@ -9,10 +9,10 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
-# v7 seed agent: generic code agent that proposes a full-file patch for main.py only.
-# - Never embeds problem-specific constants or dataset names
-# - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
-# - Returns a unified diff that replaces main.py entirely
+# v7 agent: Generic code-solving agent for Python problems
+# - Uses only INFERENCE_URL/SANDBOX_PROXY_URL for LLM calls
+# - Returns unified diff patch for main.py
+# - Focuses on correctness and proper output formatting
 
 
 DEFAULT_PROXY_URL = (
@@ -30,7 +30,7 @@ AGENT_MODELS: List[str] = [
 
 
 def _read(path: str) -> str:
-    """Read a file and return its contents, or empty string if not found."""
+    """Read file contents, returning empty string on error."""
     try:
         with open(path, "r", encoding="utf-8") as f:
             return f.read()
@@ -38,19 +38,17 @@ def _read(path: str) -> str:
         return ""
 
 
-def _validate_syntax(code: str) -> Optional[str]:
-    """Validate Python syntax. Returns None if valid, or error message."""
+def _validate_syntax(code: str) -> bool:
+    """Check if code has valid Python syntax."""
     try:
         ast.parse(code)
-        return None
-    except SyntaxError as e:
-        return f"Syntax error at line {e.lineno}: {e.msg}"
-    except Exception as e:
-        return f"Parse error: {str(e)}"
+        return True
+    except Exception:
+        return False
 
 
 def _build_single_file_patch(filename: str, new_content: str) -> str:
-    """Build a full-file unified diff for filename replacing its contents with new_content."""
+    """Build unified diff patch replacing file contents."""
     old = _read(filename)
     old_lines = old.splitlines()
     new_lines = new_content.splitlines()
@@ -74,7 +72,7 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
 
 
 def _extract_main_py(response: str) -> str:
-    """Extract Python code from LLM response, preferring blocks with '# main.py' header."""
+    """Extract Python code from LLM response."""
     if not response:
         return ""
     # Prefer explicitly headed block
@@ -89,23 +87,21 @@ def _extract_main_py(response: str) -> str:
 def _call_llm(
     messages: List[Dict[str, str]], 
     run_id: str, 
-    attempt: int, 
-    temperature: float = 0.0,
-    timeout_s: int = 240
+    model_idx: int,
+    timeout_s: int = 300
 ) -> str:
-    """Call the inference gateway with retry logic."""
+    """Call inference gateway with specified model."""
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
-    model = AGENT_MODELS[attempt % len(AGENT_MODELS)]
+    model = AGENT_MODELS[model_idx % len(AGENT_MODELS)]
     body = {
         "run_id": run_id,
         "messages": messages,
-        "temperature": temperature,
+        "temperature": 0.0,
         "agent_id": "agent-v7",
         "model": model,
     }
-    last_err: Exception | None = None
-    for r in range(3):
+    for retry in range(3):
         try:
             resp = requests.post(url, json=body, headers=headers, timeout=timeout_s)
             resp.raise_for_status()
@@ -116,16 +112,17 @@ def _call_llm(
                 return data
             return json.dumps(data)
         except Exception as e:
-            last_err = e
-            time.sleep(1 + r)
-    raise last_err if last_err else RuntimeError("LLM call failed")
+            if retry == 2:
+                raise
+            time.sleep(1 + retry)
+    return ""
 
 
 def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bool = False) -> str:
     """
-    Entry point required by the evaluation harness.
+    Main entry point for the evaluation harness.
     
-    Returns a unified diff patch that fully replaces main.py.
+    Generates a solution and returns a unified diff patch for main.py.
     """
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
 
@@ -140,71 +137,70 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     if mode not in ("spec_only", "tests_available"):
         mode = "tests_available" if os.path.exists("tests.py") else "spec_only"
 
-    # Repository summary
+    # Build repository context
     parts: List[str] = []
     for name in ("main.py", "tests.py"):
         content = _read(name)
         if content:
             parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
-    summary = "\n\n".join(parts)
+    repo_summary = "\n\n".join(parts)
 
+    # System message
     system_msg = (
-        "You are a senior Python engineer who writes simple, correct, bug-free code.\n"
+        "You are an expert Python engineer. Write simple, correct, bug-free code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
-        + "Return ONLY:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose or explanations."
+        + "Return ONLY a code block:\n```python\n# main.py\n[code here]\n```"
     )
     
-    user_msg = (
-        f"Problem Statement:\n{problem_statement[:12000]}\n\n"
-        f"Repository:\n{summary}\n\n"
-        "Implement a complete, correct solution.\n\n"
-        "?? CRITICAL SUCCESS FACTORS:\n\n"
-        "1. For list[str] return types with multi-line content:\n"
-        "   - DEFAULT: Each line is a separate string (flat list)\n"
-        "   - AVOID: Joining lines with \\n into single strings\n"
-        "   - Use result.extend(lines) NOT result.append('\\n'.join(lines))\n\n"
-        "2. TEST YOUR LOGIC mentally with ALL cases, especially:\n"
-        "   - FIRST/SIMPLEST case (often has special logic)\n"
-        "   - LAST case (may be different)\n"
-        "   - MIDDLE cases (general pattern)\n"
-        "   - Example: If processing items 1-10, trace through what happens for\n"
-        "     item 1, item 5, and item 10 separately\n\n"
-        "3. Common bug: Special cases in loops\n"
-        "   ```python\n"
-        "   # WRONG - first item might be skipped or missing parts\n"
-        "   if i > 1:  # This excludes i==1!\n"
-        "       add_common_suffix()\n"
-        "   \n"
-        "   # CORRECT - include first item\n"
-        "   if i >= 1:  # This includes i==1\n"
-        "       add_common_suffix()\n"
-        "   ```\n\n"
-        "4. Validation (for tuple/list problems):\n"
-        "   - len(item) < 1 only catches EMPTY, not incomplete!\n"
-        "   - Use len(item) < 2 for tuples needing 2+ elements\n\n"
-        "Before coding, mentally trace:\n"
-        "- What does the FIRST item output look like?\n"
-        "- What does the LAST item output look like?\n"
-        "- What does a MIDDLE item output look like?\n"
-        "- Are there common elements that appear in ALL cases?\n\n"
-        "Now implement the solution, ensuring all cases are handled correctly."
-    )
+    # User message with critical guidance
+    user_msg = f"""Problem:
+{problem_statement[:12000]}
+
+Repository:
+{repo_summary}
+
+Implement a complete solution. Follow these CRITICAL rules:
+
+1. OUTPUT FORMAT for list[str]:
+   When returning list[str] with multi-line content, each LINE is a separate string.
+   DON'T join lines with \\n - that creates one string instead of multiple!
+   
+   Example:
+   ? WRONG: result.append('\\n'.join(['line1', 'line2']))  # ['line1\\nline2']
+   ? RIGHT: result.extend(['line1', 'line2'])              # ['line1', 'line2']
+
+2. TEST EDGE CASES:
+   - First item (i==1, index==0) - often has special logic
+   - Last item - may be different
+   - Empty/None inputs
+   Trace through your logic for these cases mentally!
+
+3. VALIDATION (for tuple/list structures):
+   ? WRONG: if len(item) < 1    # Only catches empty
+   ? RIGHT: if len(item) < 2    # Catches empty AND incomplete
+
+4. Match specs EXACTLY:
+   - Error messages must match word-for-word
+   - Use correct exception types (TypeError vs ValueError)
+   - Handle all specified edge cases
+
+Write the complete solution now."""
 
     messages = [
         {"role": "system", "content": system_msg},
         {"role": "user", "content": user_msg},
     ]
 
-    # Try all models to find a working solution
-    for attempt in range(len(AGENT_MODELS)):
+    # Try each model until we get valid code
+    for model_idx in range(len(AGENT_MODELS)):
         try:
-            resp = _call_llm(messages, run_id, attempt, temperature=0.0, timeout_s=300)
-            code = _extract_main_py(resp)
+            response = _call_llm(messages, run_id, model_idx)
+            code = _extract_main_py(response)
             
-            if code and not _validate_syntax(code):
+            if code and _validate_syntax(code):
                 return _build_single_file_patch("main.py", code)
         except Exception:
             continue
     
+    # Fallback: return empty if all models fail
     return ""
