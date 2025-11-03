@@ -355,8 +355,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "2. THEN add validation - don't over-validate or make up restrictions not in the spec\n"
         "3. Follow the specification EXACTLY - do not deviate or add assumptions\n"
         "4. If error messages are specified, use them VERBATIM (exact wording)\n"
-        "5. For sequential inputs: watch for phase boundaries where constraints RESET ('new', 'fresh', 'bonus')\n"
-        + ("6. IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
+        "5. For DSL/tuple validation: Check completeness (length) BEFORE type-specific checks\n"
+        "6. For sequential inputs: watch for phase boundaries where constraints RESET ('new', 'fresh', 'bonus')\n"
+        + ("7. IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
         + "\nReturn your solution in this exact format:\n"
         "```python\n# main.py\n<your complete implementation here>\n```"
     )
@@ -455,19 +456,38 @@ if self.in_same_phase() and self.previous_value:
 ### For DSL/parser problems with tuple-based syntax:
 **DSLs with constants like `NODE, EDGE, ATTR = range(3)` require STRICT validation ordering.**
 
-**Validation order (CRITICAL - wrong order = wrong error messages):**
-1. **First: Check tuple completeness** (TypeError if too short to even have a type)
-   - Empty tuple `()` or tuple with just type constant `(TYPE,)` → TypeError: "incomplete"
-   - Check: `len(item) < minimum_length_for_any_type`
-2. **Then: Check type constant is valid** (ValueError if unknown type)
-   - Check: `item[0] not in [NODE, EDGE, ATTR, ...]` → ValueError: "Unknown item"
-3. **Then: Check tuple length for THAT type** (ValueError if wrong length)
-   - Each type has specific length: `(NODE, name, attrs)` = 3, `(EDGE, src, dst, attrs)` = 4
-   - Check: `len(item) != expected_length_for_this_type` → ValueError: "X is malformed"
-4. **Finally: Check element types** (ValueError if wrong types)
-   - Check: `not isinstance(name, str)` or `not isinstance(attrs, dict)` → ValueError: "X is malformed"
+**MUST CHECK IN THIS ORDER (wrong order = wrong error type/message):**
 
-**Common mistake**: Checking type-specific length before checking completeness → reports "X is malformed" instead of "incomplete"
+```python
+# Example: Validating graph DSL items
+for item in data:
+    # Step 1: Check completeness FIRST (TypeError)
+    if len(item) < 2:  # Minimum: (TYPE, ...)
+        raise TypeError("Graph item incomplete")
+    
+    # Step 2: Check type constant is valid (ValueError)
+    if item[0] not in [NODE, EDGE, ATTR]:
+        raise ValueError("Unknown item")
+    
+    # Step 3: Check type-specific length (ValueError)
+    if item[0] == NODE and len(item) != 3:
+        raise ValueError("Node is malformed")
+    elif item[0] == EDGE and len(item) != 4:
+        raise ValueError("Edge is malformed")
+    elif item[0] == ATTR and len(item) != 3:
+        raise ValueError("Attribute is malformed")
+    
+    # Step 4: Check element types (ValueError)
+    if item[0] == NODE:
+        if not isinstance(item[1], str) or not isinstance(item[2], dict):
+            raise ValueError("Node is malformed")
+    # ... similar for EDGE, ATTR
+```
+
+**WHY THIS ORDER MATTERS:**
+- `()` has len=0, can't even check `item[0]` → must check length FIRST
+- `(ATTR,)` has len=1, `item[0]` exists but missing args → "incomplete" not "malformed"
+- Only after confirming completeness can you safely check type-specific requirements
 
 ### State management for stateful classes:
 **CRITICAL: Get completion logic RIGHT - don't over-validate!**
@@ -479,6 +499,11 @@ if self.in_same_phase() and self.previous_value:
 
 ## 3. COMMON PITFALLS
 - **Over-complicating completion logic**: Understand what "complete" means, don't make up restrictions
+- **DSL tuple validation - WRONG ORDER = WRONG ERROR**:
+  - **CRITICAL**: Check tuple completeness (length) BEFORE checking type-specific validation
+  - Empty `()` or incomplete `(TYPE,)` → TypeError: "incomplete" (NOT ValueError: "malformed")
+  - Must check `len(item) < min_length` FIRST, before accessing `item[0]`
+  - See Section 2 for complete code example showing correct validation order
 - **Cumulative constraints across phases**: Don't apply unless in same phase (watch for "new", "fresh", "bonus")
 - **Off-by-one errors**: Check loop bounds and index arithmetic
 - **Loop safety**: In `while` loops with `continue`, increment BEFORE continue
