@@ -13,7 +13,6 @@ import requests
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
-# - Multi-candidate generation with diversity sampling
 
 
 DEFAULT_PROXY_URL = (
@@ -126,7 +125,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     """
     Entry point required by the evaluation harness.
     
-    Strategy: Generate multiple diverse candidates, return first valid one.
+    Returns a unified diff patch that fully replaces main.py.
     """
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
 
@@ -149,34 +148,47 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
     summary = "\n\n".join(parts)
 
-    # Careful, detailed prompt for generation
     system_msg = (
-        "You are a senior Python engineer who writes simple, correct code.\n"
+        "You are a senior Python engineer who writes simple, correct, bug-free code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
         + "Return ONLY:\n```python\n# main.py\n[complete code]\n```\n"
-        "No explanations."
+        "No prose or explanations."
     )
     
     user_msg = (
-        f"Problem:\n{problem_statement[:12000]}\n\n"
+        f"Problem Statement:\n{problem_statement[:12000]}\n\n"
         f"Repository:\n{summary}\n\n"
-        "Implement a complete solution with careful input validation.\n\n"
-        "VALIDATION CHECKLIST (critical for correctness):\n"
-        "1. Check input type FIRST (is it None? wrong type?)\n"
-        "2. For sequences (tuples, lists), check minimum length needed\n"
-        "   - If validating tuples that need N elements, check len(tuple) >= N\n"
-        "   - Don't just check len > 0, check for the actual minimum needed\n"
-        "3. Check element types and values AFTER length validation\n"
-        "4. Match error messages EXACTLY as specified in problem\n"
-        "5. Use correct exception types (TypeError vs ValueError)\n\n"
-        "Example of CORRECT tuple validation pattern:\n"
+        "Implement a complete, correct solution.\n\n"
+        "?? CRITICAL: When validating tuple/list structures, avoid this COMMON BUG:\n\n"
+        "? WRONG - This only catches EMPTY tuples, not incomplete ones:\n"
         "```python\n"
-        "# If tuple needs at least 2 elements:\n"
-        "if not isinstance(item, tuple) or len(item) < 2:\n"
-        "    raise TypeError(\"Item incomplete\")\n"
-        "# Now safe to access item[0], item[1]\n"
+        "if len(item) < 1:\n"
+        "    raise TypeError('incomplete')\n"
+        "# BUG: A tuple like (X,) has len=1, passes check, but may need 3 elements!\n"
         "```\n\n"
-        "Implement the solution following this validation pattern."
+        "? CORRECT - Check if tuple has the MINIMUM elements needed:\n"
+        "```python\n"
+        "# For items that process type-based data:\n"
+        "if not isinstance(item, tuple) or len(item) < 2:\n"
+        "    raise TypeError('incomplete')  # Catches both () and (X,)\n"
+        "\n"
+        "# Then do type-specific validation:\n"
+        "item_type = item[0]\n"
+        "if item_type == TYPE_A:\n"
+        "    if len(item) != 3:  # TYPE_A needs exactly 3 elements\n"
+        "        raise ValueError('TYPE_A malformed')\n"
+        "elif item_type == TYPE_B:\n"
+        "    if len(item) != 4:  # TYPE_B needs exactly 4 elements\n"
+        "        raise ValueError('TYPE_B malformed')\n"
+        "```\n\n"
+        "Key principle: Check for MINIMUM viable length upfront (usually 2+ for typed data),\n"
+        "then do type-specific length validation. Don't just check len < 1!\n\n"
+        "Other validation best practices:\n"
+        "- Check types BEFORE accessing elements\n"
+        "- Match error messages EXACTLY as specified\n"
+        "- Use correct exception types (TypeError vs ValueError)\n"
+        "- Handle None/null inputs\n\n"
+        "Implement the solution now, avoiding the common bug described above."
     )
 
     messages = [
@@ -184,39 +196,10 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         {"role": "user", "content": user_msg},
     ]
 
-    # Try multiple models with different temperatures for diversity
-    candidates = []
-    
-    # First, try with temperature=0 (deterministic)
+    # Try all models to find a working solution
     for attempt in range(len(AGENT_MODELS)):
         try:
             resp = _call_llm(messages, run_id, attempt, temperature=0.0, timeout_s=300)
-            code = _extract_main_py(resp)
-            
-            if code and not _validate_syntax(code):
-                candidates.append(code)
-                # If we got a valid solution, try one more with higher temperature for diversity
-                if len(candidates) == 1:
-                    try:
-                        resp2 = _call_llm(messages, run_id, attempt, temperature=0.3, timeout_s=300)
-                        code2 = _extract_main_py(resp2)
-                        if code2 and not _validate_syntax(code2) and code2 != code:
-                            candidates.append(code2)
-                    except Exception:
-                        pass
-                break
-        except Exception:
-            continue
-    
-    # If we have candidates, return the first one
-    # (could add selection logic here, but first valid is often good)
-    if candidates:
-        return _build_single_file_patch("main.py", candidates[0])
-    
-    # Fallback: try remaining models if no solution yet
-    for attempt in range(len(AGENT_MODELS)):
-        try:
-            resp = _call_llm(messages, run_id, attempt, temperature=0.5, timeout_s=300)
             code = _extract_main_py(resp)
             
             if code and not _validate_syntax(code):
