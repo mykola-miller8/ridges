@@ -171,7 +171,11 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
     system_msg = (
         "You are an expert Python engineer. Your task is to write production-quality, "
-        "bug-free Python code that correctly implements the given specification.\n"
+        "bug-free Python code that correctly implements the given specification.\n\n"
+        "CRITICAL: Read the ENTIRE specification carefully before coding. Many problems have "
+        "special cases or exceptions to the general rule (e.g., 'the last item is special', "
+        "'the 10th frame has different rules'). You MUST implement special cases with different "
+        "logic than the general pattern - do NOT use a simple uniform loop if special handling is required.\n"
         + ("IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
         + "Return your solution in this exact format:\n"
         "```python\n# main.py\n<your complete implementation here>\n```"
@@ -187,20 +191,27 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 # CRITICAL IMPLEMENTATION RULES
 
-?? **SPECIAL CASES ARE MANDATORY** ??
-Before writing ANY code, scan the entire specification for:
-- Words like "special", "exception", "except", "however", "note that", "but"  
-- Mentions of first/last items, final positions, boundaries
-- Different rules for specific indices, frames, rounds, or positions
-- Bonus/extra handling at the end
+*** WARNING: SPECIAL CASES ARE MANDATORY ***
 
-If you find special cases, you MUST implement them DIFFERENTLY from the general pattern.
-**DO NOT use a simple uniform loop if special handling is required!**
+STEP 1: BEFORE WRITING ANY CODE, scan the ENTIRE specification for special cases!
+Look for these keywords/phrases:
+- "special case" / "special" / "exception" / "except" / "however" / "note that" / "but"
+- "last" / "final" / "10th" / "bonus" / "fill" / "extra"
+- Any mention of different rules for specific positions/indices
 
-Example patterns:
-- "The 10th X is special" ? Use if/else for index 9 or separate logic after main loop
-- "Except for the last Y" ? Handle last item outside the main loop
-- "Bonus/fill" ? Extra processing beyond the standard pattern
+STEP 2: If you find special cases, you MUST implement them DIFFERENTLY!
+*** DO NOT use a simple uniform loop if special handling is required! ***
+
+Common patterns for special case implementation:
+- "The 10th/last X is special" -> Use if/else: handle items 0-8 in loop, handle item 9 separately
+- "Except for the last Y" -> Process all but last in loop, then handle last outside loop
+- "Bonus/fill balls" -> Process main items in loop, then extra processing after loop
+- "Different rules for final round" -> Split logic: for i in range(n-1): normal logic, then special logic for final
+
+STEP 3: Test your mental model:
+- Does my code handle the standard case correctly?
+- Does my code handle EACH special case with different logic?
+- Did I use separate code paths (if/else or separate loops) for special cases?
 
 Write a complete, correct implementation following these critical rules:
 
