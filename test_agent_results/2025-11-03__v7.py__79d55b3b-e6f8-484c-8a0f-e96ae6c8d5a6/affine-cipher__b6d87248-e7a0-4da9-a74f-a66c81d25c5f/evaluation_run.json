@@ -1,0 +1,97 @@
+{
+    "evaluation_run_id": "b6d87248-e7a0-4da9-a74f-a66c81d25c5f",
+    "evaluation_id": "79d55b3b-e6f8-484c-8a0f-e96ae6c8d5a6",
+    "problem_name": "affine-cipher",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,6 +1,64 @@\n-def encode(plain_text: str, a: int, b: int) -> str:\n-    pass\n-\n-\n-def decode(ciphered_text: str, a: int, b: int) -> str:\n-    pass\n+import math\n+import re\n+\n+def encode(plain_text: str, a: int, b: int) -> str:\n+    m = 26  # Length of the alphabet\n+    if math.gcd(a, m) != 1:\n+        raise ValueError(\"a and m must be coprime.\")\n+    \n+    # Convert to lowercase and remove non-alphanumeric characters\n+    cleaned_text = re.sub(r'[^a-z0-9]', '', plain_text.lower())\n+    \n+    encrypted_chars = []\n+    for char in cleaned_text:\n+        if char.isdigit():\n+            encrypted_chars.append(char)\n+        else:\n+            # Convert letter to number (0-25)\n+            i = ord(char) - ord('a')\n+            # Apply encryption formula\n+            encrypted_i = (a * i + b) % m\n+            # Convert back to letter\n+            encrypted_char = chr(encrypted_i + ord('a'))\n+            encrypted_chars.append(encrypted_char)\n+    \n+    # Group into chunks of 5\n+    grouped = []\n+    for i in range(0, len(encrypted_chars), 5):\n+        grouped.append(''.join(encrypted_chars[i:i+5]))\n+    \n+    return ' '.join(grouped)\n+\n+\n+def decode(ciphered_text: str, a: int, b: int) -> str:\n+    m = 26  # Length of the alphabet\n+    if math.gcd(a, m) != 1:\n+        raise ValueError(\"a and m must be coprime.\")\n+    \n+    # Find modular multiplicative inverse of a\n+    a_inv = None\n+    for x in range(1, m):\n+        if (a * x) % m == 1:\n+            a_inv = x\n+            break\n+    \n+    if a_inv is None:\n+        raise ValueError(\"a and m must be coprime.\")\n+    \n+    # Remove spaces and convert to lowercase\n+    cleaned_text = re.sub(r' ', '', ciphered_text.lower())\n+    \n+    decrypted_chars = []\n+    for char in cleaned_text:\n+        if char.isdigit():\n+            decrypted_chars.append(char)\n+        else:\n+            # Convert letter to number (0-25)\n+            y = ord(char) - ord('a')\n+            # Apply decryption formula\n+            decrypted_i = (a_inv * (y - b)) % m\n+            # Convert back to letter\n+            decrypted_char = chr(decrypted_i + ord('a'))\n+            decrypted_chars.append(decrypted_char)\n+    \n+    return ''.join(decrypted_chars)\n",
+    "test_results": [
+        {
+            "name": "test_decode_a_sentence",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_decode_all_the_letters",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_decode_exercism",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_decode_numbers",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_decode_with_a_not_coprime_to_m",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_decode_with_no_spaces_in_input",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_decode_with_too_many_spaces",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_all_the_letters",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_deep_thought",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_mindblowingly",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_no",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_numbers",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_o_m_g",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_omg",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_with_a_not_coprime_to_m",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_encode_yes",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T17:53:00.297735",
+    "started_initializing_agent_at": "2025-11-03T17:53:00.297910",
+    "started_running_agent_at": "2025-11-03T17:53:00.694558",
+    "started_initializing_eval_at": "2025-11-03T17:53:08.351662",
+    "started_running_eval_at": "2025-11-03T17:53:08.716425",
+    "finished_or_errored_at": "2025-11-03T17:53:08.988763"
+}
