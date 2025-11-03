@@ -175,33 +175,45 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # Balanced system prompt - concise but comprehensive
+    # System prompt with emphasis on correctness through example verification
     system_msg = (
         "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
         "APPROACH:\n"
         "1. Read the entire problem carefully, including all examples\n"
-        "2. If examples exist, trace through them to understand the required logic\n"
-        "3. Design your algorithm before coding:\n"
+        "2. Study EACH example to understand the required logic:\n"
+        "   - What is the input format?\n"
+        "   - What output is expected and why?\n"
+        "   - Trace through the logic to see how input becomes output\n"
+        "3. Design your algorithm:\n"
         "   - Choose appropriate data structures\n"
         "   - For graphs/grids: plan traversal strategy (BFS/DFS)\n"
-        "   - For spatial problems: carefully model coordinates and neighbors\n"
-        "   - For parsing: handle the exact input format\n"
-        "4. Implement complete, working code with all methods fully implemented\n"
-        "5. Mentally verify against examples to catch logic errors\n\n"
+        "   - For spatial problems: model coordinates and neighbor relationships precisely\n"
+        "   - For parsing: handle the exact input format including whitespace\n"
+        "4. Before coding, mentally trace through at least 2 examples to verify your approach\n"
+        "5. Implement complete, working code with all methods fully implemented\n"
+        "6. After coding, mentally verify it works for ALL examples\n\n"
         "CRITICAL REQUIREMENTS:\n"
         "- Implement ALL methods completely (never leave empty or with just 'pass')\n"
-        "- Parse input formats exactly as specified\n"
-        "- For graph/grid problems: get neighbor relationships right, use proper BFS/DFS\n"
-        "- For spatial problems: calculate coordinates carefully (watch for offsets, indexing)\n"
-        "- Handle all edge cases (empty inputs, boundaries, single elements)\n"
+        "- Parse input formats exactly as specified (handle whitespace, newlines, structure)\n"
+        "- For graph/grid problems:\n"
+        "  * Calculate neighbor relationships correctly (consider offsets for hex/irregular grids)\n"
+        "  * Use proper BFS/DFS with correct visited tracking\n"
+        "  * Ensure traversal explores ALL valid neighbors\n"
+        "  * Handle boundary conditions correctly\n"
+        "- For spatial problems: be precise with coordinate calculations (no off-by-one errors)\n"
+        "- Handle all edge cases (empty inputs, boundaries, single elements, complex paths)\n"
         "- Implement validation rules and raise exceptions as needed\n"
-        "- Verify your logic works for the provided examples\n\n"
-        "COMMON PITFALLS TO AVOID:\n"
-        "- Incorrect neighbor calculation in grids (especially hex/offset grids)\n"
-        "- Off-by-one errors in coordinates or boundaries\n"
-        "- Not exploring all valid neighbors in graph traversal\n"
-        "- Incorrect parsing of formatted input (missing whitespace handling)\n"
-        "- Missing edge cases\n\n"
+        "- Test your logic mentally against ALL provided examples before finalizing\n\n"
+        "VERIFICATION:\n"
+        "- For problems with examples, mentally walk through EACH example:\n"
+        "  * Simple examples (empty, single element, basic cases)\n"
+        "  * Complex examples (convoluted paths, edge cases, tricky scenarios)\n"
+        "- For each example, trace step-by-step:\n"
+        "  * How is input parsed?\n"
+        "  * What does the algorithm do?\n"
+        "  * What output is produced?\n"
+        "  * Does it match expected output?\n"
+        "- If any example fails your mental test, revise your algorithm\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
         "Start with '# main.py' as the first line.\n"
@@ -213,10 +225,11 @@ def agent_main(
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
         "Implement a complete, correct solution that:\n"
-        "- Handles all examples correctly\n"
+        "- Handles ALL examples correctly (trace through each one)\n"
         "- Implements all methods fully (no empty implementations)\n"
-        "- Handles all edge cases\n"
-        "- Uses appropriate algorithms and data structures"
+        "- Handles all edge cases including complex scenarios\n"
+        "- Uses appropriate algorithms and data structures\n"
+        "- Gets spatial/neighbor relationships exactly right for grid problems"
     )
 
     messages = [
@@ -277,22 +290,25 @@ def agent_main(
                 except Exception:
                     pass
                 
-                # Step 2: Self-review (only on first pass)
+                # Step 2: Self-review with emphasis on testing examples
                 if attempt < len(AGENT_MODELS):
                     review_messages = [
                         {"role": "system", "content": (
-                            "You are a code reviewer who finds bugs through careful analysis."
+                            "You are a meticulous code reviewer who verifies correctness by tracing through examples."
                         )},
                         {"role": "user", "content": (
                             f"# Problem\n{problem_statement[:15000]}\n\n"
                             f"# Code\n```python\n{code}\n```\n\n"
-                            "Review for:\n"
-                            "1. Are all methods fully implemented?\n"
-                            "2. Does input parsing handle the format correctly?\n"
-                            "3. For graphs/grids: Are neighbors calculated correctly? Is traversal sound?\n"
-                            "4. Trace through an example: Does it produce correct output?\n"
-                            "5. Are edge cases handled?\n\n"
-                            "Reply 'APPROVED' if correct, or list specific issues."
+                            "Review this code by:\n"
+                            "1. Checking all methods are fully implemented\n"
+                            "2. Verifying input parsing handles the format correctly\n"
+                            "3. For graphs/grids: checking neighbor calculations and traversal logic\n"
+                            "4. MOST IMPORTANT: Trace through examples (including complex ones):\n"
+                            "   - Pick a simple example and walk through the code step-by-step\n"
+                            "   - Pick a complex example (convoluted path, large input) and trace it\n"
+                            "   - Does the code produce correct output for both?\n"
+                            "5. Checking edge cases are handled\n\n"
+                            "Reply 'APPROVED' if correct for all examples, or list specific issues."
                         )}
                     ]
                     
@@ -306,7 +322,8 @@ def agent_main(
                                     "role": "user",
                                     "content": (
                                         f"Review found issues:\n{review_response}\n\n"
-                                        "Fix all issues and return corrected code.\n"
+                                        "Fix all issues, ensuring the code works for ALL examples "
+                                        "(especially complex ones). Return corrected code.\n"
                                         "Format: ```python\\n# main.py\\n[corrected code]\\n```"
                                     )
                                 })
