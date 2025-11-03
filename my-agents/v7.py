@@ -3,16 +3,17 @@ import re
 import json
 import uuid
 import time
-import subprocess
-from typing import Any, Dict, List
+import ast
+from typing import Any, Dict, List, Optional
 
 import requests
 
 
-# v7 seed agent: generic code agent that proposes a full-file patch for main.py only.
+# v7 agent: generic code agent with enhanced reasoning and validation
 # - Never embeds problem-specific constants or dataset names
 # - Uses only the inference gateway exposed via INFERENCE_URL/SANDBOX_PROXY_URL
 # - Returns a unified diff that replaces main.py entirely
+# - Includes syntax validation and self-review mechanisms
 
 
 DEFAULT_PROXY_URL = (
@@ -35,6 +36,17 @@ def _read(path: str) -> str:
             return f.read()
     except Exception:
         return ""
+
+
+def _validate_syntax(code: str) -> Optional[str]:
+    """Check if Python code is syntactically valid. Returns error message or None."""
+    try:
+        ast.parse(code)
+        return None
+    except SyntaxError as e:
+        return f"SyntaxError at line {e.lineno}: {e.msg}"
+    except Exception as e:
+        return f"Parse error: {str(e)}"
 
 
 def _build_single_file_patch(filename: str, new_content: str) -> str:
@@ -68,19 +80,23 @@ def _extract_main_py(response: str) -> str:
     m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*?)\n```", response, re.DOTALL)
     if m and m[0].strip():
         return m[0].strip()
+    # Try with optional whitespace around header
+    m = re.findall(r"```python\s*\n#\s*main\.py\s*\n([\s\S]*?)\n```", response, re.DOTALL)
+    if m and m[0].strip():
+        return m[0].strip()
     # Fallback: first python block
     m2 = re.findall(r"```python\s*\n([\s\S]*?)\n```", response, re.DOTALL)
     return m2[0].strip() if m2 and m2[0].strip() else ""
 
 
-def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
+def _call_llm(messages: List[Dict[str, str]], run_id: str, model_index: int, timeout_s: int = 300, temperature: float = 0.0) -> str:
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
-    model = AGENT_MODELS[attempt % len(AGENT_MODELS)]
+    model = AGENT_MODELS[model_index % len(AGENT_MODELS)]
     body = {
         "run_id": run_id,
         "messages": messages,
-        "temperature": 0.0,
+        "temperature": temperature,
         "agent_id": "agent-v7",
         "model": model,
     }
@@ -115,45 +131,152 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             pass
 
     problem_statement = (input_dict or {}).get("problem_statement", "") or ""
-    mode = (input_dict or {}).get("problem_category", None)
-    if mode not in ("spec_only", "tests_available"):
-        mode = "tests_available" if os.path.exists("tests.py") else "spec_only"
-
-    # Compact repository summary for context (generic, no problem-specific assumptions)
-    parts: List[str] = []
-    for name in ("main.py", "tests.py"):
-        content = _read(name)
-        if content:
-            parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
-    summary = "\n\n".join(parts)
-
+    
+    # Read main.py skeleton (only file available besides problem statement)
+    main_py_skeleton = _read("main.py")
+    
+    # Enhanced system prompt emphasizing careful analysis and optimization
     system_msg = (
-        "You are a senior Python engineer.\n"
-        + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
-        + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
-        "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Deterministic code."
+        "You are a senior software engineer specializing in algorithmic problem-solving.\n\n"
+        "CRITICAL INSTRUCTIONS:\n"
+        "1. Read the problem statement VERY carefully - every detail matters\n"
+        "2. If the problem asks for 'optimal', 'best', 'maximum', or 'minimum' solutions, you MUST implement algorithms that consider multiple strategies\n"
+        "3. Pay special attention to edge cases and examples in the problem statement\n"
+        "4. For optimization problems, greedy algorithms often fail - consider dynamic programming, exhaustive search with pruning, or mathematical optimization\n"
+        "5. Implement complete, working, syntactically correct Python code\n"
+        "6. Include all necessary imports\n"
+        "7. Return ONLY one code block with format:\n"
+        "```python\n# main.py\n[complete code]\n```\n\n"
+        "No explanations, just code."
     )
-    user_msg = (
-        f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
-        f"Repository Summary:\n{summary}\n\n"
-        "Implement strictly so all tests (if present) pass."
+    
+    # Step 1: Problem analysis and reasoning
+    analysis_prompt = (
+        f"Problem Statement:\n{problem_statement[:16000]}\n\n"
+        f"Current main.py skeleton:\n```python\n{main_py_skeleton[:4000]}\n```\n\n"
+        "Before implementing, analyze:\n"
+        "1. What is the core problem asking for?\n"
+        "2. Are there optimization requirements (best, optimal, minimum, maximum)?\n"
+        "3. What algorithm approach is needed (greedy, dynamic programming, exhaustive search, etc.)?\n"
+        "4. What are the edge cases?\n"
+        "5. What examples are provided and what do they teach us?\n\n"
+        "Provide a brief analysis (2-3 paragraphs) focusing on the algorithmic approach."
     )
-    messages = [
-        {"role": "system", "content": system_msg},
-        {"role": "user", "content": user_msg},
+    
+    analysis_messages = [
+        {"role": "system", "content": "You are an expert algorithm designer. Analyze problems carefully before implementing."},
+        {"role": "user", "content": analysis_prompt}
     ]
-
-    # Try a few models and accept the first valid main.py block
+    
+    # Step 2: Implementation with reasoning context
+    best_code = None
+    best_model = 0
+    
+    # Try multiple models with reasoning
     for attempt in range(len(AGENT_MODELS)):
         try:
-            resp = _call_llm(messages, run_id, attempt, 300)
+            # Get analysis (helps prime the model's reasoning)
+            analysis = ""
+            try:
+                analysis = _call_llm(analysis_messages, run_id, attempt, 180, 0.3)
+            except Exception:
+                analysis = ""  # Continue without analysis if it fails
+            
+            # Generate implementation
+            impl_prompt = (
+                f"Problem Statement:\n{problem_statement[:16000]}\n\n"
+                f"Current main.py skeleton:\n```python\n{main_py_skeleton[:4000]}\n```\n\n"
+            )
+            
+            if analysis:
+                impl_prompt += f"Analysis:\n{analysis[:2000]}\n\n"
+            
+            impl_prompt += (
+                "Now implement the complete solution in main.py.\n"
+                "Remember:\n"
+                "- If the problem requires optimization, implement a thorough algorithm\n"
+                "- Handle all edge cases mentioned in the problem\n"
+                "- Ensure the solution is complete and syntactically correct\n"
+                "- Include all necessary imports\n\n"
+                "Return ONLY the code block in this exact format:\n"
+                "```python\n# main.py\n[complete implementation]\n```"
+            )
+            
+            impl_messages = [
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": impl_prompt}
+            ]
+            
+            resp = _call_llm(impl_messages, run_id, attempt, 300, 0.0)
             main_src = _extract_main_py(resp)
-            if main_src:
-                return _build_single_file_patch("main.py", main_src)
+            
+            if not main_src:
+                continue
+            
+            # Validate syntax
+            syntax_error = _validate_syntax(main_src)
+            if syntax_error:
+                # Try to fix with feedback
+                fix_prompt = (
+                    f"The previous implementation has a syntax error:\n{syntax_error}\n\n"
+                    f"Previous code:\n```python\n{main_src[:4000]}\n```\n\n"
+                    "Fix the syntax error and return the corrected complete main.py:\n"
+                    "```python\n# main.py\n[corrected code]\n```"
+                )
+                
+                impl_messages.append({"role": "assistant", "content": resp})
+                impl_messages.append({"role": "user", "content": fix_prompt})
+                
+                fix_resp = _call_llm(impl_messages, run_id, attempt, 240, 0.0)
+                fixed_src = _extract_main_py(fix_resp)
+                
+                if fixed_src and _validate_syntax(fixed_src) is None:
+                    main_src = fixed_src
+                else:
+                    continue  # Skip this attempt if unfixable
+            
+            # We have valid code
+            if best_code is None:
+                best_code = main_src
+                best_model = attempt
+                # Don't break - try other models too for better solutions
+            
+            # For the first valid solution, also try a review pass
+            if attempt == 0:
+                review_prompt = (
+                    f"Review this implementation for the problem:\n\n"
+                    f"Problem: {problem_statement[:8000]}\n\n"
+                    f"Implementation:\n```python\n{main_src[:6000]}\n```\n\n"
+                    "Check:\n"
+                    "1. Does it handle ALL cases including edge cases?\n"
+                    "2. For optimization problems, does it find the truly optimal solution?\n"
+                    "3. Are there any logical errors?\n\n"
+                    "If improvements are needed, return the improved complete code:\n"
+                    "```python\n# main.py\n[improved code]\n```\n\n"
+                    "If it's already correct, return the same code."
+                )
+                
+                review_messages = [
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": review_prompt}
+                ]
+                
+                try:
+                    review_resp = _call_llm(review_messages, run_id, attempt, 240, 0.1)
+                    reviewed_src = _extract_main_py(review_resp)
+                    
+                    if reviewed_src and _validate_syntax(reviewed_src) is None:
+                        best_code = reviewed_src
+                except Exception:
+                    pass  # Keep original if review fails
+            
         except Exception:
             continue
-
+    
+    # Return best valid code found
+    if best_code:
+        return _build_single_file_patch("main.py", best_code)
+    
     return ""
 
 
