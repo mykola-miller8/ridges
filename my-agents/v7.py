@@ -185,78 +185,79 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 {repo_summary}
 
-# CRITICAL IMPLEMENTATION RULES
+# IMPLEMENTATION GUIDELINES
 
-?? **SPECIAL CASES ARE MANDATORY** ??
-Before writing ANY code, scan the entire specification for:
-- Words like "special", "exception", "except", "however", "note that", "but"  
-- Mentions of first/last items, final positions, boundaries
-- Different rules for specific indices, frames, rounds, or positions
-- Bonus/extra handling at the end
+## 1. SIMPLICITY IS CRITICAL
+**The #1 cause of bugs is unnecessary complexity.**
+- Use the MINIMUM state variables needed (each extra variable = exponentially more bugs)
+- Prefer simple, direct logic over clever abstractions
+- Before coding, ask: "What's the SIMPLEST approach that could work?"
+- For stateful classes: Track only what you absolutely need
+- Avoid redundant or derived state (don't store what you can compute)
 
-If you find special cases, you MUST implement them DIFFERENTLY from the general pattern.
-**DO NOT use a simple uniform loop if special handling is required!**
+## 2. TRACE YOUR LOGIC BEFORE CODING
+**Test your approach mentally with concrete examples BEFORE writing code.**
+- Pick 2-3 test cases from the spec and trace through your planned logic
+- Check: start state ? middle state ? end state
+- Verify boundary conditions: first item, last item, empty input
+- Watch for off-by-one errors in loops and indices
+- If you can't trace it easily in your head, it's too complex!
 
-Example patterns:
-- "The 10th X is special" ? Use if/else for index 9 or separate logic after main loop
-- "Except for the last Y" ? Handle last item outside the main loop
-- "Bonus/fill" ? Extra processing beyond the standard pattern
+## 3. IDENTIFY SPECIAL CASES
+**Scan the ENTIRE specification for exceptions to general rules:**
+- Keywords: "special", "except", "however", "note that", "but", "otherwise"
+- Positional: "first", "last", "final", "10th", specific indices
+- Conditional: "if X then Y", "only when", "unless"
+- Extra handling: "bonus", "fill", "additional"
 
-Write a complete, correct implementation following these critical rules:
+**Implement special cases EXPLICITLY - don't assume a uniform loop will handle them!**
 
-1. **Identify Special Cases FIRST**: Before coding, scan for exceptions to the general rule!
-   - Read the ENTIRE specification
-   - Highlight any text about special/different handling
-   - Plan where your code will diverge from the standard pattern
-   - Common locations: last item, first item, specific indices, boundaries
+Examples:
+- "The 10th frame is special" ? Handle frame 10 separately with different logic
+- "Except for the last element" ? Process n-1 items in loop, then handle last specially
+- "Bonus rolls if spare/strike" ? Add conditional logic after main processing
 
-2. **Simplicity First**: Keep implementations as simple as possible. Avoid complex state tracking with multiple variables.
-   - For stateful classes: Use minimal state variables. More state = more bugs.
-   - Prefer simple data structures (lists, counters) over complex tracking logic
-   - Think: "What's the simplest way to solve this?"
+## 4. STATE MANAGEMENT FOR CLASSES
+For classes with mutable state (games, parsers, accumulators):
+- **Validate preconditions** in all state-modifying methods
+  - Check: Is this operation allowed in the current state?
+  - Example: game.roll() should validate game isn't finished
+  - Raise clear exceptions when preconditions fail
+- **Test state transitions**: mentally trace start ? middle ? end
+- **Watch for completion logic**: Ensure "is done" checks cover ALL completion scenarios
+- **Avoid state redundancy**: Don't track the same information multiple ways
 
-3. **State Management**: For classes with state (e.g., games, parsers):
-   - Carefully consider ALL state transitions and boundary conditions
-   - Test your logic mentally: what happens at start, middle, end?
-   - For completion/validation checks: ensure conditions cover ALL cases
-   - Avoid duplicate or conflicting state (e.g., tracking same info in 2+ variables)
+## 5. COMMON PITFALLS TO AVOID
+- **Off-by-one errors**: Double-check loop bounds and index arithmetic
+  - Is it `range(n)` or `range(n+1)`?
+  - Is frame 10 at index 9 or 10?
+- **Loop safety**: In `while` loops with `continue`, increment BEFORE continue
+  - Wrong: `while i < n: if cond: continue` (infinite loop!)
+  - Right: `while i < n: if cond: i += 1; continue`
+- **Validation**: Use correct checks for edge cases
+  - `len(item) < 2` catches empty AND single-element
+  - `len(item) < 1` only catches empty
+- **Return types**: If returning `list[str]`, each element is ONE line (not multi-line with \\n)
 
-4. **Input Validation in State-Modifying Methods**: Methods that change state must validate ALL preconditions!
-   - Before modifying state, check: Is this operation allowed right now?
-   - For methods like roll(), add(), push(): Validate the object's current state permits the operation
-   - Common validations: Is operation complete? Is limit reached? Is state valid for this action?
-   - **Context-dependent validation**: Sometimes validity depends on previous actions, not just current state
-     * Example: In special cases, an input may be valid only if previous inputs had certain properties
-     * Check constraints that involve relationships between current and prior values
-   - Raise appropriate exceptions with clear messages when validation fails
-   - Example: A game's roll() should check if game is already finished
+## 6. EDGE CASES CHECKLIST
+Always handle:
+- Empty inputs (empty strings, empty lists, zero values)
+- Single-element collections
+- First element in a sequence
+- Last element in a sequence  
+- Boundary values (min, max)
+- Initial state before any operations
 
-5. **Loop Safety**: In while loops with continue, ensure the loop variable advances before continue!
-   - Wrong: `while i < n: if cond: continue` (infinite loop - i never increments)
-   - Correct: `while i < n: if cond: i += 1; continue`
+## 7. FINAL VERIFICATION
+Before submitting, mentally trace through your code:
+1. Does it handle the basic/normal case?
+2. Does it handle ALL special cases mentioned in the spec?
+3. Did I use the minimum state needed?
+4. Can I explain the logic in 2-3 simple sentences?
+5. Are there off-by-one errors in my indexing?
+6. Do all state-modifying methods validate preconditions?
 
-6. **Return Types**: For functions returning list[str], each element is a single line, not multiple lines joined with \\n
-
-7. **Edge Cases**: Always handle:
-   - Empty inputs (empty strings, empty lists)
-   - First and last elements in sequences
-   - Single-element collections
-   - Boundary conditions
-   - Initial state vs final state
-
-8. **Validation**: For tuple/list validation, use appropriate length checks:
-   - Use `len(item) < 2` to catch both empty and single-element cases
-   - Not `len(item) < 1` which only catches empty
-
-9. **Exceptions**: Match error messages and exception types exactly as specified in the problem statement
-
-10. **Imports**: Include all necessary imports at the top of the file
-
-11. **Logic Verification**: Before finalizing, trace through your logic:
-    - Does it handle the basic case correctly?
-    - Does it handle ALL special cases mentioned in the problem spec?
-    - Are there any assumptions that might break?
-    - Did I implement exceptions to the general pattern?
+**If you can't clearly trace the logic, simplify it!**
 
 Provide your complete implementation now."""
 
