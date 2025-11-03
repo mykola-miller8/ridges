@@ -17,7 +17,7 @@ TEST_AGENT_CLI = f"{ROOT}/test_agent.py"
 INFERENCE_URL = os.getenv("INFERENCE_URL", "http://172.17.0.1:1234")
 PROBLEM_SET = os.getenv("PROBLEM_SET", "all-polyglot")
 SOURCE_BRANCH = "cursor-work"
-TARGET_BRANCH = "cursor-work-6"
+TARGET_BRANCH = "cursor-work-7"
 
 # v7 solving uses the inference gateway (set in test_agent CLI). For rewriting v7 itself,
 # we use the Cursor API only (no public LLM).
@@ -298,7 +298,7 @@ def _add_followup_with_failure_context(
         f"- Agent file to improve: {agent_rel_path}\n\n"
         f"TASK:\n"
         f"Improve my-agents/v7.py to handle this failure case. Remember:\n"
-        f"- The agent must remain GENERIC - no problem-specific logic\n"
+        f"- CRITICAL: The agent must remain GENERIC - no problem-specific logic, always  double check the code is generic before committing, remove any problem-specific logic\n"
         f"- IMPORTANT: The agent code deals with Python ONLY - no other programming languages\n"
         f"- At runtime, only problem_statement (instruction.md) and main.py skeleton are available\n"
         f"- tests.py is NOT available at runtime, so don't rely on test specifics\n"
