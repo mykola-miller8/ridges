@@ -189,49 +189,57 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 Write a complete, correct implementation following these critical rules:
 
-1. **Simplicity First**: Keep implementations as simple as possible. Avoid complex state tracking with multiple variables.
+1. **Read the Specification Carefully**: Before coding, thoroughly understand ALL requirements!
+   - Identify the general pattern/algorithm
+   - Look for special cases, exceptions, and boundary conditions explicitly mentioned
+   - Note any rules that differ at the start, end, or specific positions
+   - Watch for phrases like "special case", "except", "however", "note that"
+   - Example: If a problem says "frame 10 is special", frame 10 needs different logic!
+
+2. **Simplicity First**: Keep implementations as simple as possible. Avoid complex state tracking with multiple variables.
    - For stateful classes: Use minimal state variables. More state = more bugs.
    - Prefer simple data structures (lists, counters) over complex tracking logic
    - Think: "What's the simplest way to solve this?"
 
-2. **State Management**: For classes with state (e.g., games, parsers):
+3. **State Management**: For classes with state (e.g., games, parsers):
    - Carefully consider ALL state transitions and boundary conditions
    - Test your logic mentally: what happens at start, middle, end?
    - For completion/validation checks: ensure conditions cover ALL cases
    - Avoid duplicate or conflicting state (e.g., tracking same info in 2+ variables)
 
-3. **Input Validation in State-Modifying Methods**: Methods that change state must validate preconditions!
+4. **Input Validation in State-Modifying Methods**: Methods that change state must validate preconditions!
    - Before modifying state, check: Is this operation allowed right now?
    - For methods like roll(), add(), push(): Validate the object's current state permits the operation
    - Common validations: Is operation complete? Is limit reached? Is state valid for this action?
    - Raise appropriate exceptions with clear messages when validation fails
    - Example: A game's roll() should check if game is already finished
 
-4. **Loop Safety**: In while loops with continue, ensure the loop variable advances before continue!
+5. **Loop Safety**: In while loops with continue, ensure the loop variable advances before continue!
    - Wrong: `while i < n: if cond: continue` (infinite loop - i never increments)
    - Correct: `while i < n: if cond: i += 1; continue`
 
-5. **Return Types**: For functions returning list[str], each element is a single line, not multiple lines joined with \\n
+6. **Return Types**: For functions returning list[str], each element is a single line, not multiple lines joined with \\n
 
-6. **Edge Cases**: Always handle:
+7. **Edge Cases**: Always handle:
    - Empty inputs (empty strings, empty lists)
    - First and last elements in sequences
    - Single-element collections
    - Boundary conditions
    - Initial state vs final state
 
-7. **Validation**: For tuple/list validation, use appropriate length checks:
+8. **Validation**: For tuple/list validation, use appropriate length checks:
    - Use `len(item) < 2` to catch both empty and single-element cases
    - Not `len(item) < 1` which only catches empty
 
-8. **Exceptions**: Match error messages and exception types exactly as specified in the problem statement
+9. **Exceptions**: Match error messages and exception types exactly as specified in the problem statement
 
-9. **Imports**: Include all necessary imports at the top of the file
+10. **Imports**: Include all necessary imports at the top of the file
 
-10. **Logic Verification**: Before finalizing, trace through your logic:
+11. **Logic Verification**: Before finalizing, trace through your logic:
     - Does it handle the basic case correctly?
-    - Does it handle all special cases mentioned in the problem?
+    - Does it handle ALL special cases mentioned in the problem spec?
     - Are there any assumptions that might break?
+    - Did I implement exceptions to the general pattern?
 
 Provide your complete implementation now."""
 
