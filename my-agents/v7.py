@@ -166,9 +166,6 @@ def agent_main(
             pass
 
     problem_statement = (input_dict or {}).get("problem_statement", "") or ""
-    mode = (input_dict or {}).get("problem_category", None)
-    if mode not in ("spec_only", "tests_available"):
-        mode = "tests_available" if os.path.exists("tests.py") else "spec_only"
 
     # Build context from available files
     parts: List[str] = []
@@ -178,28 +175,42 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # Construct system prompt with strong emphasis on correctness
+    # Enhanced system prompt with stronger algorithmic guidance
     system_msg = (
         "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
-        "CRITICAL REQUIREMENTS:\n"
-        "- Study the ENTIRE problem statement carefully, including all examples and explanations\n"
-        "- If examples are provided, understand exactly how they work before coding\n"
-        "- Implement ALL required methods/functions with complete, correct logic\n"
-        "- Choose the right algorithms and data structures for the problem\n"
-        "- Handle ALL edge cases, corner cases, boundary conditions, and special scenarios\n"
-        "- Implement RIGOROUS input validation - check every constraint mentioned\n"
-        "- Raise exceptions with meaningful messages for ALL invalid inputs and rule violations\n"
-        "- Pay special attention to state management and state transitions\n"
-        "- Write deterministic code with no infinite loops or undefined behavior\n"
-        "- Do NOT modify tests.py if present\n\n"
-        "ALGORITHM CORRECTNESS:\n"
-        "- Think through the algorithm carefully before implementing\n"
-        "- Mentally trace through examples to verify your approach works\n"
-        "- Ensure your implementation matches the problem's requirements exactly\n\n"
+        "CRITICAL WORKFLOW - FOLLOW THESE STEPS:\n"
+        "1. READ THE ENTIRE PROBLEM: Study every detail, example, constraint, and rule\n"
+        "2. UNDERSTAND EXAMPLES: If examples are provided, trace through them COMPLETELY to understand:\n"
+        "   - What inputs are given and their format/structure\n"
+        "   - What outputs are expected and why\n"
+        "   - The underlying logic that produces each output\n"
+        "   - Edge cases or special patterns demonstrated\n"
+        "3. DESIGN THE ALGORITHM: Before writing ANY code, plan:\n"
+        "   - What algorithm/approach is needed (BFS/DFS/dynamic programming/parsing/etc.)\n"
+        "   - What data structures to use and why\n"
+        "   - How to handle input parsing (especially complex formats like grids, trees, graphs)\n"
+        "   - How to correctly compute the result\n"
+        "4. IMPLEMENT WITH PRECISION: Write code that:\n"
+        "   - Correctly parses input in the exact format provided\n"
+        "   - Implements the algorithm with correct logic\n"
+        "   - Handles ALL edge cases and boundaries\n"
+        "   - Validates inputs and raises exceptions for violations\n"
+        "   - Produces output in the exact format required\n\n"
+        "ALGORITHM CORRECTNESS (CRITICAL):\n"
+        "- For graph/grid/connectivity problems: Implement proper traversal (BFS/DFS/Union-Find)\n"
+        "- For spatial problems: Correctly model neighbor relationships (consider offsets, coordinates, adjacency)\n"
+        "- For parsing problems: Handle whitespace, delimiters, and formatting exactly as specified\n"
+        "- For stateful problems: Track state transitions correctly and handle all cases\n"
+        "- Test your logic mentally against EVERY example before finalizing\n\n"
+        "INPUT PARSING AND DATA STRUCTURES:\n"
+        "- Pay close attention to input format (grids with indentation, nested structures, etc.)\n"
+        "- If the input has special formatting (spaces, tabs, newlines), parse it correctly\n"
+        "- Choose appropriate data structures (2D arrays, graphs, dictionaries, sets, etc.)\n"
+        "- Model the problem domain accurately in your data structures\n\n"
         "VALIDATION AND EXCEPTIONS:\n"
-        "- If the problem mentions validation rules or constraints, implement them ALL\n"
-        "- Every validation rule must raise an appropriate exception with a descriptive message\n"
-        "- Test your logic mentally against edge cases before finalizing\n\n"
+        "- Implement ALL validation rules mentioned in the problem\n"
+        "- Raise descriptive exceptions for invalid inputs\n"
+        "- Handle edge cases gracefully\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
         "Start with '# main.py' as the first line.\n"
@@ -210,8 +221,13 @@ def agent_main(
     user_msg = (
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
-        "Implement a complete, correct solution that handles ALL cases and validation rules.\n"
-        "If examples are provided in the problem statement, ensure your solution produces correct results for them."
+        "IMPLEMENTATION CHECKLIST:\n"
+        "1. Read and understand the ENTIRE problem statement, including all examples\n"
+        "2. If examples exist, trace through them to understand the required behavior\n"
+        "3. Design your algorithm/approach before coding\n"
+        "4. Implement with correct parsing, algorithm logic, and validation\n"
+        "5. Mentally verify your solution works for ALL provided examples\n\n"
+        "Implement a complete, correct solution."
     )
 
     messages = [
@@ -253,20 +269,23 @@ def agent_main(
                     review_messages = [
                         {"role": "system", "content": (
                             "You are a meticulous code reviewer. Your job is to find ANY issues.\n"
-                            "Focus especially on: algorithm correctness, logic errors, edge cases, "
-                            "validation, and exception handling."
+                            "Focus especially on: algorithm correctness, input parsing, logic errors, "
+                            "edge cases, and validation."
                         )},
                         {"role": "user", "content": (
                             f"# Problem Statement\n{problem_statement[:15000]}\n\n"
                             f"# Proposed Code\n```python\n{code}\n```\n\n"
                             "Review this code thoroughly. Check:\n"
-                            "1. ALGORITHM: Is the core algorithm/logic correct? Trace through the logic step-by-step.\n"
-                            "2. EXAMPLES: If the problem includes examples, would this code handle them correctly?\n"
-                            "3. VALIDATION: Does it implement ALL validation rules and raise exceptions as required?\n"
-                            "4. EDGE CASES: Does it handle ALL edge cases and special scenarios correctly?\n"
-                            "5. STATE MANAGEMENT: Is the state management and control flow correct for all cases?\n\n"
-                            "If there are examples in the problem, mentally trace through them to verify correctness.\n"
-                            "Respond with 'APPROVED' if the code is correct, or list specific issues found."
+                            "1. INPUT PARSING: Does it correctly parse the input format? "
+                            "Are there any issues with whitespace, delimiters, or structure?\n"
+                            "2. ALGORITHM: Is the core algorithm correct? For graph/grid problems, "
+                            "are neighbor relationships and traversal logic correct?\n"
+                            "3. EXAMPLES: If the problem includes examples, trace through them. "
+                            "Would this code produce the correct output for each example?\n"
+                            "4. EDGE CASES: Does it handle empty inputs, single elements, boundaries, etc.?\n"
+                            "5. VALIDATION: Does it implement required validation and raise exceptions?\n\n"
+                            "Mentally trace through examples step-by-step to verify correctness.\n"
+                            "Respond with 'APPROVED' if correct, or list specific issues with line numbers."
                         )}
                     ]
                     
@@ -281,8 +300,10 @@ def agent_main(
                                     "role": "user",
                                     "content": (
                                         f"Code review found issues:\n{review_response}\n\n"
-                                        "Revise the code to fix ALL issues identified. "
-                                        "Pay special attention to algorithm correctness and logic errors.\n"
+                                        "Revise the code to fix ALL issues. Pay special attention to:\n"
+                                        "- Correct input parsing and data structure modeling\n"
+                                        "- Accurate algorithm implementation\n"
+                                        "- Verification against examples\n"
                                         "Format: ```python\\n# main.py\\n[revised code]\\n```"
                                     )
                                 })
