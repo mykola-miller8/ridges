@@ -4,15 +4,9 @@ import ast
 import json
 import uuid
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import requests
-
-
-# v7 agent: Generic code-solving agent for Python problems
-# - Uses only INFERENCE_URL/SANDBOX_PROXY_URL for LLM calls
-# - Returns unified diff patch for main.py
-# - Focuses on correctness and proper output formatting
 
 
 DEFAULT_PROXY_URL = (
@@ -84,12 +78,7 @@ def _extract_main_py(response: str) -> str:
     return m2[0].strip() if m2 and m2[0].strip() else ""
 
 
-def _call_llm(
-    messages: List[Dict[str, str]], 
-    run_id: str, 
-    model_idx: int,
-    timeout_s: int = 300
-) -> str:
+def _call_llm(messages: List[Dict[str, str]], run_id: str, model_idx: int) -> str:
     """Call inference gateway with specified model."""
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
@@ -103,7 +92,7 @@ def _call_llm(
     }
     for retry in range(3):
         try:
-            resp = requests.post(url, json=body, headers=headers, timeout=timeout_s)
+            resp = requests.post(url, json=body, headers=headers, timeout=300)
             resp.raise_for_status()
             data = resp.json()
             if isinstance(data, dict) and data.get("choices"):
@@ -111,7 +100,7 @@ def _call_llm(
             if isinstance(data, str):
                 return data
             return json.dumps(data)
-        except Exception as e:
+        except Exception:
             if retry == 2:
                 raise
             time.sleep(1 + retry)
@@ -121,7 +110,6 @@ def _call_llm(
 def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bool = False) -> str:
     """
     Main entry point for the evaluation harness.
-    
     Generates a solution and returns a unified diff patch for main.py.
     """
     run_id = (input_dict or {}).get("run_id", os.getenv("RUN_ID", str(uuid.uuid4())))
@@ -145,53 +133,33 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # System message
     system_msg = (
-        "You are an expert Python engineer. Write simple, correct, bug-free code.\n"
+        "You are an expert Python engineer. Write correct, bug-free code.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
-        + "Return ONLY a code block:\n```python\n# main.py\n[code here]\n```"
+        + "Return ONLY:\n```python\n# main.py\n[code]\n```"
     )
     
-    # User message with critical guidance
     user_msg = f"""Problem:
 {problem_statement[:12000]}
 
 Repository:
 {repo_summary}
 
-Implement a complete solution. Follow these CRITICAL rules:
+Implement complete solution following these rules:
 
-1. OUTPUT FORMAT for list[str]:
-   When returning list[str] with multi-line content, each LINE is a separate string.
-   DON'T join lines with \\n - that creates one string instead of multiple!
-   
-   Example:
-   ? WRONG: result.append('\\n'.join(['line1', 'line2']))  # ['line1\\nline2']
-   ? RIGHT: result.extend(['line1', 'line2'])              # ['line1', 'line2']
+1. For list[str] returns: Each element is ONE line, not multiple lines joined with \\n
+2. Test edge cases: first item, last item, empty inputs
+3. For tuple validation: len(item) < 2 catches both empty and incomplete (not len < 1)
+4. Match error messages and exception types exactly as specified
 
-2. TEST EDGE CASES:
-   - First item (i==1, index==0) - often has special logic
-   - Last item - may be different
-   - Empty/None inputs
-   Trace through your logic for these cases mentally!
-
-3. VALIDATION (for tuple/list structures):
-   ? WRONG: if len(item) < 1    # Only catches empty
-   ? RIGHT: if len(item) < 2    # Catches empty AND incomplete
-
-4. Match specs EXACTLY:
-   - Error messages must match word-for-word
-   - Use correct exception types (TypeError vs ValueError)
-   - Handle all specified edge cases
-
-Write the complete solution now."""
+Implement now."""
 
     messages = [
         {"role": "system", "content": system_msg},
         {"role": "user", "content": user_msg},
     ]
 
-    # Try each model until we get valid code
+    # Try each model
     for model_idx in range(len(AGENT_MODELS)):
         try:
             response = _call_llm(messages, run_id, model_idx)
@@ -202,5 +170,4 @@ Write the complete solution now."""
         except Exception:
             continue
     
-    # Fallback: return empty if all models fail
     return ""
