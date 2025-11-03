@@ -31,14 +31,9 @@ def _verbose_log(step: str, details: Any = None, level: str = "INFO") -> None:
     if details is not None:
         if isinstance(details, (dict, list)):
             details_str = json.dumps(details, indent=2, default=str)
-            # Truncate very long details
-            if len(details_str) > 2000:
-                details_str = details_str[:2000] + "... [truncated]"
             log_line += f"\n{details_str}"
         else:
             details_str = str(details)
-            if len(details_str) > 1000:
-                details_str = details_str[:1000] + "... [truncated]"
             log_line += f": {details_str}"
     print(log_line, flush=True)
 
@@ -53,7 +48,7 @@ def _read(path: str) -> str:
                 "path": path,
                 "size_bytes": len(content),
                 "size_lines": len(content.splitlines()),
-                "preview": content[:200] + "..." if len(content) > 200 else content
+                "content": content
             })
             return content
     except Exception as e:
@@ -128,7 +123,7 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
     _verbose_log("PATCH_BUILD: Patch built successfully", {
         "patch_size": len(patch),
         "patch_lines": len(patch.splitlines()),
-        "preview": patch[:500] + "..." if len(patch) > 500 else patch
+        "patch": patch
     })
     return patch
 
@@ -137,7 +132,7 @@ def _extract_main_py(response: str) -> str:
     """Extract Python code from LLM response using multiple strategies."""
     _verbose_log("CODE_EXTRACTION: Starting code extraction", {
         "response_length": len(response),
-        "response_preview": response[:300] + "..." if len(response) > 300 else response
+        "response": response
     })
     if not response:
         _verbose_log("CODE_EXTRACTION: Empty response, returning empty", level="WARN")
@@ -150,7 +145,7 @@ def _extract_main_py(response: str) -> str:
         _verbose_log("CODE_EXTRACTION: Strategy 1 succeeded (explicit main.py)", {
             "extracted_length": len(extracted),
             "extracted_lines": len(extracted.splitlines()),
-            "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
+            "extracted_code": extracted
         })
         return extracted
     
@@ -163,7 +158,7 @@ def _extract_main_py(response: str) -> str:
                 _verbose_log("CODE_EXTRACTION: Strategy 2 succeeded (python block)", {
                     "extracted_length": len(extracted),
                     "extracted_lines": len(extracted.splitlines()),
-                    "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
+                    "extracted_code": extracted
                 })
                 return extracted
     
@@ -177,7 +172,7 @@ def _extract_main_py(response: str) -> str:
                 _verbose_log("CODE_EXTRACTION: Strategy 3 succeeded (generic code block)", {
                     "extracted_length": len(extracted),
                     "extracted_lines": len(extracted.splitlines()),
-                    "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
+                    "extracted_code": extracted
                 })
                 return extracted
     
@@ -240,13 +235,13 @@ def _call_llm(
                 content = (data["choices"][0].get("message", {}) or {}).get("content") or ""
                 _verbose_log("LLM_CALL: Response extracted from choices", {
                     "content_length": len(content),
-                    "content_preview": content[:300] + "..." if len(content) > 300 else content
+                    "content": content
                 })
                 return content
             if isinstance(data, str):
                 _verbose_log("LLM_CALL: Response is string", {
                     "content_length": len(data),
-                    "content_preview": data[:300] + "..." if len(data) > 300 else data
+                    "content": data
                 })
                 return data
             _verbose_log("LLM_CALL: Converting response to JSON string", {
@@ -313,7 +308,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     problem_statement = (input_dict or {}).get("problem_statement", "") or ""
     _verbose_log("AGENT_MAIN: Problem statement loaded", {
         "statement_length": len(problem_statement),
-        "statement_preview": problem_statement[:300] + "..." if len(problem_statement) > 300 else problem_statement
+        "problem_statement": problem_statement
     })
     
     mode = (input_dict or {}).get("problem_category", None)
