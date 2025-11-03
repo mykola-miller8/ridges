@@ -68,7 +68,8 @@ class CursorAPIClient:
         self,
         prompt_text: str,
         repository: Optional[str] = None,
-        branch_name: Optional[str] = None,
+        source_branch: Optional[str] = None,
+        target_branch: Optional[str] = None,
         skip_reviewer_request: bool = True,
         auto_create_pr: bool = False,
     ) -> Dict[str, Any]:
@@ -77,7 +78,8 @@ class CursorAPIClient:
         Args:
             prompt_text: The task/prompt for the agent
             repository: Repository URL (defaults to detected git remote or default_repo_url)
-            branch_name: Branch name for the agent's work (defaults to auto-generated)
+            source_branch: Branch name for the agent's work (defaults to auto-generated)
+            target_branch: Branch name for the agent's work (defaults to auto-generated)
             skip_reviewer_request: Whether to skip reviewer requests
             auto_create_pr: Whether to automatically create a PR when done
             
@@ -104,10 +106,11 @@ class CursorAPIClient:
                 "autoCreatePr": auto_create_pr,
             },
         }
-        
-        if branch_name:
-            payload["target"]["branchName"] = branch_name
-            payload["source"]["ref"] = branch_name
+
+        if source_branch:
+            payload["source"]["ref"] = source_branch
+        if target_branch:
+            payload["target"]["branchName"] = target_branch
         
         resp = requests.post(url, headers=self._headers(), json=payload, timeout=60)
         
