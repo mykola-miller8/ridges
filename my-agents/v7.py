@@ -176,51 +176,51 @@ def agent_main(
             parts.append(f"### {name}\n```python\n{content[:10000]}\n```")
     repo_summary = "\n\n".join(parts)
 
-    # System prompt emphasizing careful algorithm design
+    # Focused system prompt with clear algorithmic guidance
     system_msg = (
-        "You are an expert Python engineer who writes flawless, production-ready code.\n\n"
-        "APPROACH:\n"
-        "1. Read the entire problem carefully, including all examples\n"
-        "2. Study EACH example to understand the required logic:\n"
-        "   - What is the input format?\n"
-        "   - What output is expected and why?\n"
-        "   - Trace through the logic to see how input becomes output\n"
-        "3. Design your algorithm carefully:\n"
-        "   - Choose appropriate data structures\n"
-        "   - For graphs/grids: plan traversal strategy (BFS/DFS)\n"
-        "   - For spatial problems: model coordinates and neighbor relationships precisely\n"
-        "   - For parsing: handle the exact input format including whitespace\n"
-        "4. Before coding, mentally trace through multiple examples to verify your approach\n"
-        "5. Implement complete, working code with all methods fully implemented\n"
-        "6. After coding, verify it works for ALL examples\n\n"
-        "CRITICAL REQUIREMENTS:\n"
-        "- Implement ALL methods completely (never leave empty or with just 'pass')\n"
-        "- Parse input formats exactly as specified (handle whitespace, newlines, structure)\n"
-        "- For graph/grid problems:\n"
-        "  * Calculate neighbor relationships correctly (consider offsets for hex/irregular grids)\n"
-        "  * Use proper BFS/DFS with correct visited tracking\n"
-        "  * Ensure traversal explores ALL valid neighbors\n"
-        "  * Handle boundary conditions correctly\n"
-        "- For spatial problems: be precise with coordinate calculations (no off-by-one errors)\n"
-        "- Handle all edge cases (empty inputs, boundaries, single elements, complex paths)\n"
-        "- Implement validation rules and raise exceptions as needed\n"
-        "- Test your logic mentally against ALL provided examples before finalizing\n\n"
+        "You are an expert Python engineer who writes correct, production-ready code.\n\n"
+        "YOUR PROCESS:\n"
+        "1. Read the problem statement completely, including ALL examples\n"
+        "2. Understand what each example demonstrates - study the pattern\n"
+        "3. Design your algorithm:\n"
+        "   - For graph/grid connectivity: Use BFS or DFS to find paths\n"
+        "   - For spatial/grid problems: Get coordinate system and neighbors RIGHT\n"
+        "   - For parsing: Handle exact format (whitespace, structure, delimiters)\n"
+        "4. Implement complete code with all methods fully working\n"
+        "5. Mentally test against examples to verify correctness\n\n"
+        "CRITICAL FOR GRID/GRAPH PROBLEMS:\n"
+        "When implementing graph traversal or grid connectivity:\n"
+        "- Parse the grid correctly, building a proper data structure\n"
+        "- Define neighbor relationships PRECISELY (for hex grids, offset grids, etc.)\n"
+        "- Start from ALL cells on the starting edge (not just one)\n"
+        "- Use BFS/DFS to explore connected cells\n"
+        "- Track visited cells to avoid infinite loops\n"
+        "- Check if ANY path reaches the opposite edge\n"
+        "- Handle edge cases: empty grids, single cells, no paths\n\n"
+        "NEIGHBOR CALCULATION FOR IRREGULAR GRIDS:\n"
+        "If the grid has indentation or offsets (like hex grids):\n"
+        "- Rows may have different neighbor patterns based on row parity (even/odd)\n"
+        "- Account for row offset when calculating column neighbors\n"
+        "- Test neighbor calculation on paper with examples\n"
+        "- Ensure boundary checks are correct\n\n"
+        "IMPLEMENTATION RULES:\n"
+        "- Implement ALL methods completely (no empty/pass-only bodies)\n"
+        "- Use helper methods for complex operations\n"
+        "- Add comments for non-obvious logic\n"
+        "- Handle all edge cases\n"
+        "- Validate inputs and raise exceptions as needed\n\n"
         "OUTPUT FORMAT:\n"
-        "Return ONLY a single Python code block with the complete main.py.\n"
-        "Start with '# main.py' as the first line.\n"
+        "Return ONLY a Python code block starting with '# main.py'.\n"
         "Format: ```python\\n# main.py\\n[complete code]\\n```\n"
-        "No explanations or prose."
+        "No explanations."
     )
 
     user_msg = (
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
-        "Implement a complete, correct solution that:\n"
-        "- Handles ALL examples correctly (trace through each one)\n"
-        "- Implements all methods fully (no empty implementations)\n"
-        "- Handles all edge cases including complex scenarios\n"
-        "- Uses appropriate algorithms and data structures\n"
-        "- Gets spatial/neighbor relationships exactly right for grid problems"
+        "Implement a complete, correct solution.\n"
+        "Study the examples carefully to understand the required behavior.\n"
+        "For grid/graph problems, get the neighbor relationships exactly right."
     )
 
     messages = [
@@ -228,15 +228,15 @@ def agent_main(
         {"role": "user", "content": user_msg},
     ]
 
-    # Try generate-review-refine cycle with multiple models
-    max_attempts = len(AGENT_MODELS) * 2
+    # Extended attempts with temperature variation
+    max_attempts = len(AGENT_MODELS) * 3  # Increased from 2x to 3x
     
     for attempt in range(max_attempts):
         try:
-            # Use temperature variation: 0.0 for first attempts, slightly higher for retries
+            # Temperature strategy: 0.0 for first pass, 0.3 for later attempts
             temp = 0.0 if attempt < len(AGENT_MODELS) else 0.3
             
-            # Step 1: Generate initial code
+            # Generate code
             response = _call_llm(messages, run_id, attempt, 300, temperature=temp)
             code_blocks = _extract_code_blocks(response)
             
@@ -245,124 +245,81 @@ def agent_main(
                 is_valid, error_msg = _validate_syntax(code)
                 
                 if not is_valid:
-                    # Syntax error - add feedback and retry
                     if attempt < max_attempts - 1:
                         messages.append({"role": "assistant", "content": response})
                         messages.append({
                             "role": "user",
                             "content": (
                                 f"Syntax error: {error_msg}\n\n"
-                                "Fix the syntax and return corrected code.\n"
-                                "Format: ```python\\n# main.py\\n[corrected code]\\n```"
+                                "Fix and return corrected code.\n"
+                                "Format: ```python\\n# main.py\\n[code]\\n```"
                             )
                         })
                         break
                     continue
                 
-                # Check for incomplete implementations (empty methods)
+                # Check for incomplete implementations
                 try:
                     tree = ast.parse(code)
-                    has_empty_methods = False
+                    has_empty = False
                     for node in ast.walk(tree):
                         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                            # Check if function body is just 'pass'
                             if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
-                                has_empty_methods = True
+                                has_empty = True
                                 break
                     
-                    if has_empty_methods:
+                    if has_empty:
                         if attempt < max_attempts - 1:
                             messages.append({"role": "assistant", "content": response})
                             messages.append({
                                 "role": "user",
                                 "content": (
-                                    "The code has empty method bodies. Implement ALL methods with complete logic.\n"
-                                    "Format: ```python\\n# main.py\\n[complete implementation]\\n```"
+                                    "Incomplete implementation. All methods must have working logic.\n"
+                                    "Format: ```python\\n# main.py\\n[complete code]\\n```"
                                 )
                             })
                             break
                 except Exception:
                     pass
                 
-                # Step 2: Initial review
-                if attempt < len(AGENT_MODELS):
+                # Review phase (first 6 attempts only)
+                if attempt < len(AGENT_MODELS) + 2:
                     review_messages = [
-                        {"role": "system", "content": (
-                            "You are a meticulous code reviewer who verifies correctness by tracing through examples."
-                        )},
+                        {"role": "system", "content": "You are a code reviewer focused on correctness."},
                         {"role": "user", "content": (
                             f"# Problem\n{problem_statement[:15000]}\n\n"
                             f"# Code\n```python\n{code}\n```\n\n"
-                            "Review this code:\n"
-                            "1. Are all methods fully implemented?\n"
-                            "2. Does input parsing handle the format correctly?\n"
-                            "3. For graphs/grids: Are neighbors calculated correctly? Is traversal sound?\n"
-                            "4. Trace through a simple example - does it work?\n"
-                            "5. Are edge cases handled?\n\n"
-                            "Reply 'APPROVED' if correct, or list specific issues."
+                            "Review checklist:\n"
+                            "1. All methods implemented?\n"
+                            "2. Input parsing correct?\n"
+                            "3. For grids: Neighbor calculation correct for the grid type?\n"
+                            "4. For graphs: BFS/DFS logic sound?\n"
+                            "5. Trace one simple and one complex example - correct outputs?\n"
+                            "6. Edge cases handled?\n\n"
+                            "Reply 'APPROVED' or list issues."
                         )}
                     ]
                     
                     try:
-                        review_response = _call_llm(review_messages, run_id, attempt, 120)
+                        review = _call_llm(review_messages, run_id, attempt, 120)
                         
-                        if review_response and "APPROVED" not in review_response.upper():
+                        if review and "APPROVED" not in review.upper():
                             if attempt < max_attempts - 1:
                                 messages.append({"role": "assistant", "content": response})
                                 messages.append({
                                     "role": "user",
                                     "content": (
-                                        f"Review found issues:\n{review_response}\n\n"
-                                        "Fix all issues and return corrected code.\n"
-                                        "Format: ```python\\n# main.py\\n[corrected code]\\n```"
+                                        f"Issues found:\n{review}\n\n"
+                                        "Fix all issues. Pay special attention to neighbor "
+                                        "calculations and algorithm correctness.\n"
+                                        "Format: ```python\\n# main.py\\n[fixed code]\\n```"
                                     )
                                 })
                                 break
                     except Exception:
                         pass
                 
-                # Step 3: Deep verification for complex examples (on first 2 attempts)
-                if attempt < 2:
-                    verification_messages = [
-                        {"role": "system", "content": (
-                            "You are a verification specialist who tests code against complex scenarios."
-                        )},
-                        {"role": "user", "content": (
-                            f"# Problem\n{problem_statement[:15000]}\n\n"
-                            f"# Code\n```python\n{code}\n```\n\n"
-                            "Perform a DEEP verification:\n"
-                            "1. Pick the MOST COMPLEX example from the problem (largest, most convoluted)\n"
-                            "2. Manually trace through the code with this complex example:\n"
-                            "   - Parse the input step by step\n"
-                            "   - Execute each line of logic\n"
-                            "   - Track what happens at each step\n"
-                            "   - Determine what output is produced\n"
-                            "3. Does the output match what's expected?\n"
-                            "4. Are there any bugs in neighbor calculation, traversal, or logic?\n\n"
-                            "Reply 'VERIFIED' if the complex example works correctly, "
-                            "or explain exactly what goes wrong."
-                        )}
-                    ]
-                    
-                    try:
-                        verify_response = _call_llm(verification_messages, run_id, attempt, 120)
-                        
-                        if verify_response and "VERIFIED" not in verify_response.upper():
-                            if attempt < max_attempts - 1:
-                                messages.append({"role": "assistant", "content": response})
-                                messages.append({
-                                    "role": "user",
-                                    "content": (
-                                        f"Complex example verification failed:\n{verify_response}\n\n"
-                                        "Fix the issues to handle complex examples correctly.\n"
-                                        "Format: ```python\\n# main.py\\n[corrected code]\\n```"
-                                    )
-                                })
-                                break
-                    except Exception:
-                        pass
-                
-                # Code passed all validations
+                # Code passed validation
                 return _build_single_file_patch("main.py", code)
             
         except Exception:
