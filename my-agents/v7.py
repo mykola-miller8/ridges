@@ -132,7 +132,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
         + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
         "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Deterministic code."
+        "No prose. Deterministic code. No Infinite Loop"
     )
     user_msg = (
         f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
