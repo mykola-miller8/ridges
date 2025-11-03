@@ -180,8 +180,8 @@ def _extract_main_py(response: str) -> str:
         _verbose_log("CODE_EXTRACTION: Empty response, returning empty", level="WARN")
         return ""
     
-    # Strategy 1: Explicitly headed block with main.py comment
-    m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*→)\n```", response, re.DOTALL)
+    # Strategy 1: Python block with main.py comment (flexible newlines)
+    m = re.findall(r"```python\s*\n\s*#\s*main\.py\s*\n([\s\S]*?)```", response, re.DOTALL)
     if m and m[0].strip():
         extracted = m[0].strip()
         _verbose_log("CODE_EXTRACTION: Strategy 1 succeeded (explicit main.py)", {
@@ -191,32 +191,44 @@ def _extract_main_py(response: str) -> str:
         })
         return extracted
     
-    # Strategy 2: Any python code block
-    m2 = re.findall(r"```python\s*\n([\s\S]*→)\n```", response, re.DOTALL)
+    # Strategy 2: Any python code block (flexible newlines)
+    m2 = re.findall(r"```python\s*\n([\s\S]*?)```", response, re.DOTALL)
     if m2:
         for block in m2:
-            if block.strip():
-                extracted = block.strip()
+            stripped = block.strip()
+            if stripped:
+                # Remove leading "# main.py" comment if present
+                if stripped.startswith("# main.py"):
+                    lines = stripped.split('\n', 1)
+                    if len(lines) > 1:
+                        stripped = lines[1].strip()
+                
                 _verbose_log("CODE_EXTRACTION: Strategy 2 succeeded (python block)", {
-                    "extracted_length": len(extracted),
-                    "extracted_lines": len(extracted.splitlines()),
-                    "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
+                    "extracted_length": len(stripped),
+                    "extracted_lines": len(stripped.splitlines()),
+                    "preview": stripped[:200] + "..." if len(stripped) > 200 else stripped
                 })
-                return extracted
+                return stripped
     
-    # Strategy 3: Code block without language specifier
-    m3 = re.findall(r"```\n([\s\S]*→)\n```", response, re.DOTALL)
+    # Strategy 3: Generic code block (flexible newlines)
+    m3 = re.findall(r"```\s*\n([\s\S]*?)```", response, re.DOTALL)
     if m3:
         for block in m3:
-            # Check if it looks like Python code (has def, class, or import)
-            if block.strip() and any(keyword in block for keyword in ['def ', 'class ', 'import ']):
-                extracted = block.strip()
+            stripped = block.strip()
+            # Check if it looks like Python code
+            if stripped and any(keyword in stripped for keyword in ['def ', 'class ', 'import ', 'from ']):
+                # Remove leading "# main.py" comment if present
+                if stripped.startswith("# main.py"):
+                    lines = stripped.split('\n', 1)
+                    if len(lines) > 1:
+                        stripped = lines[1].strip()
+                
                 _verbose_log("CODE_EXTRACTION: Strategy 3 succeeded (generic code block)", {
-                    "extracted_length": len(extracted),
-                    "extracted_lines": len(extracted.splitlines()),
-                    "preview": extracted[:200] + "..." if len(extracted) > 200 else extracted
+                    "extracted_length": len(stripped),
+                    "extracted_lines": len(stripped.splitlines()),
+                    "preview": stripped[:200] + "..." if len(stripped) > 200 else stripped
                 })
-                return extracted
+                return stripped
     
     _verbose_log("CODE_EXTRACTION: All strategies failed, no code extracted", {
         "response_length": len(response),
