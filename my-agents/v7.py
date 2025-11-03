@@ -352,8 +352,10 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "bug-free Python code that correctly implements the given specification.\n\n"
         "CRITICAL REQUIREMENTS:\n"
         "- Follow the specification EXACTLY - do not deviate or add assumptions\n"
+        "- READ THE ENTIRE SPEC 2-3 TIMES to catch ALL rules, constraints, and validation requirements\n"
         "- If error messages are specified, use them VERBATIM (exact wording)\n"
         "- If validation is required, implement ALL validation cases completely\n"
+        "- For sequential inputs: implement ALL dependent validation rules (input N based on input N-1)\n"
         "- Pay attention to type signatures, constants, and structure definitions\n"
         + ("- IMPORTANT: Only modify main.py. Do not change tests.py.\n" if mode == "tests_available" else "")
         + "\nReturn your solution in this exact format:\n"
@@ -370,8 +372,13 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
 # IMPLEMENTATION GUIDELINES
 
-## 0. READ THE SPECIFICATION CAREFULLY - EXACT OUTPUT MATTERS
-**Many problems require EXACT string matching or specific output format.**
+## 0. READ THE SPECIFICATION CAREFULLY AND COMPLETELY
+**Many problems require EXACT string matching, specific output format, AND comprehensive validation.**
+
+### READ THE ENTIRE SPEC 2-3 TIMES:
+1. **First read**: Understand the overall goal and basic behavior
+2. **Second read**: Identify ALL validation rules, constraints, edge cases, and error conditions
+3. **Third read**: Look for subtle dependencies, special cases, and "gotcha" rules
 
 ### When the spec shows example output:
 1. **Study the examples CHARACTER BY CHARACTER**
@@ -436,9 +443,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 **Implement special cases EXPLICITLY - don't assume a uniform loop will handle them!**
 
 Examples:
-- "The 10th frame is special" → Handle frame 10 separately with different logic
-- "Except for the last element" → Process n-1 items in loop, then handle last specially
-- "Bonus rolls if spare/strike" → Add conditional logic after main processing
+- "The 10th frame is special" ? Handle frame 10 separately with different logic
+- "Except for the last element" ? Process n-1 items in loop, then handle last specially
+- "Bonus rolls if spare/strike" ? Add conditional logic after main processing
 
 ## 4. INPUT VALIDATION AND ERROR HANDLING
 **Many problems require strict input validation with specific error types and messages.**
@@ -455,7 +462,8 @@ Examples:
 2. **Validate in the correct order (fail fast principle)**
    - Type checks first (is it the right type? list vs dict vs str vs int)
    - Structure checks next (right length? right format?)
-   - Content checks last (valid values? constraints met?)
+   - Content checks (valid values? constraints met?)
+   - **Dependent checks last**: Constraints based on previous inputs/state (see section below)
 
 3. **Common validation patterns**
    - **Type validation**: `if not isinstance(data, expected_type): raise TypeError("...")`
@@ -470,20 +478,78 @@ Examples:
    - If spec provides exact messages, use them verbatim
    - Otherwise, make messages descriptive but consistent with the spec's tone
 
+### CRITICAL: Sequential/Dependent Validation
+**For problems with sequential inputs, later inputs often have constraints based on earlier inputs.**
+
+**Pattern: Input N depends on Input N-1 (or earlier inputs)**
+
+1. **Identify sequential input problems**:
+   - Methods called multiple times with related inputs (game.roll(), parser.add(), etc.)
+   - Each call modifies state that affects what future calls can accept
+   - Look for phrases: "cannot exceed", "depends on", "only if previous", "remaining"
+
+2. **Types of dependent constraints**:
+   - **Physical/logical limits**: "If you knocked down 6 pins, you can't knock down more than 4 remaining"
+   - **State-based limits**: "Cannot roll after game is complete"
+   - **Cumulative limits**: "Sum of X and Y cannot exceed Z"
+   - **Conditional rules**: "If previous input was A, current can only be B or C"
+
+3. **Implementation pattern**:
+   ```python
+   def accept_input(self, value):
+       # 1. Basic validation (type, range)
+       if value < 0 or value > 10:
+           raise ValueError("Value must be 0-10")
+       
+       # 2. State-based validation
+       if self.is_complete:
+           raise Exception("Cannot accept more input")
+       
+       # 3. DEPENDENT VALIDATION - check against previous inputs
+       if self.previous_value is not None:
+           # Example: remaining capacity constraint
+           if value + self.previous_value > 10:
+               raise Exception("Exceeds limit")
+           # Example: conditional constraint  
+           if self.previous_value < 10 and value == 10:
+               # Special rule based on previous input
+               raise Exception("Not allowed after non-max value")
+   ```
+
+4. **How to find these rules in the spec**:
+   - Read the ENTIRE spec 2-3 times carefully
+   - Look for sections on "validation", "constraints", "rules", "exceptions"
+   - Look for phrases: "cannot", "must not", "only if", "unless", "depends on"
+   - Check all test scenarios - they often reveal subtle constraints
+   - **Don't assume simple rules** - complex problems often have special cases
+
+5. **Common scenarios**:
+   - **Game scoring with multiple rounds**: Later rounds may have special rules
+   - **Parsers with state**: What's valid depends on what was parsed before
+   - **Resource allocation**: Can't allocate more than remaining capacity
+   - **Sequential construction**: Each piece must be compatible with previous pieces
+
+**CRITICAL: Test your validation mentally**
+For each input-accepting method:
+- "What are ALL the ways this input could be invalid?"
+- "Does validity depend on previous inputs? If so, what are ALL those rules?"
+- "Are there special cases for the first/last input?"
+- "Did I implement EVERY constraint mentioned in the spec?"
+
 5. **DSL and parser problems - special attention**
    - **Look for constant definitions** at the top of main.py (e.g., `NODE, EDGE, ATTR = range(3)`)
    - **These constants identify different data types** in the input
    - **Each type usually has a specific structure**: (TYPE_CONSTANT, ...required args...)
    - **CRITICAL: Count arguments from examples to determine exact tuple length per type**
-     - Example: If spec shows (NODE, "a", dict) → NODE tuples must have exactly 3 elements
-     - Example: If spec shows (EDGE, "a", "b", dict) → EDGE tuples must have exactly 4 elements
+     - Example: If spec shows (NODE, "a", dict) ? NODE tuples must have exactly 3 elements
+     - Example: If spec shows (EDGE, "a", "b", dict) ? EDGE tuples must have exactly 4 elements
      - **Different types can have different lengths!** Don't use a single length check for all
    - **Validation must check (in order)**:
-     1. Is the tuple empty or too short to even have a type? → "Graph item incomplete"
-     2. Is the type constant valid/recognized? → "Unknown item"  
+     1. Is the tuple empty or too short to even have a type? ? "Graph item incomplete"
+     2. Is the type constant valid/recognized? ? "Unknown item"  
      3. Does the tuple have **EXACTLY** the right number of elements? Use `len(item) != expected` not `<` or `>`
-        - Catches BOTH too few AND too many elements → "X is malformed"
-     4. Are the element types correct (str, dict, int, etc.)? → "X is malformed"
+        - Catches BOTH too few AND too many elements ? "X is malformed"
+     4. Are the element types correct (str, dict, int, etc.)? ? "X is malformed"
    - **Read ALL examples in the spec** to determine the expected length for EACH type
    - **Use if/elif/else to handle each type separately** with its own length AND type checks
    - **Example validation structure**:
@@ -498,10 +564,11 @@ Examples:
    - **CRITICAL**: Use `!=` for length check (catches too many AND too few), then validate each element type
 
 ### State management for classes:
-- **Validate preconditions** in all state-modifying methods
+- **Validate ALL preconditions** in all state-modifying methods
   - Check: Is this operation allowed in the current state?
   - **CRITICAL**: Before accepting input, verify the operation is still valid
   - Example: game.roll() must check if game is complete and reject if so
+  - **Check dependent constraints**: Does this input violate constraints based on previous inputs?
   - Raise clear exceptions when preconditions fail
 - **Track completion for fixed-length games/processes**
   - If there's a fixed number of rounds/frames/steps, track progress
@@ -509,6 +576,11 @@ Examples:
   - **Variable-length final rounds**: Some games have special last rounds (e.g., bonus balls)
     - Track the round number AND what makes that round complete
     - Don't just count rolls - check logical completion conditions
+    - **Last round often has special rules**: Extra inputs allowed, different constraints
+    - Implement last round validation separately from normal rounds
+- **Store what you need for dependent validation**
+  - If later inputs depend on earlier ones, store enough history to validate
+  - Example: If current input cannot exceed (10 - previous_input), store previous_input
 - **Test state transitions**: mentally trace start ? middle ? end
 - **Avoid state redundancy**: Don't track the same information multiple ways
 
@@ -554,13 +626,18 @@ Before submitting, mentally trace through your code:
 2. Does it handle ALL special cases mentioned in the spec?
 3. Did I match the example output EXACTLY (punctuation, capitalization, spacing)?
 4. **If error messages are specified**: Did I use the EXACT error messages verbatim?
-5. **If validation is required**: Did I validate input type, structure, and content correctly?
-6. Did I use the minimum state needed?
-7. Can I explain the logic in 2-3 simple sentences?
-8. Are there off-by-one errors in my indexing?
-9. Do all state-modifying methods validate preconditions?
-10. **For games/processes with fixed length**: Does it prevent operations after completion?
-11. **For string generation**: Did I test singular/plural forms and edge cases?
+5. **If validation is required**: Did I validate input type, structure, content, AND dependencies correctly?
+6. **For sequential input problems**: Did I implement ALL dependent validation rules?
+   - Does input N check constraints based on input N-1?
+   - Are there cumulative constraints (sum, capacity, etc.)?
+   - Did I handle special rules for first/last inputs?
+7. Did I use the minimum state needed?
+8. Can I explain the logic in 2-3 simple sentences?
+9. Are there off-by-one errors in my indexing?
+10. Do all state-modifying methods validate ALL preconditions (state + dependencies)?
+11. **For games/processes with fixed length**: Does it prevent operations after completion?
+12. **For string generation**: Did I test singular/plural forms and edge cases?
+13. **Did I read the ENTIRE spec thoroughly?** (2-3+ times to catch all rules)
 
 **If you can't clearly trace the logic, simplify it!**
 
