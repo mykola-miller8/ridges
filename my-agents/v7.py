@@ -177,36 +177,44 @@ def agent_main(
     system_msg = (
         "You are an expert Python engineer who writes correct, production-ready code.\n\n"
         "APPROACH:\n"
-        "1. Read the problem statement carefully, understanding:\n"
-        "   - The core requirements and functionality needed\n"
+        "1. Read the problem statement THOROUGHLY:\n"
+        "   - Core requirements and all functionality needed\n"
         "   - Input/output specifications and formats\n"
-        "   - All examples provided (what they demonstrate)\n"
-        "   - Edge cases and validation rules\n"
-        "   - Any exceptions that must be raised\n\n"
-        "2. Analyze the problem type and choose appropriate approach:\n"
-        "   - State management: Track state across method calls correctly\n"
-        "   - Algorithms: Choose efficient data structures (lists, dicts, sets, deques)\n"
-        "   - Parsing: Handle input format precisely (whitespace, newlines, delimiters)\n"
-        "   - Validation: Check inputs and raise exceptions with meaningful messages\n"
-        "   - Business logic: Implement all rules and special cases exactly as specified\n\n"
-        "3. Trace through examples mentally:\n"
-        "   - For EACH example, walk through your logic step-by-step\n"
-        "   - Verify the output matches expectations\n"
-        "   - Check edge cases (empty inputs, boundaries, special states)\n\n"
-        "4. Implementation requirements:\n"
-        "   - Implement ALL methods completely (never leave empty or with just 'pass')\n"
-        "   - Initialize state properly in __init__ methods\n"
-        "   - Handle all validation (raise exceptions with messages as required)\n"
-        "   - Parse inputs exactly as specified\n"
-        "   - Implement all business rules and special cases\n"
-        "   - Use appropriate data structures for efficiency\n"
-        "   - Handle edge cases (empty, boundary, invalid inputs)\n\n"
+        "   - ALL examples (understand what each demonstrates)\n"
+        "   - ALL validation rules and constraints\n"
+        "   - EVERY exception/error condition that must be raised\n"
+        "   - Special sections like 'Exception messages' or 'Error handling'\n"
+        "   - Edge cases and boundary conditions\n\n"
+        "2. Analyze problem type and design your solution:\n"
+        "   - State management: Plan what state to track, how to initialize, how to update\n"
+        "   - Validation first: Identify ALL error conditions before implementing logic\n"
+        "   - Data structures: Choose appropriate types (list, dict, set, deque, etc.)\n"
+        "   - Algorithms: Select efficient approaches for the problem type\n"
+        "   - Business rules: List ALL special cases and rules to implement\n\n"
+        "3. Implement with COMPLETENESS:\n"
+        "   - Initialize ALL instance variables in __init__\n"
+        "   - Implement EVERY method fully (never leave empty or with just 'pass')\n"
+        "   - Add validation at the START of methods that receive input\n"
+        "   - Raise exceptions with MEANINGFUL MESSAGES (not just 'Exception()')\n"
+        "   - Handle ALL edge cases (empty, boundary, invalid, out-of-order)\n"
+        "   - Implement ALL business logic including special rules\n\n"
+        "4. CRITICAL - Exception handling:\n"
+        "   - Read problem for ALL scenarios requiring exceptions\n"
+        "   - Raise appropriate exception types (ValueError, IndexError, etc.)\n"
+        "   - ALWAYS include descriptive message: raise ValueError(\"clear message\")\n"
+        "   - Validate BEFORE processing (fail fast with clear errors)\n"
+        "   - Check boundaries, ranges, state validity, input constraints\n\n"
+        "5. Verify mentally:\n"
+        "   - Trace through examples step-by-step\n"
+        "   - Test edge cases mentally (empty, boundary, invalid)\n"
+        "   - Verify exceptions are raised correctly\n"
+        "   - Check state updates happen correctly\n\n"
         "COMMON PATTERNS:\n"
-        "- Classes with state: Initialize instance variables in __init__, update in methods\n"
-        "- Validation: Check constraints and raise ValueError/Exception with clear messages\n"
-        "- Parsing: Use split(), strip(), int() carefully for the exact format\n"
-        "- Algorithms: Consider BFS/DFS for graphs, dynamic programming for optimization\n"
-        "- Edge cases: Test mentally with empty, single element, maximum, invalid inputs\n\n"
+        "- State tracking: Use instance variables, update in each method call\n"
+        "- Validation: Check at method start, raise with message immediately\n"
+        "- Boundary checks: Test limits (negative, too large, out of range)\n"
+        "- State validity: Ensure operations allowed in current state\n"
+        "- Complete logic: Implement all rules, cases, and special scenarios\n\n"
         "OUTPUT FORMAT:\n"
         "Return ONLY a single Python code block with the complete main.py.\n"
         "Start with '# main.py' as the first line.\n"
@@ -217,13 +225,16 @@ def agent_main(
     user_msg = (
         f"# Problem Statement\n{problem_statement[:15000]}\n\n"
         f"# Current Repository\n{repo_summary}\n\n"
-        "Implement a complete, correct solution that:\n"
-        "1. Implements all methods fully (no empty bodies)\n"
-        "2. Initializes and manages state correctly\n"
-        "3. Handles all validation and raises exceptions as specified\n"
-        "4. Parses inputs in the exact format required\n"
-        "5. Implements all business logic and special cases\n"
-        "6. Works correctly for all examples and edge cases"
+        "Implement a complete, correct solution:\n\n"
+        "CRITICAL REQUIREMENTS:\n"
+        "1. Implement ALL methods with complete logic (no empty bodies)\n"
+        "2. Initialize ALL state variables in __init__\n"
+        "3. Read problem for ALL validation rules and exception conditions\n"
+        "4. Raise exceptions with MEANINGFUL MESSAGES for every error condition\n"
+        "5. Implement ALL business logic, rules, and special cases\n"
+        "6. Handle ALL edge cases (empty, boundary, invalid inputs, state errors)\n"
+        "7. Parse inputs exactly as specified\n"
+        "8. Verify your solution works for all provided examples"
     )
 
     messages = [
@@ -259,11 +270,13 @@ def agent_main(
                         break
                     continue
                 
-                # Check for incomplete implementations (empty methods)
+                # Check for incomplete implementations and missing validation
                 try:
                     tree = ast.parse(code)
                     has_empty_methods = False
                     empty_method_names: List[str] = []
+                    has_raise_statements = False
+                    methods_with_params: List[str] = []
                     
                     for node in ast.walk(tree):
                         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -271,7 +284,16 @@ def agent_main(
                             if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                                 has_empty_methods = True
                                 empty_method_names.append(node.name)
+                            
+                            # Track methods with parameters (likely need validation)
+                            if node.name != "__init__" and len(node.args.args) > 1:  # More than just 'self'
+                                methods_with_params.append(node.name)
+                        
+                        # Check if code has any exception raising
+                        if isinstance(node, ast.Raise):
+                            has_raise_statements = True
                     
+                    # Flag if empty methods found
                     if has_empty_methods:
                         if attempt < max_attempts - 1:
                             messages.append({"role": "assistant", "content": response})
@@ -286,6 +308,26 @@ def agent_main(
                             })
                             break
                         continue
+                    
+                    # Flag if validation likely missing (has methods with params but no raises)
+                    # Only check if problem mentions "exception" or "error" or "raise"
+                    problem_lower = problem_statement.lower()
+                    needs_validation = any(keyword in problem_lower for keyword in 
+                                          ["exception", "error", "raise", "invalid", "cannot"])
+                    
+                    if needs_validation and methods_with_params and not has_raise_statements:
+                        if attempt < len(AGENT_MODELS):  # Only on first pass
+                            messages.append({"role": "assistant", "content": response})
+                            messages.append({
+                                "role": "user",
+                                "content": (
+                                    "The problem requires exception handling but no validation is implemented.\n"
+                                    "Read the problem for ALL error conditions and validation requirements.\n"
+                                    "Add proper validation that raises exceptions with meaningful messages.\n"
+                                    "Format: ```python\\n# main.py\\n[complete implementation with validation]\\n```"
+                                )
+                            })
+                            break
                 except Exception:
                     pass
                 
@@ -298,18 +340,32 @@ def agent_main(
                         {"role": "user", "content": (
                             f"# Problem\n{problem_statement[:15000]}\n\n"
                             f"# Code\n```python\n{code}\n```\n\n"
-                            "Review this code by checking:\n"
-                            "1. All methods are fully implemented (no empty bodies)\n"
-                            "2. State is initialized and managed correctly\n"
-                            "3. Input parsing handles the exact format specified\n"
-                            "4. All validation rules are implemented (exceptions raised as needed)\n"
-                            "5. Business logic matches all requirements and special cases\n"
-                            "6. Examples work correctly:\n"
-                            "   - Trace through at least one simple example\n"
-                            "   - Trace through at least one complex example\n"
-                            "   - Does the code produce correct results?\n"
-                            "7. Edge cases are handled (empty, boundary, invalid inputs)\n\n"
-                            "Reply 'APPROVED' if correct for all cases, or list specific issues found."
+                            "Review this code thoroughly:\n\n"
+                            "1. Implementation completeness:\n"
+                            "   - Are ALL methods fully implemented (no empty bodies)?\n"
+                            "   - Are ALL instance variables initialized in __init__?\n\n"
+                            "2. Exception handling (CRITICAL):\n"
+                            "   - Read problem for ALL error/exception requirements\n"
+                            "   - Does code check for EVERY invalid condition?\n"
+                            "   - Are exceptions raised with MEANINGFUL messages?\n"
+                            "   - Are all boundary/constraint checks implemented?\n\n"
+                            "3. State management:\n"
+                            "   - Is state tracked correctly across method calls?\n"
+                            "   - Are state updates correct for all cases?\n"
+                            "   - Are state validity checks in place?\n\n"
+                            "4. Business logic:\n"
+                            "   - Are ALL requirements and rules implemented?\n"
+                            "   - Are special cases handled correctly?\n"
+                            "   - Does logic match problem specification exactly?\n\n"
+                            "5. Examples verification:\n"
+                            "   - Trace through simple example step-by-step\n"
+                            "   - Trace through complex example\n"
+                            "   - Does code produce correct results?\n\n"
+                            "6. Edge cases:\n"
+                            "   - Empty/boundary inputs handled?\n"
+                            "   - Invalid inputs raise exceptions?\n"
+                            "   - Out-of-order operations caught?\n\n"
+                            "Reply 'APPROVED' if fully correct, or list SPECIFIC issues found."
                         )}
                     ]
                     
