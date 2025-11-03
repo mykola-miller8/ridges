@@ -1,0 +1,82 @@
+{
+    "evaluation_run_id": "d8820821-d47b-46d1-9bc0-e4db1c97acfa",
+    "evaluation_id": "225d2278-3a01-46f3-900c-e7e3983b0bcd",
+    "problem_name": "dominoes",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,110 @@\n-def can_chain(dominoes: list[tuple[int, int]]) -> list[tuple[int, int]] | None:\n-    pass\n+def can_chain(dominoes: list[tuple[int, int]]) -> list[tuple[int, int]] | None:\n+    if not dominoes:\n+        return []\n+    \n+    # Count degrees of each vertex\n+    degree = {}\n+    for a, b in dominoes:\n+        degree[a] = degree.get(a, 0) + 1\n+        degree[b] = degree.get(b, 0) + 1\n+    \n+    # Check if Eulerian cycle exists (all vertices must have even degree)\n+    for d in degree.values():\n+        if d % 2 != 0:\n+            return None\n+    \n+    # Build adjacency list\n+    # Each edge needs to be tracked separately since we can have duplicate dominoes\n+    adj = {}\n+    edge_count = {}  # Count of each type of edge\n+    \n+    for i, (a, b) in enumerate(dominoes):\n+        if a not in adj:\n+            adj[a] = []\n+        if b not in adj:\n+            adj[b] = []\n+        \n+        # Store edge as (neighbor, edge_index)\n+        adj[a].append((b, i))\n+        adj[b].append((a, i))\n+        \n+        # Count edges between vertices\n+        edge_key = tuple(sorted([a, b]))\n+        edge_count[edge_key] = edge_count.get(edge_key, 0) + 1\n+    \n+    # Find starting vertex (any vertex with edges)\n+    start = next(iter(adj.keys()))\n+    \n+    # Use Hierholzer's algorithm to find Eulerian cycle\n+    def find_eulerian_cycle(start_vertex):\n+        stack = [start_vertex]\n+        path = []\n+        used_edges = {}  # Track used edges by index\n+        \n+        while stack:\n+            current = stack[-1]\n+            \n+            # Find unused edge from current vertex\n+            found_edge = False\n+            if current in adj:\n+                for neighbor, edge_idx in adj[current]:\n+                    # Check if this specific edge hasn't been used\n+                    if edge_idx not in used_edges:\n+                        # Also check if we haven't used all edges of this type\n+                        edge_key = tuple(sorted([current, neighbor]))\n+                        used_count = sum(1 for idx, (u, v) in used_edges.items() \n+                                       if tuple(sorted([u, v])) == edge_key)\n+                        if used_count < edge_count[edge_key]:\n+                            used_edges[edge_idx] = (current, neighbor)\n+                            stack.append(neighbor)\n+                            found_edge = True\n+                            break\n+            \n+            if not found_edge:\n+                path.append(stack.pop())\n+        \n+        path.reverse()\n+        return path\n+    \n+    # Find the cycle\n+    cycle = find_eulerian_cycle(start)\n+    \n+    # The cycle should use all edges\n+    if len(cycle) - 1 != len(dominoes):\n+        return None\n+    \n+    # Reconstruct dominoes from the cycle\n+    result = []\n+    used_indices = set()\n+    \n+    # For each consecutive pair in cycle, find a matching domino\n+    for i in range(len(cycle) - 1):\n+        from_vertex = cycle[i]\n+        to_vertex = cycle[i + 1]\n+        \n+        # Find an unused domino that matches this transition\n+        found = False\n+        for j, (a, b) in enumerate(dominoes):\n+            if j not in used_indices:\n+                if (a == from_vertex and b == to_vertex) or (a == to_vertex and b == from_vertex):\n+                    if a == from_vertex and b == to_vertex:\n+                        result.append((a, b))\n+                    else:\n+                        result.append((b, a))  # Flip the domino to match direction\n+                    used_indices.add(j)\n+                    found = True\n+                    break\n+        \n+        if not found:\n+            return None\n+    \n+    # Check if all dominoes were used\n+    if len(result) != len(dominoes):\n+        return None\n+    \n+    # Verify the chain is valid (circular)\n+    if result:\n+        if result[0][0] != result[-1][1]:\n+            return None\n+    \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_can_reverse_dominoes",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_can_t_be_chained",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_disconnected_double_loop",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_disconnected_simple",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_disconnected_single_isolated",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_empty_input_empty_output",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_need_backtrack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_nine_elements",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_separate_loops",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_separate_three_domino_loops",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_singleton_input_singleton_output",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_singleton_that_can_t_be_chained",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_three_elements",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-03T16:46:44.767361",
+    "started_initializing_agent_at": "2025-11-03T16:46:44.767440",
+    "started_running_agent_at": "2025-11-03T16:46:45.046502",
+    "started_initializing_eval_at": "2025-11-03T16:46:56.423209",
+    "started_running_eval_at": "2025-11-03T16:46:56.837264",
+    "finished_or_errored_at": "2025-11-03T16:46:57.138007"
+}
