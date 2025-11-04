@@ -3,8 +3,7 @@ import re
 import json
 import uuid
 import time
-import subprocess
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import requests
 
@@ -62,15 +61,60 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
 
 
 def _extract_main_py(response: str) -> str:
+    """Extract a complete main.py code block from an LLM response.
+
+    Priority:
+    1) ```python\n# main.py\n...\n```
+    2) First ```python``` block
+    3) Any ```\n...\n``` block (language-agnostic)
+    """
     if not response:
         return ""
-    # Prefer explicitly headed block
+    # Strict headered python block
     m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*?)\n```", response, re.DOTALL)
     if m and m[0].strip():
         return m[0].strip()
-    # Fallback: first python block
+    # Any python block
     m2 = re.findall(r"```python\s*\n([\s\S]*?)\n```", response, re.DOTALL)
-    return m2[0].strip() if m2 and m2[0].strip() else ""
+    if m2 and m2[0].strip():
+        return m2[0].strip()
+    # Any fenced block
+    m3 = re.findall(r"```\s*\n([\s\S]*?)\n```", response, re.DOTALL)
+    if m3 and m3[0].strip():
+        return m3[0].strip()
+    return ""
+
+
+def _parse_api_signatures(src: str) -> Tuple[List[Tuple[str, int]], List[str]]:
+    """Return (functions[name,argcount], classes[name]) from module source without underscored names."""
+    funcs: List[Tuple[str, int]] = []
+    classes: List[str] = []
+    try:
+        import ast
+        tree = ast.parse(src)
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+                arg_count = len([a for a in node.args.args])
+                funcs.append((node.name, arg_count))
+            elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+                classes.append(node.name)
+    except Exception:
+        return [], []
+    return funcs, classes
+
+
+def _syntax_valid(src: str) -> Tuple[bool, str]:
+    """Check Python syntax by parsing AST. Return (ok, error_message)."""
+    if not isinstance(src, str) or not src.strip():
+        return False, "empty source"
+    try:
+        import ast
+        ast.parse(src)
+        return True, ""
+    except SyntaxError as e:
+        return False, f"SyntaxError: {e.msg} at line {getattr(e, 'lineno', '?')} col {getattr(e, 'offset', '?')}"
+    except Exception as e:
+        return False, f"ParseError: {e}"
 
 
 def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
@@ -124,15 +168,23 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     for name in ("main.py", "tests.py"):
         content = _read(name)
         if content:
-            parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
+            # Trim to keep token usage reasonable
+            parts.append(f"### {name}\n```python\n{content[:6000]}\n```")
     summary = "\n\n".join(parts)
+
+    # Capture skeleton API from existing main.py to enforce preservation in candidates
+    skeleton_main = _read("main.py")
+    sk_funcs, sk_classes = _parse_api_signatures(skeleton_main)
 
     system_msg = (
         "You are a senior Python engineer.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
-        + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
+        + "Implement strictly from the problem statement and the existing main.py skeleton.\n"
+        "Preserve all public function and class names from the skeleton and fulfill their contracts.\n"
+        "Avoid I/O, sleeps, randomness; write deterministic, efficient Python-only code.\n"
+        "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
         "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Deterministic code. Be careful not to be stuck in an infinite loop."
+        "No prose."
     )
     user_msg = (
         f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
@@ -144,15 +196,50 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         {"role": "user", "content": user_msg},
     ]
 
-    # Try a few models and accept the first valid main.py block
-    for attempt in range(len(AGENT_MODELS)):
-        try:
-            resp = _call_llm(messages, run_id, attempt, 300)
-            main_src = _extract_main_py(resp)
-            if main_src:
-                return _build_single_file_patch("main.py", main_src)
-        except Exception:
-            continue
+    # Multi-model, multi-round with parsing and API-preservation checks
+    max_rounds = 4
+    for round_idx in range(max_rounds):
+        for attempt in range(len(AGENT_MODELS)):
+            try:
+                resp = _call_llm(messages, run_id, attempt + round_idx, 300)
+                candidate = _extract_main_py(resp)
+                if not candidate:
+                    continue
+                ok, err = _syntax_valid(candidate)
+                if not ok:
+                    # Add repair hint and continue next attempt
+                    repair_note = (
+                        "Your last answer had Python syntax errors and was rejected.\n"
+                        f"Parser error: {err}.\n"
+                        "Return only a corrected complete main.py code block as specified."
+                    )
+                    messages.append({"role": "assistant", "content": f"```python\n# main.py\n{candidate}\n```"})
+                    messages.append({"role": "user", "content": repair_note})
+                    continue
+                # Enforce preservation of skeleton public API names (best-effort, generic)
+                if sk_funcs or sk_classes:
+                    cand_funcs, cand_classes = _parse_api_signatures(candidate)
+                    cand_func_names = {n for (n, _a) in cand_funcs}
+                    missing_funcs = [n for (n, _a) in sk_funcs if n not in cand_func_names]
+                    missing_classes = [c for c in sk_classes if c not in set(cand_classes)]
+                    if missing_funcs or missing_classes:
+                        miss_text = "".join(
+                            [f"- function: {n}\n" for n in missing_funcs]
+                            + [f"- class: {n}\n" for n in missing_classes]
+                        )
+                        repair_note = (
+                            "Preserve all public API from the skeleton main.py. The following names are missing in your answer:\n"
+                            f"{miss_text}"
+                            "Return a corrected complete main.py with these names implemented."
+                        )
+                        messages.append({"role": "assistant", "content": f"```python\n# main.py\n{candidate}\n```"})
+                        messages.append({"role": "user", "content": repair_note})
+                        continue
+                # Candidate passes syntax and basic API checks
+                return _build_single_file_patch("main.py", candidate)
+            except Exception:
+                # Try next attempt/model
+                continue
 
     return ""
 
