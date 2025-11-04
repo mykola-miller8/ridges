@@ -4,7 +4,8 @@ import json
 import uuid
 import time
 import subprocess
-from typing import Any, Dict, List
+import ast
+from typing import Any, Dict, List, Tuple
 
 import requests
 
@@ -61,16 +62,84 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
     return "\n".join(header + body) + "\n"
 
 
+def _strip_code_fences(text: str) -> str:
+    if not isinstance(text, str):
+        return ""
+    s = text.strip()
+    # Remove a single surrounding ```...``` block if present
+    if s.startswith("```") and s.endswith("```"):
+        m = re.findall(r"```(?:python)?\s*\n([\s\S]*?)\n```", s, re.DOTALL)
+        if m and m[0].strip():
+            return m[0].strip()
+    return s
+
+
+def _ensure_header(code: str) -> str:
+    code = code.lstrip("\n")
+    if not code.startswith("# main.py"):
+        return "# main.py\n" + code
+    return code
+
+
 def _extract_main_py(response: str) -> str:
     if not response:
         return ""
-    # Prefer explicitly headed block
+    # 1) Prefer explicitly headed python block
     m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*?)\n```", response, re.DOTALL)
     if m and m[0].strip():
-        return m[0].strip()
-    # Fallback: first python block
+        return _ensure_header(m[0].strip())
+    # 2) Any python block
     m2 = re.findall(r"```python\s*\n([\s\S]*?)\n```", response, re.DOTALL)
-    return m2[0].strip() if m2 and m2[0].strip() else ""
+    if m2 and m2[0].strip():
+        return _ensure_header(m2[0].strip())
+    # 3) Any code fence without language
+    m3 = re.findall(r"```\s*\n([\s\S]*?)\n```", response, re.DOTALL)
+    if m3 and m3[0].strip():
+        return _ensure_header(m3[0].strip())
+    # 4) Fallback to raw (strip if contains def/class)
+    raw = response.strip()
+    if ("def " in raw) or ("class " in raw):
+        return _ensure_header(_strip_code_fences(raw))
+    return ""
+
+
+def _validate_python(code: str) -> Tuple[bool, str]:
+    try:
+        # Strip header comment before parsing
+        src = re.sub(r"^#\s*main\.py\s*\n", "", code)
+        ast.parse(src)
+        return True, ""
+    except SyntaxError as e:
+        return False, f"SyntaxError: {e.msg} at line {e.lineno}, col {e.offset}"
+    except Exception as e:
+        return False, f"Error: {e}"
+
+
+def _repair_syntax(run_id: str, bad_code: str, error_text: str, attempt_index: int) -> str:
+    """Ask the LLM to repair syntax only, returning a single code block for main.py."""
+    system = (
+        "You are a Python code fixer.\n"
+        "Task: Repair ONLY syntax/parse errors in the provided Python file.\n"
+        "Do not change behavioral intent or API. Do not add tests.\n"
+        "Return EXACTLY one code block formatted as:\n"
+        "```python\n# main.py\n[complete file]\n```\n"
+        "No prose, no extra blocks. Deterministic output."
+    )
+    user = (
+        "The following Python file fails to parse. Fix syntax only.\n\n"
+        f"Parser error:\n{error_text}\n\n"
+        "Current file:\n```python\n# main.py\n" + bad_code.strip() + "\n```\n"
+    )
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+    try:
+        resp = _call_llm(messages, run_id, attempt_index, 180)
+        fixed = _extract_main_py(resp)
+        return fixed or ""
+    except Exception:
+        return ""
 
 
 def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
@@ -97,6 +166,7 @@ def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout
             return json.dumps(data)
         except Exception as e:
             last_err = e
+            # Linear backoff to be gentle on gateway
             time.sleep(1 + r)
     raise last_err if last_err else RuntimeError("LLM call failed")
 
@@ -130,9 +200,14 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     system_msg = (
         "You are a senior Python engineer.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
-        + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
-        "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Deterministic code."
+        + "Strict output format: return EXACTLY one code block with the full file.\n"
+        "Use this format only:\n```python\n# main.py\n[complete Python file]\n```\n"
+        "Requirements:\n"
+        "- Deterministic, no randomness, no I/O, no prints/logging.\n"
+        "- Only Python standard library.\n"
+        "- Precise input validation and clear exceptions consistent with the spec.\n"
+        "- Type hints and concise docstrings for public functions/classes.\n"
+        "- Keep code readable and minimal; avoid unnecessary abstractions.\n"
     )
     user_msg = (
         f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
@@ -144,13 +219,30 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         {"role": "user", "content": user_msg},
     ]
 
-    # Try a few models and accept the first valid main.py block
-    for attempt in range(len(AGENT_MODELS)):
+    # Rotate starting model index to diversify across runs
+    start_idx = (hash(run_id) % len(AGENT_MODELS)) if AGENT_MODELS else 0
+    indices = [(start_idx + i) % len(AGENT_MODELS) for i in range(len(AGENT_MODELS))]
+
+    # Try models; validate syntax; attempt auto-repair up to 2 times per model
+    for attempt_pos, model_idx in enumerate(indices):
         try:
-            resp = _call_llm(messages, run_id, attempt, 300)
+            resp = _call_llm(messages, run_id, model_idx, 300)
             main_src = _extract_main_py(resp)
-            if main_src:
+            if not main_src:
+                continue
+            ok, err = _validate_python(main_src)
+            if ok:
                 return _build_single_file_patch("main.py", main_src)
+            # Try up to 2 syntax repairs
+            repaired = main_src
+            for fix_round in range(2):
+                fixed = _repair_syntax(f"{run_id}-fix{attempt_pos}-{fix_round+1}", repaired, err, model_idx)
+                if not fixed:
+                    break
+                ok2, err2 = _validate_python(fixed)
+                if ok2:
+                    return _build_single_file_patch("main.py", fixed)
+                repaired, err = fixed, err2
         except Exception:
             continue
 
