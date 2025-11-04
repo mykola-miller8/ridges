@@ -95,6 +95,7 @@ class CursorAPIClient:
         
         url = f"{self.api_url}/v0/agents"
         payload = {
+            "model": "gpt-5",
             "prompt": {
                 "text": prompt_text,
             },
