@@ -117,6 +117,52 @@ def _syntax_valid(src: str) -> Tuple[bool, str]:
         return False, f"ParseError: {e}"
 
 
+def _extract_exception_contracts(text: str) -> List[Tuple[str, str]]:
+    """Find ExceptionType("exact message") pairs in the plain-text spec.
+
+    Returns a de-duplicated list preserving order.
+    """
+    pat = r"raise\s+([A-Za-z_][A-Za-z0-9_]*Error)\(\s*['\"]([^'\"]+)['\"]\s*\)"
+    found = [(m.group(1), m.group(2)) for m in re.finditer(pat, text or "")]
+    seen = set()
+    out: List[Tuple[str, str]] = []
+    for it in found:
+        if it not in seen:
+            out.append(it)
+            seen.add(it)
+    return out
+
+
+def _scan_policy_violations(src: str) -> List[str]:
+    """Detect generic anti-patterns that often break evaluations.
+
+    Used to request a corrected candidate from the model.
+    """
+    if not isinstance(src, str):
+        return ["non-string candidate"]
+    issues: List[str] = []
+    # Discourage I/O and environment interactions
+    banned_patterns = [
+        r"\bprint\s*\(",
+        r"\binput\s*\(",
+        r"\bopen\s*\(",
+        r"\bos\.system\s*\(",
+        r"\bsubprocess\.",
+        r"\brequests\.",
+        r"\btime\.sleep\s*\(",
+    ]
+    for pat in banned_patterns:
+        if re.search(pat, src):
+            issues.append(f"disallowed usage: {pat}")
+    # Randomness without control can cause flaky behavior
+    if re.search(r"\brandom\.", src):
+        issues.append("avoid random-based nondeterminism; implement deterministic logic instead")
+    # Over-broad imports
+    if re.search(r"^\s*from\s+\S+\s+import\s+\*", src, flags=re.MULTILINE):
+        issues.append("avoid star-imports; import explicit names")
+    return issues
+
+
 def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
@@ -176,15 +222,29 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     skeleton_main = _read("main.py")
     sk_funcs, sk_classes = _parse_api_signatures(skeleton_main)
 
+    contracts = _extract_exception_contracts(problem_statement)
+
+    # Compose strict rules section (generic, not problem-specific)
+    strict_rules = [
+        "Preserve all public function and class names from the skeleton and fulfill their contracts.",
+        "Implement exact exception types and messages if the spec states them (case and punctuation must match).",
+        "Validate inputs rigorously (types, arity/shape, bounds) and raise precise exceptions per spec.",
+        "Ensure deterministic behavior: avoid I/O, sleeps, global mutable state, or randomness.",
+        "Prefer pure functions and canonicalized outputs; avoid relying on dict/set iteration order.",
+        "Do not include any tests or prose in the answer.",
+    ]
+    rules_text = "\n- " + "\n- ".join(strict_rules)
+
+    contracts_text = "\n".join([f"- {exc}: \"{msg}\"" for exc, msg in contracts]) if contracts else ""
+
     system_msg = (
         "You are a senior Python engineer.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
-        + "Implement strictly from the problem statement and the existing main.py skeleton.\n"
-        "Preserve all public function and class names from the skeleton and fulfill their contracts.\n"
-        "Avoid I/O, sleeps, randomness; write deterministic, efficient Python-only code.\n"
-        "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
+        + "Follow the problem statement and the existing main.py skeleton strictly.\n"
+        + "Strict rules:" + rules_text + "\n"
+        + ("Exception contracts to enforce exactly:\n" + contracts_text + "\n" if contracts_text else "")
+        + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
         "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose."
     )
     user_msg = (
         f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
@@ -235,6 +295,19 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                         messages.append({"role": "assistant", "content": f"```python\n# main.py\n{candidate}\n```"})
                         messages.append({"role": "user", "content": repair_note})
                         continue
+                # Policy violations (I/O, randomness, etc.)
+                violations = _scan_policy_violations(candidate)
+                if violations:
+                    messages.append({"role": "assistant", "content": f"```python\n# main.py\n{candidate}\n```"})
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Your last answer violated one or more strict rules and was rejected.\n"
+                            + "\n".join(f"- {v}" for v in violations)
+                            + "\nPlease return a corrected, deterministic implementation that adheres to all strict rules and preserves the skeleton API."
+                        ),
+                    })
+                    continue
                 # Candidate passes syntax and basic API checks
                 return _build_single_file_patch("main.py", candidate)
             except Exception:
