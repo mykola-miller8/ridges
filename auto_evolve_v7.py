@@ -727,6 +727,19 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
                     print(f"[WARN] Failed to pull from origin/{SOURCE_BRANCH}: {pull_result.stderr}")
                 else:
                     print(f"[GIT] Successfully checked out to {TARGET_BRANCH} and pulled from {SOURCE_BRANCH}")
+                    
+                    # Checkout back to SOURCE_BRANCH
+                    checkout_back_result = subprocess.run(
+                        ["git", "checkout", SOURCE_BRANCH],
+                        cwd=ROOT,
+                        capture_output=True,
+                        text=True,
+                        check=False
+                    )
+                    if checkout_back_result.returncode != 0:
+                        print(f"[WARN] Failed to checkout back to {SOURCE_BRANCH}: {checkout_back_result.stderr}")
+                    else:
+                        print(f"[GIT] Successfully checked out back to {SOURCE_BRANCH}")
         except Exception as e:
             print(f"[WARN] Git checkout/pull operations failed: {e}")
         
