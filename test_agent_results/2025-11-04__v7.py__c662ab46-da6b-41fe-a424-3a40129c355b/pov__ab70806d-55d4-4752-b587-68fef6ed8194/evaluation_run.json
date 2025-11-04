@@ -1,0 +1,92 @@
+{
+    "evaluation_run_id": "ab70806d-55d4-4752-b587-68fef6ed8194",
+    "evaluation_id": "c662ab46-da6b-41fe-a424-3a40129c355b",
+    "problem_name": "pov",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,25 +1,106 @@\n-from json import dumps\n-\n-\n-class Tree:\n-    def __init__(self, label: str, children: list[\"Tree\"] | None = None):\n-        self.label = label\n-        self.children = children if children is not None else []\n-\n-    def __dict__(self):\n-        return {self.label: [c.__dict__() for c in sorted(self.children)]}\n-\n-    def __str__(self, indent=None):\n-        return dumps(self.__dict__(), indent=indent)\n-\n-    def __lt__(self, other):\n-        return self.label < other.label\n-\n-    def __eq__(self, other):\n-        return self.__dict__() == other.__dict__()\n-\n-    def from_pov(self, from_node: str) -> \"Tree\":\n-        pass\n-\n-    def path_to(self, from_node: str, to_node: str) -> list[str]:\n-        pass\n+from json import dumps\n+\n+\n+class Tree:\n+    def __init__(self, label: str, children: list[\"Tree\"] | None = None):\n+        self.label = label\n+        self.children = children if children is not None else []\n+\n+    def __dict__(self):\n+        return {self.label: [c.__dict__() for c in sorted(self.children)]}\n+\n+    def __str__(self, indent=None):\n+        return dumps(self.__dict__(), indent=indent)\n+\n+    def __lt__(self, other):\n+        return self.label < other.label\n+\n+    def __eq__(self, other):\n+        return self.__dict__() == other.__dict__()\n+\n+    def from_pov(self, from_node: str) -> \"Tree\":\n+        # First check if the node exists in the tree\n+        if not self._find_node(from_node):\n+            raise ValueError(\"Tree could not be reoriented\")\n+        \n+        # If this is the target node, return the tree as is\n+        if self.label == from_node:\n+            return Tree(self.label, self.children)\n+        \n+        # Otherwise, we need to reorient the tree\n+        # Find the path from root to the target node\n+        path = self._find_path_to_node(from_node, [])\n+        if not path:\n+            raise ValueError(\"Tree could not be reoriented\")\n+        \n+        # Reorient the tree based on the path\n+        return self._reorient_tree(path)\n+\n+    def path_to(self, from_node: str, to_node: str) -> list[str]:\n+        # Check if both nodes exist\n+        if not self._find_node(from_node) or not self._find_node(to_node):\n+            raise ValueError(\"No path found\")\n+        \n+        # Get the tree from the perspective of from_node\n+        try:\n+            reoriented = self.from_pov(from_node)\n+        except ValueError:\n+            raise ValueError(\"No path found\")\n+        \n+        # Find path from from_node to to_node in the reoriented tree\n+        path = reoriented._find_path_to_node(to_node, [])\n+        if not path:\n+            raise ValueError(\"No path found\")\n+        \n+        return path\n+\n+    def _find_node(self, label: str) -> bool:\n+        \"\"\"Check if a node with the given label exists in the tree.\"\"\"\n+        if self.label == label:\n+            return True\n+        for child in self.children:\n+            if child._find_node(label):\n+                return True\n+        return False\n+\n+    def _find_path_to_node(self, target: str, path: list) -> list[str]:\n+        \"\"\"Find path from current node to target node.\"\"\"\n+        new_path = path + [self.label]\n+        if self.label == target:\n+            return new_path\n+        \n+        for child in self.children:\n+            result = child._find_path_to_node(target, new_path)\n+            if result:\n+                return result\n+        return []\n+\n+    def _reorient_tree(self, path: list[str]) -> \"Tree\":\n+        \"\"\"Reorient the tree so that the node at the end of path becomes the root.\"\"\"\n+        if len(path) == 1:\n+            # We're at the target node, return a copy of this node\n+            return Tree(self.label, self.children)\n+        \n+        # Find the child that leads to the next node in the path\n+        next_node_label = path[1]\n+        target_child = None\n+        other_children = []\n+        \n+        for child in self.children:\n+            if child.label == next_node_label:\n+                target_child = child\n+            else:\n+                other_children.append(child)\n+        \n+        if target_child is None:\n+            raise ValueError(\"Tree could not be reoriented\")\n+        \n+        # Recursively reorient the subtree\n+        reoriented_child = target_child._reorient_tree(path[1:])\n+        \n+        # Create new children list for the reoriented child\n+        # The current node becomes a child of the reoriented child\n+        new_current_node = Tree(self.label, other_children)\n+        reoriented_child.children.append(new_current_node)\n+        \n+        return reoriented_child\n",
+    "test_results": [
+        {
+            "name": "test_can_find_path_from_nodes_other_than_x",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_can_find_path_not_involving_root",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_can_find_path_to_cousin",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_can_find_path_to_parent",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_can_find_path_to_sibling",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_can_reroot_a_complex_tree_with_cousins",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_can_reroot_a_tree_with_a_parent_and_many_siblings",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_can_reroot_a_tree_with_a_parent_and_one_sibling",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_can_reroot_a_tree_with_new_root_deeply_nested_in_tree",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_errors_if_destination_does_not_exist",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_errors_if_source_does_not_exist",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_errors_if_target_does_not_exist_in_a_large_tree",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_errors_if_target_does_not_exist_in_a_singleton_tree",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_moves_children_of_the_new_root_to_same_level_as_former_parent",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_results_in_the_same_tree_if_the_input_tree_is_a_singleton",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:02:53.576630",
+    "started_initializing_agent_at": "2025-11-04T03:02:53.576663",
+    "started_running_agent_at": "2025-11-04T03:02:56.110344",
+    "started_initializing_eval_at": "2025-11-04T03:03:09.195882",
+    "started_running_eval_at": "2025-11-04T03:03:12.526229",
+    "finished_or_errored_at": "2025-11-04T03:03:13.238715"
+}

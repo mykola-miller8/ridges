@@ -5,6 +5,7 @@ import json
 import time
 import glob
 import subprocess
+import random
 from typing import List, Dict, Any, Tuple
 
 from cursor_api_client import CursorAPIClient
@@ -17,7 +18,7 @@ TEST_AGENT_CLI = f"{ROOT}/test_agent.py"
 INFERENCE_URL = os.getenv("INFERENCE_URL", "http://172.17.0.1:1234")
 PROBLEM_SET = os.getenv("PROBLEM_SET", "all-polyglot")
 SOURCE_BRANCH = "cursor-work"
-TARGET_BRANCH = "cursor-work-15"
+TARGET_BRANCH = f"cursor-work-{random.randint(10000, 99999)}"
 
 # v7 solving uses the inference gateway (set in test_agent CLI). For rewriting v7 itself,
 # we use the Cursor API only (no public LLM).
@@ -669,7 +670,7 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
         print(f"\n=== Attempt {attempts}/{max_attempts_per_problem} (all problems) ===")
 
         # delete test_agent_results directory
-        subprocess.run(["rm", "-rf", f"{ROOT}/test_agent_results"], cwd=ROOT, check=False)
+        # subprocess.run(["rm", "-rf", f"{ROOT}/test_agent_results"], cwd=ROOT, check=False)
         
         # Run all problems at once
         print(f"[RUN] Running test-problem-set all-polyglot...")

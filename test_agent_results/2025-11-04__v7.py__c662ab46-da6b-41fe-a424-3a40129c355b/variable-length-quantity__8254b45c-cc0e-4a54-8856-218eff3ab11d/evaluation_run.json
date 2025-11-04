@@ -1,0 +1,147 @@
+{
+    "evaluation_run_id": "8254b45c-cc0e-4a54-8856-218eff3ab11d",
+    "evaluation_id": "c662ab46-da6b-41fe-a424-3a40129c355b",
+    "problem_name": "variable-length-quantity",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,6 +1,52 @@\n-def encode(numbers: list[int]) -> list[int]:\n-    pass\n-\n-\n-def decode(bytes_: list[int]) -> list[int]:\n-    pass\n+def encode(numbers: list[int]) -> list[int]:\n+    result = []\n+    for number in numbers:\n+        if number < 0:\n+            raise ValueError(\"Only non-negative integers are supported\")\n+        \n+        # Convert number to VLQ\n+        if number == 0:\n+            result.append(0)\n+            continue\n+            \n+        bytes_list = []\n+        while number > 0:\n+            # Take the 7 least significant bits\n+            byte = number & 0x7F\n+            number >>= 7\n+            bytes_list.append(byte)\n+        \n+        # Reverse to get most significant first\n+        bytes_list.reverse()\n+        \n+        # Set continuation bit for all but the last byte\n+        for i in range(len(bytes_list) - 1):\n+            bytes_list[i] |= 0x80\n+            \n+        result.extend(bytes_list)\n+    \n+    return result\n+\n+\n+def decode(bytes_: list[int]) -> list[int]:\n+    result = []\n+    number = 0\n+    \n+    for byte in bytes_:\n+        # Check if this is the last byte in the sequence (continuation bit is 0)\n+        if byte & 0x80 == 0:\n+            # This is the last byte\n+            number = (number << 7) | byte\n+            result.append(number)\n+            number = 0\n+        else:\n+            # This is a continuation byte\n+            # Extract the 7 data bits\n+            data = byte & 0x7F\n+            number = (number << 7) | data\n+    \n+    # If we still have a number being built, the sequence is incomplete\n+    if number != 0:\n+        raise ValueError(\"incomplete sequence\")\n+        \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_arbitrary_double_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_arbitrary_quadruple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_arbitrary_quintuple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_arbitrary_single_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_arbitrary_triple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_four_bytes",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_incomplete_sequence_causes_error",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_incomplete_sequence_causes_error_even_if_value_is_zero",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_largest_double_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_largest_quadruple_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_largest_single_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_largest_triple_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_many_multi_byte_values",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_maximum_32_bit_integer",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_maximum_32_bit_integer_input",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_multiple_values",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_one_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_smallest_double_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_smallest_quadruple_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_smallest_quintuple_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_smallest_triple_byte",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_three_bytes",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_bytes",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_multi_byte_values",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_single_byte_values",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_zero",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:02:53.607866",
+    "started_initializing_agent_at": "2025-11-04T03:02:53.607900",
+    "started_running_agent_at": "2025-11-04T03:02:57.350237",
+    "started_initializing_eval_at": "2025-11-04T03:03:05.275811",
+    "started_running_eval_at": "2025-11-04T03:03:11.874468",
+    "finished_or_errored_at": "2025-11-04T03:03:12.951958"
+}

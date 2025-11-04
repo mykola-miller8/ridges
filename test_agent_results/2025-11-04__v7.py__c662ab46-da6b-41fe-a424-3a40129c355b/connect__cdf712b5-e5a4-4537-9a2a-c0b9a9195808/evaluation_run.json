@@ -1,0 +1,67 @@
+{
+    "evaluation_run_id": "cdf712b5-e5a4-4537-9a2a-c0b9a9195808",
+    "evaluation_id": "c662ab46-da6b-41fe-a424-3a40129c355b",
+    "problem_name": "connect",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,7 +1,50 @@\n-\n-class ConnectGame:\n-    def __init__(self, board: str):\n-        pass\n-\n-    def get_winner(self) -> str:\n-        pass\n+class ConnectGame:\n+    def __init__(self, board: str):\n+        self.board = [list(row.replace(' ', '')) for row in board.splitlines()]\n+        self.rows = len(self.board)\n+        self.cols = len(self.board[0]) if self.rows > 0 else 0\n+\n+    def get_winner(self) -> str:\n+        if self._is_winner('O'):\n+            return 'O'\n+        if self._is_winner('X'):\n+            return 'X'\n+        return ''\n+\n+    def _is_winner(self, player: str) -> bool:\n+        if player == 'O':\n+            # Check if O connects top to bottom\n+            visited = set()\n+            for c in range(self.cols):\n+                if self.board[0][c] == player and self._dfs(0, c, player, visited):\n+                    return True\n+        else:  # player == 'X'\n+            # Check if X connects left to right\n+            visited = set()\n+            for r in range(self.rows):\n+                if self.board[r][0] == player and self._dfs(r, 0, player, visited):\n+                    return True\n+        return False\n+\n+    def _dfs(self, r: int, c: int, player: str, visited: set) -> bool:\n+        if not (0 <= r < self.rows and 0 <= c < self.cols):\n+            return False\n+        if self.board[r][c] != player:\n+            return False\n+        if (r, c) in visited:\n+            return False\n+\n+        visited.add((r, c))\n+\n+        if player == 'O' and r == self.rows - 1:\n+            return True\n+        if player == 'X' and c == self.cols - 1:\n+            return True\n+\n+        # Hex neighbors: up, down, left, right, up-right, down-left\n+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, 1), (1, -1)]\n+        for dr, dc in directions:\n+            if self._dfs(r + dr, c + dc, player, visited):\n+                return True\n+\n+        return False\n",
+    "test_results": [
+        {
+            "name": "test_an_empty_board_has_no_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_illegal_diagonal_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_nobody_wins_crossing_adjacent_angles",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_o_wins_crossing_from_top_to_bottom",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_only_edges_does_not_make_a_winner",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_can_win_on_a_1x1_board",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_crossing_from_left_to_right",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_using_a_convoluted_path",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_x_wins_using_a_spiral_path",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:02:53.520886",
+    "started_initializing_agent_at": "2025-11-04T03:02:53.520962",
+    "started_running_agent_at": "2025-11-04T03:02:54.963535",
+    "started_initializing_eval_at": "2025-11-04T03:03:05.018095",
+    "started_running_eval_at": "2025-11-04T03:03:11.641004",
+    "finished_or_errored_at": "2025-11-04T03:03:12.761715"
+}

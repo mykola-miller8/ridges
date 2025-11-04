@@ -1,0 +1,97 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: ZipperTest
+[POLYGLOT_TEST_RUNNER] Found 14 test methods
+[POLYGLOT_TEST_RUNNER] [1/14] Running test_data_is_retained...
+[POLYGLOT_TEST_RUNNER] test_data_is_retained: PASSED
+[POLYGLOT_TEST_RUNNER] [2/14] Running test_dead_end...
+[POLYGLOT_TEST_RUNNER] test_dead_end: PASSED
+[POLYGLOT_TEST_RUNNER] [3/14] Running test_different_paths_to_same_zipper...
+[POLYGLOT_TEST_RUNNER] test_different_paths_to_same_zipper: PASSED
+[POLYGLOT_TEST_RUNNER] [4/14] Running test_left_right_and_up...
+[POLYGLOT_TEST_RUNNER] test_left_right_and_up: PASSED
+[POLYGLOT_TEST_RUNNER] [5/14] Running test_left_right_and_value...
+[POLYGLOT_TEST_RUNNER] test_left_right_and_value: PASSED
+[POLYGLOT_TEST_RUNNER] [6/14] Running test_set_left_with_leaf...
+[POLYGLOT_TEST_RUNNER] test_set_left_with_leaf: FAILED - {'val[21 chars]ue': 1, 'left': {'value': 2, 'left': {'value':[186 chars]one}} != {'val[21 chars]ue': 2, 'left': {'value': 5, 'left': None, 'ri[112 chars]one}}
+Diff is 704 characters long. Set self.maxDiff to None to see it.
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_data_is_retained",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_dead_end",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_different_paths_to_same_zipper",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_left_right_and_up",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_left_right_and_value",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_set_left_with_leaf",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_set_right_with_null",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_set_right_with_subtree",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_set_value",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_set_value_after_traversing_up",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_set_value_on_deep_focus",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_test_ability_to_descend_multiple_levels_and_return",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_traversing_up_from_top",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_tree_from_deep_focus",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 5 passed, 1 failed, 8 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

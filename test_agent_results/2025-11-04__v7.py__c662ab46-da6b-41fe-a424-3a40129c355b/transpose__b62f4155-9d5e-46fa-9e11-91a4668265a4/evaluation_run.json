@@ -1,0 +1,77 @@
+{
+    "evaluation_run_id": "b62f4155-9d5e-46fa-9e11-91a4668265a4",
+    "evaluation_id": "c662ab46-da6b-41fe-a424-3a40129c355b",
+    "problem_name": "transpose",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,22 @@\n-def transpose(text: str) -> str:\n-    pass\n+def transpose(text: str) -> str:\n+    if not text:\n+        return \"\"\n+    \n+    lines = text.split('\\n')\n+    \n+    # Find the maximum length among all lines\n+    max_length = max(len(line) for line in lines) if lines else 0\n+    \n+    # Pad each line to the left with spaces to match the maximum length\n+    padded_lines = [line.ljust(max_length) for line in lines]\n+    \n+    # Transpose the matrix\n+    transposed = []\n+    for col in range(max_length):\n+        new_row = ''.join(padded_lines[row][col] for row in range(len(padded_lines)))\n+        transposed.append(new_row)\n+    \n+    # Remove trailing spaces from each row and join with newlines\n+    result = '\\n'.join(row.rstrip(' ') for row in transposed)\n+    \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_empty_string",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_first_line_longer_than_second_line",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_jagged_triangle",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_mixed_line_length",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_rectangle",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_second_line_longer_than_first_line",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_simple",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_single_line",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_square",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_triangle",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_characters_in_a_column",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_characters_in_a_row",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:02:53.596868",
+    "started_initializing_agent_at": "2025-11-04T03:02:53.596901",
+    "started_running_agent_at": "2025-11-04T03:02:56.952937",
+    "started_initializing_eval_at": "2025-11-04T03:03:03.259011",
+    "started_running_eval_at": "2025-11-04T03:03:09.007040",
+    "finished_or_errored_at": "2025-11-04T03:03:11.118199"
+}

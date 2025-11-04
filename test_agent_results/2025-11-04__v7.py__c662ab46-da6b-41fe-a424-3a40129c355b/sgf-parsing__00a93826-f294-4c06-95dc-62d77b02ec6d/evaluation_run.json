@@ -1,0 +1,132 @@
+{
+    "evaluation_run_id": "00a93826-f294-4c06-95dc-62d77b02ec6d",
+    "evaluation_id": "c662ab46-da6b-41fe-a424-3a40129c355b",
+    "problem_name": "sgf-parsing",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,29 +1,228 @@\n-class SgfTree:\n-    def __init__(self, properties: dict | None = None, children: list[\"SgfTree\"] | None = None):\n-        self.properties = properties or {}\n-        self.children = children or []\n-\n-    def __eq__(self, other):\n-        if not isinstance(other, SgfTree):\n-            return False\n-        for key, value in self.properties.items():\n-            if key not in other.properties:\n-                return False\n-            if other.properties[key] != value:\n-                return False\n-        for key in other.properties.keys():\n-            if key not in self.properties:\n-                return False\n-        if len(self.children) != len(other.children):\n-            return False\n-        for child, other_child in zip(self.children, other.children):\n-            if child != other_child:\n-                return False\n-        return True\n-\n-    def __ne__(self, other):\n-        return not self == other\n-\n-\n-def parse(input_string: str) -> SgfTree:\n-    pass\n+class SgfTree:\n+    def __init__(self, properties: dict | None = None, children: list[\"SgfTree\"] | None = None):\n+        self.properties = properties or {}\n+        self.children = children or []\n+\n+    def __eq__(self, other):\n+        if not isinstance(other, SgfTree):\n+            return False\n+        for key, value in self.properties.items():\n+            if key not in other.properties:\n+                return False\n+            if other.properties[key] != value:\n+                return False\n+        for key in other.properties.keys():\n+            if key not in self.properties:\n+                return False\n+        if len(self.children) != len(other.children):\n+            return False\n+        for child, other_child in zip(self.children, other.children):\n+            if child != other_child:\n+                return False\n+        return True\n+\n+    def __ne__(self, other):\n+        return not self == other\n+\n+\n+def parse(input_string: str) -> SgfTree:\n+    if not input_string:\n+        raise ValueError(\"tree missing\")\n+    \n+    if not input_string.startswith('(') or not input_string.endswith(')'):\n+        raise ValueError(\"tree missing\")\n+    \n+    # Remove the outer parentheses\n+    content = input_string[1:-1]\n+    \n+    if not content:\n+        raise ValueError(\"tree with no nodes\")\n+    \n+    # Parse the first node\n+    node_end = find_node_end(content)\n+    first_node_content = content[:node_end]\n+    remaining_content = content[node_end:]\n+    \n+    properties = parse_properties(first_node_content)\n+    \n+    # Parse children\n+    children = []\n+    if remaining_content:\n+        children = parse_children(remaining_content)\n+    \n+    return SgfTree(properties=properties, children=children)\n+\n+\n+def find_node_end(s: str) -> int:\n+    \"\"\"Find the end of the first node, handling nested structures.\"\"\"\n+    if not s.startswith(';'):\n+        # This is a node without ';', which means it's the property part directly\n+        # Find where properties end and children might begin\n+        i = 0\n+        while i < len(s):\n+            if s[i] == '(':\n+                return i\n+            i += 1\n+        return len(s)\n+    else:\n+        # Skip the ';'\n+        i = 1\n+        # Parse properties\n+        while i < len(s):\n+            if s[i] == '(':\n+                return i\n+            # Check for property key\n+            if i < len(s) and s[i].isalpha() and s[i].isupper():\n+                # Skip key\n+                while i < len(s) and s[i].isalpha() and s[i].isupper():\n+                    i += 1\n+                # Expect '['\n+                if i >= len(s) or s[i] != '[':\n+                    break\n+                # Skip all values for this key\n+                while i < len(s) and s[i] == '[':\n+                    i += 1  # skip '['\n+                    # Find matching ']'\n+                    bracket_count = 1\n+                    while i < len(s) and bracket_count > 0:\n+                        if s[i] == '\\\\':\n+                            i += 2  # skip escape and next character\n+                        elif s[i] == ']':\n+                            bracket_count -= 1\n+                            i += 1\n+                        elif s[i] == '[' and bracket_count == 1:\n+                            bracket_count -= 1\n+                        else:\n+                            i += 1\n+            else:\n+                i += 1\n+        return i\n+\n+\n+def parse_properties(s: str) -> dict:\n+    properties = {}\n+    \n+    if not s:\n+        return properties\n+        \n+    # Handle optional leading ';'\n+    if s.startswith(';'):\n+        s = s[1:]\n+    \n+    i = 0\n+    while i < len(s):\n+        # Parse key\n+        if not s[i].isalpha() or not s[i].isupper():\n+            raise ValueError(\"property must be in uppercase\")\n+        \n+        key_start = i\n+        while i < len(s) and s[i].isalpha() and s[i].isupper():\n+            i += 1\n+        key = s[key_start:i]\n+        \n+        if not key:\n+            raise ValueError(\"properties without delimiter\")\n+            \n+        # Parse values\n+        values = []\n+        while i < len(s) and s[i] == '[':\n+            i += 1  # skip '['\n+            value_start = i\n+            # Find matching ']'\n+            bracket_count = 1\n+            value_chars = []\n+            while i < len(s) and bracket_count > 0:\n+                if s[i] == '\\\\':\n+                    # Handle escape character\n+                    i += 1\n+                    if i < len(s):\n+                        value_chars.append(s[i])\n+                        i += 1\n+                    else:\n+                        raise ValueError(\"properties without delimiter\")\n+                elif s[i] == ']':\n+                    bracket_count -= 1\n+                    if bracket_count > 0:\n+                        value_chars.append(s[i])\n+                    i += 1\n+                elif s[i] == '[' and bracket_count == 1:\n+                    bracket_count -= 1\n+                else:\n+                    value_chars.append(s[i])\n+                    i += 1\n+            \n+            if bracket_count > 0:\n+                raise ValueError(\"properties without delimiter\")\n+                \n+            value = ''.join(value_chars)\n+            # Process SGF text type\n+            processed_value = process_sgf_text(value)\n+            values.append(processed_value)\n+        \n+        if not values:\n+            raise ValueError(\"properties without delimiter\")\n+            \n+        properties[key] = values\n+        \n+    return properties\n+\n+\n+def process_sgf_text(text: str) -> str:\n+    \"\"\"Process SGF Text type according to specifications.\"\"\"\n+    result = []\n+    i = 0\n+    while i < len(text):\n+        if text[i] == '\\\\':\n+            i += 1\n+            if i < len(text):\n+                # Any character after \\ is inserted as-is\n+                # But whitespace follows special rules\n+                if text[i].isspace() and text[i] != '\\n':\n+                    result.append(' ')\n+                elif text[i] == '\\n':\n+                    # Newlines are removed if they come immediately after \\\n+                    pass\n+                else:\n+                    result.append(text[i])\n+                i += 1\n+            else:\n+                # Trailing backslash\n+                result.append('\\\\')\n+                i += 1\n+        else:\n+            if text[i] == '\\n':\n+                result.append('\\n')\n+            elif text[i].isspace():\n+                result.append(' ')\n+            else:\n+                result.append(text[i])\n+            i += 1\n+    return ''.join(result)\n+\n+\n+def parse_children(s: str) -> list[SgfTree]:\n+    children = []\n+    i = 0\n+    while i < len(s):\n+        if s[i] != '(':\n+            raise ValueError(\"tree missing\")\n+        \n+        # Find matching parenthesis\n+        paren_count = 1\n+        i += 1\n+        child_start = i\n+        while i < len(s) and paren_count > 0:\n+            if s[i] == '(':\n+                paren_count += 1\n+            elif s[i] == ')':\n+                paren_count -= 1\n+            i += 1\n+        \n+        if paren_count > 0:\n+            raise ValueError(\"tree missing\")\n+            \n+        child_content = s[child_start:i-1]\n+        child_tree = parse(f\"({child_content})\")\n+        children.append(child_tree)\n+        \n+    return children\n",
+    "test_results": [
+        {
+            "name": "test_all_lowercase_property",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_empty_input",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_escaped_backslash_in_property_value_becomes_just_a_backslash",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_escaped_closing_bracket_within_property_value_becomes_just_a_closing_bracket",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_escaped_newline_in_property_value_is_converted_to_nothing_at_all",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_escaped_t_and_n_in_property_value_are_just_letters_not_whitespace",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_escaped_tab_in_property_value_is_converted_to_space",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_mixing_various_kinds_of_whitespace_and_escaped_characters_in_property_value",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_multiple_properties",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_multiple_property_values",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_node_without_properties",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_node_without_tree",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_opening_bracket_within_property_value_doesn_t_need_to_be_escaped",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_parentheses_in_property_value_don_t_need_to_be_escaped",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_properties_without_delimiter",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_semicolon_in_property_value_doesn_t_need_to_be_escaped",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_single_node_tree",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_tree_with_no_nodes",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_child_trees",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_two_nodes",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_upper_and_lowercase_property",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_within_property_values_newlines_remain_as_newlines",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_within_property_values_whitespace_characters_such_as_tab_are_converted_to_spaces",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:02:53.596521",
+    "started_initializing_agent_at": "2025-11-04T03:02:53.596553",
+    "started_running_agent_at": "2025-11-04T03:02:57.178050",
+    "started_initializing_eval_at": "2025-11-04T03:03:11.683700",
+    "started_running_eval_at": "2025-11-04T03:03:13.231474",
+    "finished_or_errored_at": "2025-11-04T03:03:13.564690"
+}

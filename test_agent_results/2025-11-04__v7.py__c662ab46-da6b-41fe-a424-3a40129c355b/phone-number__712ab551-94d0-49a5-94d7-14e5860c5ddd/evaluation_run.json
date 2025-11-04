@@ -1,0 +1,122 @@
+{
+    "evaluation_run_id": "712ab551-94d0-49a5-94d7-14e5860c5ddd",
+    "evaluation_id": "c662ab46-da6b-41fe-a424-3a40129c355b",
+    "problem_name": "phone-number",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,6 +1,38 @@\n-class PhoneNumber:\n-    def __init__(self, number: str):\n-        pass\n-\n-    def pretty(self) -> str:\n-        pass\n+class PhoneNumber:\n+    def __init__(self, number: str):\n+        # Remove all non-digit characters\n+        cleaned = ''.join(filter(str.isdigit, number))\n+        \n+        # Check for invalid characters\n+        if any(c.isalpha() for c in number):\n+            raise ValueError(\"letters not permitted\")\n+        if any(c in number for c in \"!@#$%^&*()[]_+=<>?/\\\\|~`\\\"';:,\"):\n+            raise ValueError(\"punctuations not permitted\")\n+            \n+        # Validate length\n+        if len(cleaned) < 10:\n+            raise ValueError(\"must not be fewer than 10 digits\")\n+        if len(cleaned) > 11:\n+            raise ValueError(\"must not be greater than 11 digits\")\n+        if len(cleaned) == 11:\n+            if cleaned[0] != '1':\n+                raise ValueError(\"11 digits must start with 1\")\n+            cleaned = cleaned[1:]  # Remove country code\n+            \n+        # Validate area code (first digit after cleaning)\n+        if cleaned[0] == '0':\n+            raise ValueError(\"area code cannot start with zero\")\n+        if cleaned[0] == '1':\n+            raise ValueError(\"area code cannot start with one\")\n+            \n+        # Validate exchange code (fourth digit after cleaning)\n+        if cleaned[3] == '0':\n+            raise ValueError(\"exchange code cannot start with zero\")\n+        if cleaned[3] == '1':\n+            raise ValueError(\"exchange code cannot start with one\")\n+            \n+        self.number = cleaned\n+        self.area_code = cleaned[:3]\n+\n+    def pretty(self) -> str:\n+        return f\"({self.number[:3]})-{self.number[3:6]}-{self.number[6:]}\"\n",
+    "test_results": [
+        {
+            "name": "test_area_code",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cleans_numbers_with_dots",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cleans_numbers_with_multiple_spaces",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_cleans_the_number",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_invalid_if_area_code_starts_with_0",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_if_area_code_starts_with_0_on_valid_11_digit_number",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_if_area_code_starts_with_1",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_if_area_code_starts_with_1_on_valid_11_digit_number",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_if_exchange_code_starts_with_0",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_if_exchange_code_starts_with_0_on_valid_11_digit_number",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_if_exchange_code_starts_with_1",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_if_exchange_code_starts_with_1_on_valid_11_digit_number",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_when_11_digits_does_not_start_with_a_1",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_when_9_digits",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_when_more_than_11_digits",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_with_letters",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_invalid_with_punctuations",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_pretty_print",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_pretty_print_with_full_us_phone_number",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_valid_when_11_digits_and_starting_with_1",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_valid_when_11_digits_and_starting_with_1_even_with_punctuation",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:02:53.574476",
+    "started_initializing_agent_at": "2025-11-04T03:02:53.574520",
+    "started_running_agent_at": "2025-11-04T03:02:56.325019",
+    "started_initializing_eval_at": "2025-11-04T03:03:04.061380",
+    "started_running_eval_at": "2025-11-04T03:03:10.123204",
+    "finished_or_errored_at": "2025-11-04T03:03:11.715371"
+}
