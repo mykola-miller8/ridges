@@ -1,0 +1,189 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: WordyTest
+[POLYGLOT_TEST_RUNNER] Found 25 test methods
+[POLYGLOT_TEST_RUNNER] [1/25] Running test_addition...
+[POLYGLOT_TEST_RUNNER] test_addition: PASSED
+[POLYGLOT_TEST_RUNNER] [2/25] Running test_addition_and_multiplication...
+[POLYGLOT_TEST_RUNNER] test_addition_and_multiplication: PASSED
+[POLYGLOT_TEST_RUNNER] [3/25] Running test_addition_and_subtraction...
+[POLYGLOT_TEST_RUNNER] test_addition_and_subtraction: PASSED
+[POLYGLOT_TEST_RUNNER] [4/25] Running test_addition_with_negative_numbers...
+[POLYGLOT_TEST_RUNNER] test_addition_with_negative_numbers: PASSED
+[POLYGLOT_TEST_RUNNER] [5/25] Running test_division...
+[POLYGLOT_TEST_RUNNER] test_division: PASSED
+[POLYGLOT_TEST_RUNNER] [6/25] Running test_just_a_number...
+[POLYGLOT_TEST_RUNNER] test_just_a_number: PASSED
+[POLYGLOT_TEST_RUNNER] [7/25] Running test_large_addition...
+[POLYGLOT_TEST_RUNNER] test_large_addition: PASSED
+[POLYGLOT_TEST_RUNNER] [8/25] Running test_missing_number...
+[POLYGLOT_TEST_RUNNER] test_missing_number: PASSED
+[POLYGLOT_TEST_RUNNER] [9/25] Running test_missing_operation...
+[POLYGLOT_TEST_RUNNER] test_missing_operation: PASSED
+[POLYGLOT_TEST_RUNNER] [10/25] Running test_more_addition...
+[POLYGLOT_TEST_RUNNER] test_more_addition: PASSED
+[POLYGLOT_TEST_RUNNER] [11/25] Running test_multiple_additions...
+[POLYGLOT_TEST_RUNNER] test_multiple_additions: PASSED
+[POLYGLOT_TEST_RUNNER] [12/25] Running test_multiple_division...
+[POLYGLOT_TEST_RUNNER] test_multiple_division: PASSED
+[POLYGLOT_TEST_RUNNER] [13/25] Running test_multiple_multiplication...
+[POLYGLOT_TEST_RUNNER] test_multiple_multiplication: PASSED
+[POLYGLOT_TEST_RUNNER] [14/25] Running test_multiple_subtraction...
+[POLYGLOT_TEST_RUNNER] test_multiple_subtraction: PASSED
+[POLYGLOT_TEST_RUNNER] [15/25] Running test_multiplication...
+[POLYGLOT_TEST_RUNNER] test_multiplication: PASSED
+[POLYGLOT_TEST_RUNNER] [16/25] Running test_non_math_question...
+[POLYGLOT_TEST_RUNNER] test_non_math_question: PASSED
+[POLYGLOT_TEST_RUNNER] [17/25] Running test_reject_postfix_notation...
+[POLYGLOT_TEST_RUNNER] test_reject_postfix_notation: PASSED
+[POLYGLOT_TEST_RUNNER] [18/25] Running test_reject_prefix_notation...
+[POLYGLOT_TEST_RUNNER] test_reject_prefix_notation: PASSED
+[POLYGLOT_TEST_RUNNER] [19/25] Running test_reject_problem_missing_an_operand...
+[POLYGLOT_TEST_RUNNER] test_reject_problem_missing_an_operand: PASSED
+[POLYGLOT_TEST_RUNNER] [20/25] Running test_reject_problem_with_no_operands_or_operators...
+[POLYGLOT_TEST_RUNNER] test_reject_problem_with_no_operands_or_operators: PASSED
+[POLYGLOT_TEST_RUNNER] [21/25] Running test_reject_two_numbers_in_a_row...
+[POLYGLOT_TEST_RUNNER] test_reject_two_numbers_in_a_row: PASSED
+[POLYGLOT_TEST_RUNNER] [22/25] Running test_reject_two_operations_in_a_row...
+[POLYGLOT_TEST_RUNNER] test_reject_two_operations_in_a_row: PASSED
+[POLYGLOT_TEST_RUNNER] [23/25] Running test_subtraction...
+[POLYGLOT_TEST_RUNNER] test_subtraction: PASSED
+[POLYGLOT_TEST_RUNNER] [24/25] Running test_subtraction_then_addition...
+[POLYGLOT_TEST_RUNNER] test_subtraction_then_addition: PASSED
+[POLYGLOT_TEST_RUNNER] [25/25] Running test_unknown_operation...
+[POLYGLOT_TEST_RUNNER] test_unknown_operation: PASSED
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_addition",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_addition_and_multiplication",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_addition_and_subtraction",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_addition_with_negative_numbers",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_division",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_just_a_number",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_large_addition",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_missing_number",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_missing_operation",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_more_addition",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_multiple_additions",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_multiple_division",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_multiple_multiplication",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_multiple_subtraction",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_multiplication",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_non_math_question",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_reject_postfix_notation",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_reject_prefix_notation",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_reject_problem_missing_an_operand",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_reject_problem_with_no_operands_or_operators",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_reject_two_numbers_in_a_row",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_reject_two_operations_in_a_row",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_subtraction",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_subtraction_then_addition",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_unknown_operation",
+    "category": "default",
+    "status": "pass"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 25 passed, 0 failed, 0 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

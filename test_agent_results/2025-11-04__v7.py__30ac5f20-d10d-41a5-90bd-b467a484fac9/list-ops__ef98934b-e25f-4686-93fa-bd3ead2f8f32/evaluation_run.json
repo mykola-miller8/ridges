@@ -1,0 +1,137 @@
+{
+    "evaluation_run_id": "ef98934b-e25f-4686-93fa-bd3ead2f8f32",
+    "evaluation_id": "30ac5f20-d10d-41a5-90bd-b467a484fac9",
+    "problem_name": "list-ops",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,33 +1,61 @@\n-from typing import Callable, Any\n-\n-\n-def append(list1: list, list2: list) -> list:\n-    pass\n-\n-\n-def concat(lists: list[list]) -> list:\n-    pass\n-\n-\n-def filter(function: Callable, list: list) -> list:\n-    pass\n-\n-\n-def length(list: list) -> int:\n-    pass\n-\n-\n-def map(function: Callable, list: list) -> list:\n-    pass\n-\n-\n-def foldl(function: Callable, list: list, initial: Any) -> Any:  # function(acc, el)\n-    pass\n-\n-\n-def foldr(function: Callable, list: list, initial: Any) -> Any:  # function(acc, el)\n-    pass\n-\n-\n-def reverse(list: list) -> list:\n-    pass\n+from typing import Callable, Any\n+\n+\n+def append(list1: list, list2: list) -> list:\n+    result = []\n+    for item in list1:\n+        result.append(item)\n+    for item in list2:\n+        result.append(item)\n+    return result\n+\n+\n+def concat(lists: list[list]) -> list:\n+    result = []\n+    for lst in lists:\n+        for item in lst:\n+            result.append(item)\n+    return result\n+\n+\n+def filter(function: Callable, list: list) -> list:\n+    result = []\n+    for item in list:\n+        if function(item):\n+            result.append(item)\n+    return result\n+\n+\n+def length(list: list) -> int:\n+    count = 0\n+    for _ in list:\n+        count += 1\n+    return count\n+\n+\n+def map(function: Callable, list: list) -> list:\n+    result = []\n+    for item in list:\n+        result.append(function(item))\n+    return result\n+\n+\n+def foldl(function: Callable, list: list, initial: Any) -> Any:\n+    accumulator = initial\n+    for item in list:\n+        accumulator = function(accumulator, item)\n+    return accumulator\n+\n+\n+def foldr(function: Callable, list: list, initial: Any) -> Any:\n+    accumulator = initial\n+    for i in range(length(list) - 1, -1, -1):\n+        accumulator = function(accumulator, list[i])\n+    return accumulator\n+\n+\n+def reverse(list: list) -> list:\n+    result = []\n+    for i in range(length(list) - 1, -1, -1):\n+        result.append(list[i])\n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_append_empty_list_to_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_append_empty_lists",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_append_list_to_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_append_non_empty_lists",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_concat_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_concat_list_of_lists",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_concat_list_of_nested_lists",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_filter_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_filter_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_foldl_direction_dependent_function_applied_to_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_foldl_direction_independent_function_applied_to_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_foldl_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_foldr_direction_dependent_function_applied_to_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_foldr_direction_independent_function_applied_to_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_foldr_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_foldr_foldr_add_string",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_length_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_length_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_map_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_map_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_reverse_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_reverse_list_of_lists_is_not_flattened",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_reverse_non_empty_list",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_reverse_reverse_mixed_types",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:44:32.112962",
+    "started_initializing_agent_at": "2025-11-04T03:44:32.112989",
+    "started_running_agent_at": "2025-11-04T03:44:33.992459",
+    "started_initializing_eval_at": "2025-11-04T03:44:42.714831",
+    "started_running_eval_at": "2025-11-04T03:44:46.530431",
+    "finished_or_errored_at": "2025-11-04T03:44:49.410891"
+}

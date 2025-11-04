@@ -1,0 +1,89 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: RestApiTest
+[POLYGLOT_TEST_RUNNER] Found 9 test methods
+[POLYGLOT_TEST_RUNNER] [1/9] Running test_add_user...
+[POLYGLOT_TEST_RUNNER] test_add_user: PASSED
+[POLYGLOT_TEST_RUNNER] [2/9] Running test_borrower_has_negative_balance...
+[POLYGLOT_TEST_RUNNER] test_borrower_has_negative_balance: PASSED
+[POLYGLOT_TEST_RUNNER] [3/9] Running test_both_users_have_0_balance...
+[POLYGLOT_TEST_RUNNER] test_both_users_have_0_balance: PASSED
+[POLYGLOT_TEST_RUNNER] [4/9] Running test_get_single_user...
+[POLYGLOT_TEST_RUNNER] test_get_single_user: PASSED
+[POLYGLOT_TEST_RUNNER] [5/9] Running test_lender_has_negative_balance...
+[POLYGLOT_TEST_RUNNER] test_lender_has_negative_balance: PASSED
+[POLYGLOT_TEST_RUNNER] [6/9] Running test_lender_owes_borrower...
+[POLYGLOT_TEST_RUNNER] test_lender_owes_borrower: FAILED - {'use[27 chars]s': {}, 'owed_by': {}, 'balance': 0}, {'name':[59 chars].0}]} != {'use[27 chars]s': {'Bob': 1.0}, 'owed_by': {}, 'balance': -1[71 chars].0}]}
+- {'users': [{'balance': 0, 'name': 'Adam', 'owed_by': {}, 'owes': {}},
++ {'users': [{'balance': -1.0,
++             'name': 'Adam',
++             'owed_by': {},
++             'owes': {'Bob': 1.0}},
+-            {'balance': -1.0,
+?                        -
+
++            {'balance': 1.0,
+              'name': 'Bob',
+-             'owed_by': {},
+-             'owes': {'Adam': 1.0}}]}
+?                 ^                ^^^
+
++             'owed_by': {'Adam': 1.0},
+?                 ^^^^                ^
+
++             'owes': {}}]}
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_add_user",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_borrower_has_negative_balance",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_both_users_have_0_balance",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_get_single_user",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_lender_has_negative_balance",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_lender_owes_borrower",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_lender_owes_borrower_less_than_new_loan",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_lender_owes_borrower_same_as_new_loan",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_no_users",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 5 passed, 1 failed, 3 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

@@ -1,0 +1,147 @@
+{
+    "evaluation_run_id": "75081c25-9a1c-48aa-8be2-c18cba29e97f",
+    "evaluation_id": "30ac5f20-d10d-41a5-90bd-b467a484fac9",
+    "problem_name": "variable-length-quantity",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,6 +1,51 @@\n-def encode(numbers: list[int]) -> list[int]:\n-    pass\n-\n-\n-def decode(bytes_: list[int]) -> list[int]:\n-    pass\n+def encode(numbers: list[int]) -> list[int]:\n+    result = []\n+    for number in numbers:\n+        if number < 0 or number > 0xFFFFFFFF:\n+            raise ValueError(\"number out of range\")\n+        \n+        # Convert number to VLQ\n+        if number == 0:\n+            result.append(0)\n+            continue\n+            \n+        bytes_list = []\n+        while number > 0:\n+            byte = number & 0x7F\n+            number >>= 7\n+            if bytes_list:\n+                byte |= 0x80\n+            bytes_list.append(byte)\n+        \n+        # Reverse to get most significant byte first\n+        result.extend(reversed(bytes_list))\n+    \n+    return result\n+\n+\n+def decode(bytes_: list[int]) -> list[int]:\n+    result = []\n+    number = 0\n+    \n+    for byte in bytes_:\n+        if byte < 0 or byte > 0xFF:\n+            raise ValueError(\"invalid byte\")\n+            \n+        # Add 7 bits to our number\n+        number = (number << 7) | (byte & 0x7F)\n+        \n+        # If MSB is not set, this is the last byte of the number\n+        if (byte & 0x80) == 0:\n+            if number > 0xFFFFFFFF:\n+                raise ValueError(\"number out of range\")\n+            result.append(number)\n+            number = 0\n+        elif len(result) >= len(bytes_) - 1 and (byte & 0x80) != 0:\n+            # Check if we have an incomplete sequence\n+            raise ValueError(\"incomplete sequence\")\n+    \n+    # Check if we have an incomplete sequence at the end\n+    if number != 0:\n+        raise ValueError(\"incomplete sequence\")\n+        \n+    return result\n",
+    "test_results": [
+        {
+            "name": "test_arbitrary_double_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_arbitrary_quadruple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_arbitrary_quintuple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_arbitrary_single_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_arbitrary_triple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_four_bytes",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_incomplete_sequence_causes_error",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_incomplete_sequence_causes_error_even_if_value_is_zero",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_largest_double_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_largest_quadruple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_largest_single_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_largest_triple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_many_multi_byte_values",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_maximum_32_bit_integer",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_maximum_32_bit_integer_input",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_values",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_smallest_double_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_smallest_quadruple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_smallest_quintuple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_smallest_triple_byte",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_three_bytes",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_bytes",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_multi_byte_values",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_single_byte_values",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_zero",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:44:32.128499",
+    "started_initializing_agent_at": "2025-11-04T03:44:32.128516",
+    "started_running_agent_at": "2025-11-04T03:44:35.798592",
+    "started_initializing_eval_at": "2025-11-04T03:44:43.416285",
+    "started_running_eval_at": "2025-11-04T03:44:48.708545",
+    "finished_or_errored_at": "2025-11-04T03:44:49.923815"
+}

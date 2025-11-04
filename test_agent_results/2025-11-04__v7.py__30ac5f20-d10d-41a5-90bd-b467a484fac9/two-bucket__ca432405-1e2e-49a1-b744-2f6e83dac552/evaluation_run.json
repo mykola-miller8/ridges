@@ -1,0 +1,62 @@
+{
+    "evaluation_run_id": "ca432405-1e2e-49a1-b744-2f6e83dac552",
+    "evaluation_id": "30ac5f20-d10d-41a5-90bd-b467a484fac9",
+    "problem_name": "two-bucket",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,3 +1,43 @@\n-def measure(bucket_one: int, bucket_two: int, goal: int, start_bucket: str) -> tuple[int, str, int]:\n-    # Returns (total_moves, goal_bucket, other_bucket_liters) where goal_bucket is \"one\" or \"two\"\n-    pass\n+from collections import deque\n+\n+def measure(bucket_one: int, bucket_two: int, goal: int, start_bucket: str) -> tuple[int, str, int]:\n+    if goal > max(bucket_one, bucket_two):\n+        raise ValueError(\"Goal cannot be greater than the capacity of the larger bucket\")\n+    \n+    if start_bucket == \"one\":\n+        initial_state = (bucket_one, 0)\n+        forbidden_state = (0, bucket_two)\n+    elif start_bucket == \"two\":\n+        initial_state = (0, bucket_two)\n+        forbidden_state = (bucket_one, 0)\n+    else:\n+        raise ValueError(\"Start bucket must be either 'one' or 'two'\")\n+    \n+    queue = deque([(initial_state, 1)])  # (state, moves)\n+    visited = {initial_state}\n+    \n+    while queue:\n+        (b1, b2), moves = queue.popleft()\n+        \n+        # Check if we've reached the goal\n+        if b1 == goal:\n+            return (moves, \"one\", b2)\n+        if b2 == goal:\n+            return (moves, \"two\", b1)\n+        \n+        # Generate all possible next states\n+        next_states = [\n+            (bucket_one, b2),  # Fill bucket one\n+            (b1, bucket_two),  # Fill bucket two\n+            (0, b2),           # Empty bucket one\n+            (b1, 0),           # Empty bucket two\n+            (max(0, b1 - (bucket_two - b2)), min(bucket_two, b1 + b2)),  # Pour bucket one to bucket two\n+            (min(bucket_one, b1 + b2), max(0, b2 - (bucket_one - b1)))   # Pour bucket two to bucket one\n+        ]\n+        \n+        for state in next_states:\n+            if state not in visited and state != forbidden_state:\n+                visited.add(state)\n+                queue.append((state, moves + 1))\n+    \n+    raise ValueError(\"Goal amount cannot be reached\")\n",
+    "test_results": [
+        {
+            "name": "test_goal_larger_than_both_buckets_is_impossible",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_one_step_using_bucket_one_of_size_1_and_bucket_two_of_size_3_start_with_bucket_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_2_and_bucket_two_of_size_3_start_with_bucket_one_and_end_with_bucket_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_one",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_one",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_not_possible_to_reach_the_goal",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_with_the_same_buckets_but_a_different_goal_then_it_is_possible",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:44:32.128313",
+    "started_initializing_agent_at": "2025-11-04T03:44:32.128364",
+    "started_running_agent_at": "2025-11-04T03:44:35.465544",
+    "started_initializing_eval_at": "2025-11-04T03:44:43.430350",
+    "started_running_eval_at": "2025-11-04T03:44:48.855457",
+    "finished_or_errored_at": "2025-11-04T03:44:50.069394"
+}

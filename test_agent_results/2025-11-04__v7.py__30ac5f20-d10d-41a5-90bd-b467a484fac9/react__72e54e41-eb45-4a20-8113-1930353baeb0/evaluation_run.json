@@ -1,0 +1,16 @@
+{
+    "evaluation_run_id": "72e54e41-eb45-4a20-8113-1930353baeb0",
+    "evaluation_id": "30ac5f20-d10d-41a5-90bd-b467a484fac9",
+    "problem_name": "react",
+    "status": "error",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,18 +1,49 @@\n-from typing import Callable\n-\n-\n-class InputCell:\n-    def __init__(self, initial_value: int):\n-        self.value = None\n-\n-\n-class ComputeCell:\n-    def __init__(self, inputs: list, compute_function: Callable):\n-        self.value = None\n-\n-    def add_callback(self, callback: Callable) -> None:\n-        pass\n-\n-    def remove_callback(self, callback: Callable) -> None:\n-        pass\n-    \n+from typing import Callable, List\n+\n+\n+class InputCell:\n+    def __init__(self, initial_value: int):\n+        self.value = initial_value\n+        self.dependents = []\n+\n+    def set_value(self, new_value: int):\n+        if self.value != new_value:\n+            self.value = new_value\n+            for dependent in self.dependents:\n+                dependent._update()\n+\n+\n+class ComputeCell:\n+    def __init__(self, inputs: List['InputCell'], compute_function: Callable):\n+        self.inputs = inputs\n+        self.compute_function = compute_function\n+        self.dependents = []\n+        self.callbacks = []\n+        self._compute_value()\n+        \n+        # Register this compute cell as dependent of its inputs\n+        for input_cell in self.inputs:\n+            input_cell.dependents.append(self)\n+\n+    def _compute_value(self):\n+        self.value = self.compute_function([input_cell.value for input_cell in self.inputs])\n+\n+    def _update(self):\n+        old_value = self.value\n+        self._compute_value()\n+        \n+        # If value changed, notify callbacks and update dependents\n+        if self.value != old_value:\n+            for callback in self.callbacks:\n+                callback(self.value)\n+                \n+        # Update dependents\n+        for dependent in self.dependents:\n+            dependent._update()\n+\n+    def add_callback(self, callback: Callable) -> None:\n+        self.callbacks.append(callback)\n+\n+    def remove_callback(self, callback: Callable) -> None:\n+        if callback in self.callbacks:\n+            self.callbacks.remove(callback)\n",
+    "test_results": null,
+    "error_code": 1040,
+    "error_message": "The agent returned an invalid patch: error: patch failed: main.py:1\nerror: main.py: patch does not apply",
+    "created_at": "2025-11-04T03:44:32.125550",
+    "started_initializing_agent_at": "2025-11-04T03:44:32.125571",
+    "started_running_agent_at": "2025-11-04T03:44:34.654454",
+    "started_initializing_eval_at": "2025-11-04T03:44:42.641570",
+    "started_running_eval_at": null,
+    "finished_or_errored_at": "2025-11-04T03:44:45.175775"
+}

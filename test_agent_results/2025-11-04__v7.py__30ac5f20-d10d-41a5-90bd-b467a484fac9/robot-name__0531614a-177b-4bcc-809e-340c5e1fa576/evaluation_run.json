@@ -1,0 +1,37 @@
+{
+    "evaluation_run_id": "0531614a-177b-4bcc-809e-340c5e1fa576",
+    "evaluation_id": "30ac5f20-d10d-41a5-90bd-b467a484fac9",
+    "problem_name": "robot-name",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,10 +1,38 @@\n-class Robot:\n-    def __init__(self):\n-        pass\n-\n-    @property\n-    def name(self) -> str:\n-        pass\n-\n-    def reset(self) -> None:\n-        pass\n+class Robot:\n+    _counter = 0\n+    _used_names = set()\n+\n+    def __init__(self):\n+        self._name = None\n+        self._generate_name()\n+\n+    @property\n+    def name(self) -> str:\n+        return self._name\n+\n+    def reset(self) -> None:\n+        if self._name:\n+            Robot._used_names.discard(self._name)\n+        self._generate_name()\n+\n+    def _generate_name(self) -> None:\n+        while True:\n+            if Robot._counter >= 676000:\n+                raise RuntimeError(\"Exhausted all possible robot names\")\n+            \n+            part1 = Robot._counter // 1000\n+            part2 = Robot._counter % 1000\n+            \n+            first_letter = part1 // 26\n+            second_letter = part1 % 26\n+            \n+            letters = chr(65 + first_letter) + chr(65 + second_letter)\n+            digits = str(part2).zfill(3)\n+            new_name = letters + digits\n+            \n+            Robot._counter += 1\n+            \n+            if new_name not in Robot._used_names:\n+                Robot._used_names.add(new_name)\n+                self._name = new_name\n+                break\n",
+    "test_results": [
+        {
+            "name": "test_different_robots_have_different_names",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_has_name",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_name_sticks",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_reset_name",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:44:32.125827",
+    "started_initializing_agent_at": "2025-11-04T03:44:32.125878",
+    "started_running_agent_at": "2025-11-04T03:44:35.151753",
+    "started_initializing_eval_at": "2025-11-04T03:45:13.083386",
+    "started_running_eval_at": "2025-11-04T03:45:13.446180",
+    "finished_or_errored_at": "2025-11-04T03:45:13.772201"
+}

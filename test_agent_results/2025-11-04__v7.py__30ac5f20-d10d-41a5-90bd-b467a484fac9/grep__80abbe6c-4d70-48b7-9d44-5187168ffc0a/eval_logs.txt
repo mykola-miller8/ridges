@@ -1,0 +1,145 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: GrepTest
+[POLYGLOT_TEST_RUNNER] Found 25 test methods
+[POLYGLOT_TEST_RUNNER] [1/25] Running test_multiple_files_no_matches_various_flags...
+[POLYGLOT_TEST_RUNNER] test_multiple_files_no_matches_various_flags: PASSED
+[POLYGLOT_TEST_RUNNER] [2/25] Running test_multiple_files_one_match_match_entire_lines_flag...
+[POLYGLOT_TEST_RUNNER] test_multiple_files_one_match_match_entire_lines_flag: FAILED - '' != 'midsummer-night.txt:But I beseech your grace that I may know\n'
++ midsummer-night.txt:But I beseech your grace that I may know
+
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_multiple_files_no_matches_various_flags",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_multiple_files_one_match_match_entire_lines_flag",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_multiple_files_one_match_multiple_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_files_one_match_no_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_files_one_match_print_file_names_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_files_several_matches_case_insensitive_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_files_several_matches_file_flag_takes_precedence_over_line_number_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_files_several_matches_inverted_and_match_entire_lines_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_files_several_matches_inverted_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_files_several_matches_no_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_files_several_matches_print_line_numbers_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_no_matches_various_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_one_match_case_insensitive_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_one_match_file_flag_takes_precedence_over_line_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_one_match_match_entire_lines_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_one_match_multiple_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_one_match_no_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_one_match_print_file_names_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_one_match_print_line_numbers_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_several_matches_case_insensitive_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_several_matches_inverted_and_match_entire_lines_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_several_matches_inverted_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_several_matches_match_entire_lines_flag",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_several_matches_no_flags",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_one_file_several_matches_print_line_numbers_flag",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 1 passed, 1 failed, 23 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

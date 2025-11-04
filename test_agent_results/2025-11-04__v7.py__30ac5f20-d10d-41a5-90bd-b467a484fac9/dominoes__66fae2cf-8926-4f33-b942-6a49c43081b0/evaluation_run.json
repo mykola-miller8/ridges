@@ -1,0 +1,82 @@
+{
+    "evaluation_run_id": "66fae2cf-8926-4f33-b942-6a49c43081b0",
+    "evaluation_id": "30ac5f20-d10d-41a5-90bd-b467a484fac9",
+    "problem_name": "dominoes",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,42 @@\n-def can_chain(dominoes: list[tuple[int, int]]) -> list[tuple[int, int]] | None:\n-    pass\n+def can_chain(dominoes: list[tuple[int, int]]) -> list[tuple[int, int]] | None:\n+    if not dominoes:\n+        return []\n+    \n+    def backtrack(chain, remaining):\n+        if not remaining:\n+            # Check if first and last match\n+            if chain[0][0] == chain[-1][1]:\n+                return chain\n+            return None\n+        \n+        last_value = chain[-1][1]\n+        for i, domino in enumerate(remaining):\n+            if domino[0] == last_value:\n+                new_chain = chain + [domino]\n+                new_remaining = remaining[:i] + remaining[i+1:]\n+                result = backtrack(new_chain, new_remaining)\n+                if result is not None:\n+                    return result\n+            if domino[1] == last_value:\n+                new_chain = chain + [(domino[1], domino[0])]\n+                new_remaining = remaining[:i] + remaining[i+1:]\n+                result = backtrack(new_chain, new_remaining)\n+                if result is not None:\n+                    return result\n+        return None\n+    \n+    for i, domino in enumerate(dominoes):\n+        # Try starting with domino as is\n+        remaining = dominoes[:i] + dominoes[i+1:]\n+        result = backtrack([domino], remaining)\n+        if result is not None:\n+            return result\n+        \n+        # Try starting with domino flipped\n+        flipped = (domino[1], domino[0])\n+        remaining = dominoes[:i] + dominoes[i+1:]\n+        result = backtrack([flipped], remaining)\n+        if result is not None:\n+            return result\n+    \n+    return None\n",
+    "test_results": [
+        {
+            "name": "test_can_reverse_dominoes",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_can_t_be_chained",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_disconnected_double_loop",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_disconnected_simple",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_disconnected_single_isolated",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_empty_input_empty_output",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_need_backtrack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_nine_elements",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_separate_loops",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_separate_three_domino_loops",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_singleton_input_singleton_output",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_singleton_that_can_t_be_chained",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_three_elements",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:44:32.094332",
+    "started_initializing_agent_at": "2025-11-04T03:44:32.094413",
+    "started_running_agent_at": "2025-11-04T03:44:33.438657",
+    "started_initializing_eval_at": "2025-11-04T03:44:56.089419",
+    "started_running_eval_at": "2025-11-04T03:44:56.412406",
+    "finished_or_errored_at": "2025-11-04T03:44:56.647355"
+}
