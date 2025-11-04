@@ -3,7 +3,6 @@ import re
 import json
 import uuid
 import time
-import subprocess
 import ast
 from typing import Any, Dict, List, Tuple
 
@@ -31,11 +30,21 @@ AGENT_MODELS: List[str] = [
 
 
 def _read(path: str) -> str:
+    """Read a text file using UTF-8; return empty string on error."""
     try:
         with open(path, "r", encoding="utf-8") as f:
             return f.read()
     except Exception:
         return ""
+
+
+def _log(message: str) -> None:
+    """Lightweight stdout logger for the v7 agent."""
+    try:
+        print(f"[V7] {message}")
+    except Exception:
+        # Best-effort logging only
+        pass
 
 
 def _build_single_file_patch(filename: str, new_content: str) -> str:
@@ -63,6 +72,7 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
 
 
 def _strip_code_fences(text: str) -> str:
+    """Remove a single surrounding triple-backtick code fence from text, preserving content."""
     if not isinstance(text, str):
         return ""
     s = text.strip()
@@ -75,6 +85,7 @@ def _strip_code_fences(text: str) -> str:
 
 
 def _ensure_header(code: str) -> str:
+    """Ensure the file starts with the required '# main.py' header line."""
     code = code.lstrip("\n")
     if not code.startswith("# main.py"):
         return "# main.py\n" + code
@@ -82,28 +93,34 @@ def _ensure_header(code: str) -> str:
 
 
 def _extract_main_py(response: str) -> str:
+    """Extract a Python code block representing complete main.py from an LLM response."""
     if not response:
         return ""
     # 1) Prefer explicitly headed python block
     m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*?)\n```", response, re.DOTALL)
     if m and m[0].strip():
+        _log("Extracted main.py from headed python block")
         return _ensure_header(m[0].strip())
     # 2) Any python block
     m2 = re.findall(r"```python\s*\n([\s\S]*?)\n```", response, re.DOTALL)
     if m2 and m2[0].strip():
+        _log("Extracted main.py from unheaded python block")
         return _ensure_header(m2[0].strip())
     # 3) Any code fence without language
     m3 = re.findall(r"```\s*\n([\s\S]*?)\n```", response, re.DOTALL)
     if m3 and m3[0].strip():
+        _log("Extracted main.py from generic code fence")
         return _ensure_header(m3[0].strip())
     # 4) Fallback to raw (strip if contains def/class)
     raw = response.strip()
     if ("def " in raw) or ("class " in raw):
+        _log("Extracted main.py from raw content fallback")
         return _ensure_header(_strip_code_fences(raw))
     return ""
 
 
 def _validate_python(code: str) -> Tuple[bool, str]:
+    """Parse code with ast to check syntax. Returns (ok, error_text)."""
     try:
         # Strip header comment before parsing
         src = re.sub(r"^#\s*main\.py\s*\n", "", code)
@@ -135,6 +152,7 @@ def _repair_syntax(run_id: str, bad_code: str, error_text: str, attempt_index: i
         {"role": "user", "content": user},
     ]
     try:
+        _log(f"Requesting syntax repair (attempt_index={attempt_index})")
         resp = _call_llm(messages, run_id, attempt_index, 180)
         fixed = _extract_main_py(resp)
         return fixed or ""
@@ -143,6 +161,7 @@ def _repair_syntax(run_id: str, bad_code: str, error_text: str, attempt_index: i
 
 
 def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
+    """Call the inference gateway with retries and return the content string."""
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
     model = AGENT_MODELS[attempt % len(AGENT_MODELS)]
@@ -156,7 +175,9 @@ def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout
     last_err: Exception | None = None
     for r in range(3):
         try:
+            _log(f"LLM POST {url} model={model} try={r+1}/3 run_id={run_id}")
             resp = requests.post(url, json=body, headers=headers, timeout=timeout_s)
+            _log(f"LLM HTTP {resp.status_code} response_len={len(resp.text)}")
             resp.raise_for_status()
             data = resp.json()
             if isinstance(data, dict) and data.get("choices"):
@@ -181,6 +202,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     if repo_dir and os.path.exists(repo_dir):
         try:
             os.chdir(repo_dir)
+            _log(f"Changed working directory to: {os.getcwd()}")
         except Exception:
             pass
 
@@ -188,6 +210,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     mode = (input_dict or {}).get("problem_category", None)
     if mode not in ("spec_only", "tests_available"):
         mode = "tests_available" if os.path.exists("tests.py") else "spec_only"
+    _log(f"run_id={run_id} mode={mode} problem_len={len(problem_statement)} tests_present={os.path.exists('tests.py')}")
 
     # Compact repository summary for context (generic, no problem-specific assumptions)
     parts: List[str] = []
@@ -196,6 +219,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         if content:
             parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
     summary = "\n\n".join(parts)
+    _log(f"Repository summary included files: {', '.join([p.split()[1] for p in parts]) if parts else 'none'}")
 
     system_msg = (
         "You are a senior Python engineer.\n"
@@ -226,24 +250,31 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
     # Try models; validate syntax; attempt auto-repair up to 2 times per model
     for attempt_pos, model_idx in enumerate(indices):
         try:
+            _log(f"Generating main.py with model_index={model_idx} (pos {attempt_pos+1}/{len(indices)})")
             resp = _call_llm(messages, run_id, model_idx, 300)
             main_src = _extract_main_py(resp)
             if not main_src:
+                _log("No valid code block extracted; trying next model")
                 continue
             ok, err = _validate_python(main_src)
             if ok:
+                _log("Generated code parsed successfully on first try")
                 return _build_single_file_patch("main.py", main_src)
             # Try up to 2 syntax repairs
             repaired = main_src
             for fix_round in range(2):
+                _log(f"Syntax repair round {fix_round+1}/2 for current model")
                 fixed = _repair_syntax(f"{run_id}-fix{attempt_pos}-{fix_round+1}", repaired, err, model_idx)
                 if not fixed:
+                    _log("Repair attempt returned empty response; stopping repair for this model")
                     break
                 ok2, err2 = _validate_python(fixed)
                 if ok2:
+                    _log("Repair produced syntactically valid code")
                     return _build_single_file_patch("main.py", fixed)
                 repaired, err = fixed, err2
         except Exception:
+            _log("Model attempt raised exception; continuing with next model")
             continue
 
     return ""
