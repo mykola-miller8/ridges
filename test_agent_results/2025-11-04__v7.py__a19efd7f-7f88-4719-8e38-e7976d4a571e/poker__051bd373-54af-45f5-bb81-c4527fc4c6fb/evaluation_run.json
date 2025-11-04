@@ -1,0 +1,202 @@
+{
+    "evaluation_run_id": "051bd373-54af-45f5-bb81-c4527fc4c6fb",
+    "evaluation_id": "a19efd7f-7f88-4719-8e38-e7976d4a571e",
+    "problem_name": "poker",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,2 +1,66 @@\n-def best_hands(hands: list[str]) -> list[str]:  # each hand is a string like \"4S 5S 7H 8D JC\"\n-    pass\n+def best_hands(hands: list[str]) -> list[str]:\n+    def parse_hand(hand: str) -> list[tuple]:\n+        \"\"\"Convert hand string to list of (rank, suit) tuples.\"\"\"\n+        cards = hand.split()\n+        parsed = []\n+        for card in cards:\n+            rank_str, suit = card[:-1], card[-1]\n+            if rank_str == 'A':\n+                rank = 14\n+            elif rank_str == 'K':\n+                rank = 13\n+            elif rank_str == 'Q':\n+                rank = 12\n+            elif rank_str == 'J':\n+                rank = 11\n+            else:\n+                rank = int(rank_str)\n+            parsed.append((rank, suit))\n+        return sorted(parsed, reverse=True)\n+    \n+    def hand_rank(hand: list[tuple]) -> tuple:\n+        \"\"\"Return a tuple representing the rank of the hand.\"\"\"\n+        ranks = [card[0] for card in hand]\n+        suits = [card[1] for card in hand]\n+        is_flush = len(set(suits)) == 1\n+        \n+        # Check for straight\n+        unique_ranks = sorted(set(ranks), reverse=True)\n+        is_straight = len(unique_ranks) == 5 and unique_ranks[0] - unique_ranks[4] == 4\n+        \n+        # Handle low ace straight (A,2,3,4,5)\n+        if ranks == [14, 5, 4, 3, 2]:\n+            is_straight = True\n+            unique_ranks = [5, 4, 3, 2, 1]\n+            \n+        rank_counts = {}\n+        for rank in ranks:\n+            rank_counts[rank] = rank_counts.get(rank, 0) + 1\n+        counts = sorted(rank_counts.values(), reverse=True)\n+        rank_groups = sorted(rank_counts.items(), key=lambda x: (x[1], x[0]), reverse=True)\n+        \n+        if is_straight and is_flush:\n+            return (8, unique_ranks)  # Straight flush\n+        if counts == [4, 1]:\n+            return (7, rank_groups[0][0], rank_groups[1][0])  # Four of a kind\n+        if counts == [3, 2]:\n+            return (6, rank_groups[0][0], rank_groups[1][0])  # Full house\n+        if is_flush:\n+            return (5, ranks)  # Flush\n+        if is_straight:\n+            return (4, unique_ranks)  # Straight\n+        if counts == [3, 1, 1]:\n+            return (3, rank_groups[0][0], [r for r in ranks if r != rank_groups[0][0]])  # Three of a kind\n+        if counts == [2, 2, 1]:\n+            return (2, rank_groups[0][0], rank_groups[1][0], rank_groups[2][0])  # Two pair\n+        if counts == [2, 1, 1, 1]:\n+            return (1, rank_groups[0][0], [r for r in ranks if r != rank_groups[0][0]])  # One pair\n+        return (0, ranks)  # High card\n+    \n+    if not hands:\n+        return []\n+        \n+    parsed_hands = [(hand, parse_hand(hand)) for hand in hands]\n+    ranked_hands = [(hand, hand_rank(parsed)) for hand, parsed in parsed_hands]\n+    max_rank = max(rank for _, rank in ranked_hands)\n+    return [hand for hand, rank in ranked_hands if rank == max_rank]\n",
+    "test_results": [
+        {
+            "name": "test_a_straight_beats_three_of_a_kind",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_a_tie_has_multiple_winners",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_aces_can_end_a_straight_10_j_q_k_a",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_aces_can_end_a_straight_flush_10_j_q_k_a",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_aces_can_start_a_straight_a_2_3_4_5",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_aces_can_start_a_straight_flush_a_2_3_4_5",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_aces_cannot_be_in_the_middle_of_a_straight_flush_q_k_a_2_3",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_aces_cannot_be_in_the_middle_of_a_straight_q_k_a_2_3",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_a_flush_tie_goes_to_high_card_down_to_the_last_one_if_necessary",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_a_full_house_tie_goes_to_highest_ranked_triplet",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_a_straight_flush_tie_goes_to_highest_ranked_card",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_four_of_a_kind_tie_goes_to_high_quad",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_the_same_pair_high_card_wins",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_three_of_a_kind_tie_goes_to_highest_ranked_triplet",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_two_identically_ranked_pairs_tie_goes_to_remaining_card_kicker",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_two_pairs_highest_ranked_pair_wins",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_two_pairs_that_add_to_the_same_value_win_goes_to_highest_pair",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_have_two_pairs_with_the_same_highest_ranked_pair_tie_goes_to_low_pair",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_both_hands_with_a_straight_tie_goes_to_highest_ranked_card",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_even_though_an_ace_is_usually_high_a_5_high_straight_flush_is_the_lowest_scoring_straight_flush",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_even_though_an_ace_is_usually_high_a_5_high_straight_is_the_lowest_scoring_straight",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_flush_beats_a_straight",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_four_of_a_kind_beats_a_full_house",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_full_house_beats_a_flush",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_highest_card_out_of_all_hands_wins",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_highest_pair_wins",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiple_hands_with_the_same_high_cards_tie_compares_next_highest_ranked_down_to_last_card",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_one_pair_beats_high_card",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_single_hand_always_wins",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_straight_flush_beats_four_of_a_kind",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_three_of_a_kind_beats_two_pair",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_pairs_beats_one_pair",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_two_pairs_first_ranked_by_largest_pair",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_winning_high_card_hand_also_has_the_lowest_card",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_with_multiple_decks_both_hands_have_a_full_house_with_the_same_triplet_tie_goes_to_the_pair",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_with_multiple_decks_both_hands_with_identical_four_of_a_kind_tie_determined_by_kicker",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_with_multiple_decks_two_players_can_have_same_three_of_a_kind_ties_go_to_highest_remaining_cards",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:11:07.530832",
+    "started_initializing_agent_at": "2025-11-04T03:11:07.530910",
+    "started_running_agent_at": "2025-11-04T03:11:09.716788",
+    "started_initializing_eval_at": "2025-11-04T03:11:19.134970",
+    "started_running_eval_at": "2025-11-04T03:11:25.558929",
+    "finished_or_errored_at": "2025-11-04T03:11:26.141063"
+}

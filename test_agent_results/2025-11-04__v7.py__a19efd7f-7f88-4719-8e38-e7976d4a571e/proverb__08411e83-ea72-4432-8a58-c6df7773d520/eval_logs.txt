@@ -1,0 +1,70 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: ProverbTest
+[POLYGLOT_TEST_RUNNER] Found 8 test methods
+[POLYGLOT_TEST_RUNNER] [1/8] Running test_an_optional_qualifier_can_be_added...
+[POLYGLOT_TEST_RUNNER] test_an_optional_qualifier_can_be_added: PASSED
+[POLYGLOT_TEST_RUNNER] [2/8] Running test_an_optional_qualifier_in_the_final_consequences...
+[POLYGLOT_TEST_RUNNER] test_an_optional_qualifier_in_the_final_consequences: PASSED
+[POLYGLOT_TEST_RUNNER] [3/8] Running test_four_pieces_modernized...
+[POLYGLOT_TEST_RUNNER] test_four_pieces_modernized: PASSED
+[POLYGLOT_TEST_RUNNER] [4/8] Running test_full_proverb...
+[POLYGLOT_TEST_RUNNER] test_full_proverb: PASSED
+[POLYGLOT_TEST_RUNNER] [5/8] Running test_one_piece...
+[POLYGLOT_TEST_RUNNER] test_one_piece: PASSED
+[POLYGLOT_TEST_RUNNER] [6/8] Running test_three_pieces...
+[POLYGLOT_TEST_RUNNER] test_three_pieces: PASSED
+[POLYGLOT_TEST_RUNNER] [7/8] Running test_two_pieces...
+[POLYGLOT_TEST_RUNNER] test_two_pieces: PASSED
+[POLYGLOT_TEST_RUNNER] [8/8] Running test_zero_pieces...
+[POLYGLOT_TEST_RUNNER] test_zero_pieces: PASSED
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_an_optional_qualifier_can_be_added",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_an_optional_qualifier_in_the_final_consequences",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_four_pieces_modernized",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_full_proverb",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_one_piece",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_three_pieces",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_two_pieces",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_zero_pieces",
+    "category": "default",
+    "status": "pass"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 8 passed, 0 failed, 0 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

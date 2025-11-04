@@ -1,0 +1,143 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: WordyTest
+[POLYGLOT_TEST_RUNNER] Found 25 test methods
+[POLYGLOT_TEST_RUNNER] [1/25] Running test_addition...
+[POLYGLOT_TEST_RUNNER] test_addition: PASSED
+[POLYGLOT_TEST_RUNNER] [2/25] Running test_addition_and_multiplication...
+[POLYGLOT_TEST_RUNNER] test_addition_and_multiplication: FAILED - syntax error
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_addition",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_addition_and_multiplication",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_addition_and_subtraction",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_addition_with_negative_numbers",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_division",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_just_a_number",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_large_addition",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_missing_number",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_missing_operation",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_more_addition",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_additions",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_division",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_multiplication",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_subtraction",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiplication",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_non_math_question",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reject_postfix_notation",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reject_prefix_notation",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reject_problem_missing_an_operand",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reject_problem_with_no_operands_or_operators",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reject_two_numbers_in_a_row",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reject_two_operations_in_a_row",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_subtraction",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_subtraction_then_addition",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_unknown_operation",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 1 passed, 1 failed, 23 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

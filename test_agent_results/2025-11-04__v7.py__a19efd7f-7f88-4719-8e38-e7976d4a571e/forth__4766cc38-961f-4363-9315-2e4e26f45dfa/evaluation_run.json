@@ -1,0 +1,287 @@
+{
+    "evaluation_run_id": "4766cc38-961f-4363-9315-2e4e26f45dfa",
+    "evaluation_id": "a19efd7f-7f88-4719-8e38-e7976d4a571e",
+    "problem_name": "forth",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,6 +1,93 @@\n-class StackUnderflowError(Exception):\n-    pass\n-\n-\n-def evaluate(input_data: list[str]) -> list[int]:\n-    pass\n+class StackUnderflowError(Exception):\n+    \"\"\"Exception raised when Stack is not full.\n+       message: explanation of the error.\n+    \"\"\"\n+    def __init__(self, message):\n+        self.message = message\n+\n+\n+def evaluate(input_data: list[str]) -> list[int]:\n+    stack = []\n+    definitions = {}\n+    \n+    for line in input_data:\n+        tokens = line.upper().split()\n+        i = 0\n+        while i < len(tokens):\n+            token = tokens[i]\n+            \n+            if token == ':':\n+                i += 1\n+                if i >= len(tokens):\n+                    raise ValueError(\"undefined operation\")\n+                word_name = tokens[i]\n+                if word_name.isdigit() or (word_name.startswith('-') and word_name[1:].isdigit()):\n+                    raise ValueError(\"illegal operation\")\n+                i += 1\n+                definition = []\n+                while i < len(tokens) and tokens[i] != ';':\n+                    definition.append(tokens[i])\n+                    i += 1\n+                if i >= len(tokens) or tokens[i] != ';':\n+                    raise ValueError(\"undefined operation\")\n+                definitions[word_name] = definition\n+            else:\n+                expanded_tokens = []\n+                if token in definitions:\n+                    expanded_tokens.extend(definitions[token])\n+                else:\n+                    expanded_tokens.append(token)\n+                \n+                for exp_token in expanded_tokens:\n+                    if exp_token.isdigit() or (exp_token.startswith('-') and exp_token[1:].isdigit()):\n+                        stack.append(int(exp_token))\n+                    elif exp_token == '+':\n+                        if len(stack) < 2:\n+                            raise StackUnderflowError(\"Insufficient number of items in stack\")\n+                        b = stack.pop()\n+                        a = stack.pop()\n+                        stack.append(a + b)\n+                    elif exp_token == '-':\n+                        if len(stack) < 2:\n+                            raise StackUnderflowError(\"Insufficient number of items in stack\")\n+                        b = stack.pop()\n+                        a = stack.pop()\n+                        stack.append(a - b)\n+                    elif exp_token == '*':\n+                        if len(stack) < 2:\n+                            raise StackUnderflowError(\"Insufficient number of items in stack\")\n+                        b = stack.pop()\n+                        a = stack.pop()\n+                        stack.append(a * b)\n+                    elif exp_token == '/':\n+                        if len(stack) < 2:\n+                            raise StackUnderflowError(\"Insufficient number of items in stack\")\n+                        b = stack.pop()\n+                        a = stack.pop()\n+                        if b == 0:\n+                            raise ZeroDivisionError(\"divide by zero\")\n+                        stack.append(int(a / b))\n+                    elif exp_token == 'DUP':\n+                        if len(stack) < 1:\n+                            raise StackUnderflowError(\"Insufficient number of items in stack\")\n+                        stack.append(stack[-1])\n+                    elif exp_token == 'DROP':\n+                        if len(stack) < 1:\n+                            raise StackUnderflowError(\"Insufficient number of items in stack\")\n+                        stack.pop()\n+                    elif exp_token == 'SWAP':\n+                        if len(stack) < 2:\n+                            raise StackUnderflowError(\"Insufficient number of items in stack\")\n+                        b = stack.pop()\n+                        a = stack.pop()\n+                        stack.append(b)\n+                        stack.append(a)\n+                    elif exp_token == 'OVER':\n+                        if len(stack) < 2:\n+                            raise StackUnderflowError(\"Insufficient number of items in stack\")\n+                        stack.append(stack[-2])\n+                    else:\n+                        raise ValueError(\"undefined operation\")\n+            i += 1\n+    \n+    return stack\n",
+    "test_results": [
+        {
+            "name": "test_addition_can_add_two_numbers",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_addition_errors_if_there_is_nothing_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_addition_errors_if_there_is_only_one_value_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_addition_more_than_two_values_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_case_insensitivity_definitions_are_case_insensitive",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_case_insensitivity_drop_is_case_insensitive",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_case_insensitivity_dup_is_case_insensitive",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_case_insensitivity_over_is_case_insensitive",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_case_insensitivity_swap_is_case_insensitive",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_case_insensitivity_user_defined_words_are_case_insensitive",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_combined_arithmetic_addition_and_multiplication",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_combined_arithmetic_addition_and_subtraction",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_combined_arithmetic_multiplication_and_addition",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_combined_arithmetic_multiplication_and_division",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_division_can_divide_two_numbers",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_division_errors_if_dividing_by_zero",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_division_errors_if_there_is_nothing_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_division_errors_if_there_is_only_one_value_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_division_more_than_two_values_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_division_performs_integer_division",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_drop_errors_if_there_is_nothing_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_drop_removes_the_top_value_on_the_stack_if_it_is_not_the_only_one",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_drop_removes_the_top_value_on_the_stack_if_it_is_the_only_one",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_dup_copies_a_value_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_dup_copies_the_top_value_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_dup_errors_if_there_is_nothing_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiplication_can_multiply_two_numbers",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiplication_errors_if_there_is_nothing_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiplication_errors_if_there_is_only_one_value_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_multiplication_more_than_two_values_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_over_copies_the_second_element_if_there_are_more_than_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_over_copies_the_second_element_if_there_are_only_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_over_errors_if_there_is_nothing_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_over_errors_if_there_is_only_one_value_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_parsing_and_numbers_numbers_just_get_pushed_onto_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_parsing_and_numbers_pushes_negative_numbers_onto_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_subtraction_can_subtract_two_numbers",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_subtraction_errors_if_there_is_nothing_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_subtraction_errors_if_there_is_only_one_value_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_subtraction_more_than_two_values_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_swap_errors_if_there_is_nothing_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_swap_errors_if_there_is_only_one_value_on_the_stack",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_swap_swaps_the_top_two_values_on_the_stack_if_they_are_not_the_only_ones",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_swap_swaps_the_top_two_values_on_the_stack_if_they_are_the_only_ones",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_user_defined_words_can_consist_of_built_in_words",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_user_defined_words_can_define_word_that_uses_word_with_the_same_name",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_user_defined_words_can_override_built_in_operators",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_user_defined_words_can_override_built_in_words",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_user_defined_words_can_override_other_user_defined_words",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_user_defined_words_can_use_different_words_with_the_same_name",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_user_defined_words_cannot_redefine_negative_numbers",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_user_defined_words_cannot_redefine_non_negative_numbers",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_user_defined_words_errors_if_executing_a_non_existent_word",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_user_defined_words_execute_in_the_right_order",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T03:11:07.519300",
+    "started_initializing_agent_at": "2025-11-04T03:11:07.519427",
+    "started_running_agent_at": "2025-11-04T03:11:09.117583",
+    "started_initializing_eval_at": "2025-11-04T03:11:18.730282",
+    "started_running_eval_at": "2025-11-04T03:11:24.952081",
+    "finished_or_errored_at": "2025-11-04T03:11:25.933328"
+}

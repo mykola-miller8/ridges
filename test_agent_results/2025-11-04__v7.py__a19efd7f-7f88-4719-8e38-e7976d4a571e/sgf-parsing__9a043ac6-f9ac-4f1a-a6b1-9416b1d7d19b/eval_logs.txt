@@ -1,0 +1,135 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: SgfParsingTest
+[POLYGLOT_TEST_RUNNER] Found 23 test methods
+[POLYGLOT_TEST_RUNNER] [1/23] Running test_all_lowercase_property...
+[POLYGLOT_TEST_RUNNER] test_all_lowercase_property: PASSED
+[POLYGLOT_TEST_RUNNER] [2/23] Running test_empty_input...
+[POLYGLOT_TEST_RUNNER] test_empty_input: PASSED
+[POLYGLOT_TEST_RUNNER] [3/23] Running test_escaped_backslash_in_property_value_becomes_just_a_backslash...
+[POLYGLOT_TEST_RUNNER] test_escaped_backslash_in_property_value_becomes_just_a_backslash: FAILED - property must be in uppercase
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_all_lowercase_property",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_empty_input",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_escaped_backslash_in_property_value_becomes_just_a_backslash",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_escaped_closing_bracket_within_property_value_becomes_just_a_closing_bracket",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_escaped_newline_in_property_value_is_converted_to_nothing_at_all",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_escaped_t_and_n_in_property_value_are_just_letters_not_whitespace",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_escaped_tab_in_property_value_is_converted_to_space",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_mixing_various_kinds_of_whitespace_and_escaped_characters_in_property_value",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_properties",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_multiple_property_values",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_node_without_properties",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_node_without_tree",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_opening_bracket_within_property_value_doesn_t_need_to_be_escaped",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_parentheses_in_property_value_don_t_need_to_be_escaped",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_properties_without_delimiter",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_semicolon_in_property_value_doesn_t_need_to_be_escaped",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_single_node_tree",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_tree_with_no_nodes",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_two_child_trees",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_two_nodes",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_upper_and_lowercase_property",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_within_property_values_newlines_remain_as_newlines",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_within_property_values_whitespace_characters_such_as_tab_are_converted_to_spaces",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 2 passed, 1 failed, 20 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

@@ -1,0 +1,119 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: PovTest
+[POLYGLOT_TEST_RUNNER] Found 15 test methods
+[POLYGLOT_TEST_RUNNER] [1/15] Running test_can_find_path_from_nodes_other_than_x...
+[POLYGLOT_TEST_RUNNER] test_can_find_path_from_nodes_other_than_x: PASSED
+[POLYGLOT_TEST_RUNNER] [2/15] Running test_can_find_path_not_involving_root...
+[POLYGLOT_TEST_RUNNER] test_can_find_path_not_involving_root: PASSED
+[POLYGLOT_TEST_RUNNER] [3/15] Running test_can_find_path_to_cousin...
+[POLYGLOT_TEST_RUNNER] test_can_find_path_to_cousin: PASSED
+[POLYGLOT_TEST_RUNNER] [4/15] Running test_can_find_path_to_parent...
+[POLYGLOT_TEST_RUNNER] test_can_find_path_to_parent: PASSED
+[POLYGLOT_TEST_RUNNER] [5/15] Running test_can_find_path_to_sibling...
+[POLYGLOT_TEST_RUNNER] test_can_find_path_to_sibling: PASSED
+[POLYGLOT_TEST_RUNNER] [6/15] Running test_can_reroot_a_complex_tree_with_cousins...
+[POLYGLOT_TEST_RUNNER] test_can_reroot_a_complex_tree_with_cousins: PASSED
+[POLYGLOT_TEST_RUNNER] [7/15] Running test_can_reroot_a_tree_with_a_parent_and_many_siblings...
+[POLYGLOT_TEST_RUNNER] test_can_reroot_a_tree_with_a_parent_and_many_siblings: PASSED
+[POLYGLOT_TEST_RUNNER] [8/15] Running test_can_reroot_a_tree_with_a_parent_and_one_sibling...
+[POLYGLOT_TEST_RUNNER] test_can_reroot_a_tree_with_a_parent_and_one_sibling: PASSED
+[POLYGLOT_TEST_RUNNER] [9/15] Running test_can_reroot_a_tree_with_new_root_deeply_nested_in_tree...
+[POLYGLOT_TEST_RUNNER] test_can_reroot_a_tree_with_new_root_deeply_nested_in_tree: PASSED
+[POLYGLOT_TEST_RUNNER] [10/15] Running test_errors_if_destination_does_not_exist...
+[POLYGLOT_TEST_RUNNER] test_errors_if_destination_does_not_exist: PASSED
+[POLYGLOT_TEST_RUNNER] [11/15] Running test_errors_if_source_does_not_exist...
+[POLYGLOT_TEST_RUNNER] test_errors_if_source_does_not_exist: PASSED
+[POLYGLOT_TEST_RUNNER] [12/15] Running test_errors_if_target_does_not_exist_in_a_large_tree...
+[POLYGLOT_TEST_RUNNER] test_errors_if_target_does_not_exist_in_a_large_tree: PASSED
+[POLYGLOT_TEST_RUNNER] [13/15] Running test_errors_if_target_does_not_exist_in_a_singleton_tree...
+[POLYGLOT_TEST_RUNNER] test_errors_if_target_does_not_exist_in_a_singleton_tree: PASSED
+[POLYGLOT_TEST_RUNNER] [14/15] Running test_moves_children_of_the_new_root_to_same_level_as_former_parent...
+[POLYGLOT_TEST_RUNNER] test_moves_children_of_the_new_root_to_same_level_as_former_parent: PASSED
+[POLYGLOT_TEST_RUNNER] [15/15] Running test_results_in_the_same_tree_if_the_input_tree_is_a_singleton...
+[POLYGLOT_TEST_RUNNER] test_results_in_the_same_tree_if_the_input_tree_is_a_singleton: PASSED
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_can_find_path_from_nodes_other_than_x",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_can_find_path_not_involving_root",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_can_find_path_to_cousin",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_can_find_path_to_parent",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_can_find_path_to_sibling",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_can_reroot_a_complex_tree_with_cousins",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_can_reroot_a_tree_with_a_parent_and_many_siblings",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_can_reroot_a_tree_with_a_parent_and_one_sibling",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_can_reroot_a_tree_with_new_root_deeply_nested_in_tree",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_errors_if_destination_does_not_exist",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_errors_if_source_does_not_exist",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_errors_if_target_does_not_exist_in_a_large_tree",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_errors_if_target_does_not_exist_in_a_singleton_tree",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_moves_children_of_the_new_root_to_same_level_as_former_parent",
+    "category": "default",
+    "status": "pass"
+  },
+  {
+    "name": "test_results_in_the_same_tree_if_the_input_tree_is_a_singleton",
+    "category": "default",
+    "status": "pass"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 15 passed, 0 failed, 0 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()
