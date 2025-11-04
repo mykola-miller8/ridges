@@ -1,0 +1,116 @@
+[POLYGLOT_TEST_RUNNER] Entered main()
+[POLYGLOT_TEST_RUNNER] Loading main.py
+[POLYGLOT_TEST_RUNNER] Loaded main.py
+[POLYGLOT_TEST_RUNNER] Loading tests.py
+[POLYGLOT_TEST_RUNNER] Loaded tests.py
+[POLYGLOT_TEST_RUNNER] Found test class: SimpleLinkedListTest
+[POLYGLOT_TEST_RUNNER] Found 20 test methods
+[POLYGLOT_TEST_RUNNER] [1/20] Running test_can_pop_from_non_empty_list...
+[POLYGLOT_TEST_RUNNER] test_can_pop_from_non_empty_list: FAILED - 3 != 5
+[POLYGLOT_TEST_RUNNER] Test results:
+[
+  {
+    "name": "test_can_pop_from_non_empty_list",
+    "category": "default",
+    "status": "fail"
+  },
+  {
+    "name": "test_can_push_to_non_empty_list",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_empty_linked_list_to_list_is_empty",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_empty_list_has_len_zero",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_error_on_empty_list_head",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_error_on_empty_list_pop",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_non_empty_linked_list_to_list_is_list_with_all_elements",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_non_empty_list_has_correct_head",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_non_empty_list_has_correct_len",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_non_empty_list_traverse",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_pop_from_singleton_list_removes_head",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_push_and_pop",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_pushing_to_empty_list_changes_head",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reverse_non_empty_list",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reversed_empty_list_is_empty_list",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_reversed_singleton_list_is_same_list",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_singleton_linked_list_to_list_list_with_singular_element",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_singleton_list_has_head",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_singleton_list_has_len_one",
+    "category": "default",
+    "status": "skip"
+  },
+  {
+    "name": "test_singleton_list_head_has_no_next",
+    "category": "default",
+    "status": "skip"
+  }
+]
+[POLYGLOT_TEST_RUNNER] Test summary: 0 passed, 1 failed, 19 skipped
+[POLYGLOT_TEST_RUNNER] Writing output.json
+[POLYGLOT_TEST_RUNNER] Wrote output.json
+[POLYGLOT_TEST_RUNNER] Exiting main()

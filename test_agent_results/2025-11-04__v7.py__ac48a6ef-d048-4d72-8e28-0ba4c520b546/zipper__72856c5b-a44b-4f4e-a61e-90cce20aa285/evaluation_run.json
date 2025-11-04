@@ -1,0 +1,87 @@
+{
+    "evaluation_run_id": "72856c5b-a44b-4f4e-a61e-90cce20aa285",
+    "evaluation_id": "ac48a6ef-d048-4d72-8e28-0ba4c520b546",
+    "problem_name": "zipper",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,29 +1,63 @@\n-class Zipper:\n-    # Tree is a dict with keys \"value\" (int), \"left\" (dict or None), \"right\" (dict or None)\n-    @staticmethod\n-    def from_tree(tree: dict) -> \"Zipper\":\n-        pass\n-\n-    def value(self) -> int:\n-        pass\n-\n-    def set_value(self, value: int) -> \"Zipper\":\n-        pass\n-\n-    def left(self) -> \"Zipper | None\":\n-        pass\n-\n-    def set_left(self, tree: dict | None) -> \"Zipper\":\n-        pass\n-\n-    def right(self) -> \"Zipper | None\":\n-        pass\n-\n-    def set_right(self, tree: dict | None) -> \"Zipper\":\n-        pass\n-\n-    def up(self) -> \"Zipper | None\":\n-        pass\n-\n-    def to_tree(self) -> dict:\n-        pass\n+class Zipper:\n+    def __init__(self, tree, path=[]):\n+        self.tree = tree\n+        self.path = path\n+\n+    @staticmethod\n+    def from_tree(tree: dict) -> \"Zipper\":\n+        return Zipper(tree)\n+\n+    def value(self) -> int:\n+        return self.tree[\"value\"]\n+\n+    def set_value(self, value: int) -> \"Zipper\":\n+        new_tree = self._copy_tree(self.tree)\n+        new_tree[\"value\"] = value\n+        return Zipper(new_tree, self.path)\n+\n+    def left(self) -> \"Zipper | None\":\n+        if self.tree[\"left\"] is None:\n+            return None\n+        new_path = self.path + [(\"left\", self.tree)]\n+        return Zipper(self.tree[\"left\"], new_path)\n+\n+    def set_left(self, tree: dict | None) -> \"Zipper\":\n+        new_tree = self._copy_tree(self.tree)\n+        new_tree[\"left\"] = tree\n+        return Zipper(new_tree, self.path)\n+\n+    def right(self) -> \"Zipper | None\":\n+        if self.tree[\"right\"] is None:\n+            return None\n+        new_path = self.path + [(\"right\", self.tree)]\n+        return Zipper(self.tree[\"right\"], new_path)\n+\n+    def set_right(self, tree: dict | None) -> \"Zipper\":\n+        new_tree = self._copy_tree(self.tree)\n+        new_tree[\"right\"] = tree\n+        return Zipper(new_tree, self.path)\n+\n+    def up(self) -> \"Zipper | None\":\n+        if not self.path:\n+            return None\n+        direction, parent = self.path[-1]\n+        new_parent = self._copy_tree(parent)\n+        new_parent[direction] = self.tree\n+        return Zipper(new_parent, self.path[:-1])\n+\n+    def to_tree(self) -> dict:\n+        if not self.path:\n+            return self.tree\n+        current = self\n+        while current.path:\n+            current = current.up()\n+        return current.tree\n+\n+    def _copy_tree(self, tree):\n+        if tree is None:\n+            return None\n+        return {\n+            \"value\": tree[\"value\"],\n+            \"left\": self._copy_tree(tree[\"left\"]),\n+            \"right\": self._copy_tree(tree[\"right\"])\n+        }\n",
+    "test_results": [
+        {
+            "name": "test_data_is_retained",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_dead_end",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_different_paths_to_same_zipper",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_left_right_and_up",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_left_right_and_value",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_set_left_with_leaf",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_set_right_with_null",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_set_right_with_subtree",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_set_value",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_set_value_after_traversing_up",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_set_value_on_deep_focus",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_test_ability_to_descend_multiple_levels_and_return",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_traversing_up_from_top",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_tree_from_deep_focus",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T02:28:51.858903",
+    "started_initializing_agent_at": "2025-11-04T02:28:51.859027",
+    "started_running_agent_at": "2025-11-04T02:28:55.589355",
+    "started_initializing_eval_at": "2025-11-04T02:29:03.233425",
+    "started_running_eval_at": "2025-11-04T02:29:09.306109",
+    "finished_or_errored_at": "2025-11-04T02:29:10.200568"
+}

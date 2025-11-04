@@ -1,0 +1,62 @@
+{
+    "evaluation_run_id": "2c48068a-45ca-4d5e-902b-596deac28e25",
+    "evaluation_id": "ac48a6ef-d048-4d72-8e28-0ba4c520b546",
+    "problem_name": "two-bucket",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,3 +1,61 @@\n-def measure(bucket_one: int, bucket_two: int, goal: int, start_bucket: str) -> tuple[int, str, int]:\n-    # Returns (total_moves, goal_bucket, other_bucket_liters) where goal_bucket is \"one\" or \"two\"\n-    pass\n+from collections import deque\n+\n+def measure(bucket_one: int, bucket_two: int, goal: int, start_bucket: str) -> tuple[int, str, int]:\n+    if goal > max(bucket_one, bucket_two):\n+        raise ValueError(\"Goal cannot be greater than the capacity of both buckets\")\n+    \n+    # Define initial state based on which bucket to fill first\n+    if start_bucket == \"one\":\n+        initial_state = (bucket_one, 0)\n+    else:\n+        initial_state = (0, bucket_two)\n+    \n+    # Queue for BFS: (bucket1_amount, bucket2_amount, moves)\n+    queue = deque([(initial_state[0], initial_state[1], 1)])\n+    visited = set()\n+    visited.add(initial_state)\n+    \n+    while queue:\n+        b1, b2, moves = queue.popleft()\n+        \n+        # Check if we've reached the goal\n+        if b1 == goal:\n+            return (moves, \"one\", b2)\n+        if b2 == goal:\n+            return (moves, \"two\", b1)\n+            \n+        # Generate all possible next states\n+        next_states = []\n+        \n+        # Fill bucket one\n+        next_states.append((bucket_one, b2))\n+        \n+        # Fill bucket two\n+        next_states.append((b1, bucket_two))\n+        \n+        # Empty bucket one\n+        next_states.append((0, b2))\n+        \n+        # Empty bucket two\n+        next_states.append((b1, 0))\n+        \n+        # Pour from bucket one to bucket two\n+        pour_amount = min(b1, bucket_two - b2)\n+        next_states.append((b1 - pour_amount, b2 + pour_amount))\n+        \n+        # Pour from bucket two to bucket one\n+        pour_amount = min(b2, bucket_one - b1)\n+        next_states.append((b1 + pour_amount, b2 - pour_amount))\n+        \n+        for state in next_states:\n+            # Check if this state violates the rule (starting bucket empty and other full)\n+            if start_bucket == \"one\":\n+                violates_rule = (state[0] == 0 and state[1] == bucket_two)\n+            else:  # start_bucket == \"two\"\n+                violates_rule = (state[1] == 0 and state[0] == bucket_one)\n+                \n+            if state not in visited and not violates_rule:\n+                visited.add(state)\n+                queue.append((state[0], state[1], moves + 1))\n+    \n+    raise ValueError(\"Goal amount cannot be reached\")\n",
+    "test_results": [
+        {
+            "name": "test_goal_larger_than_both_buckets_is_impossible",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_one_step_using_bucket_one_of_size_1_and_bucket_two_of_size_3_start_with_bucket_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_2_and_bucket_two_of_size_3_start_with_bucket_one_and_end_with_bucket_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_one",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_3_and_bucket_two_of_size_5_start_with_bucket_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_one",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_measure_using_bucket_one_of_size_7_and_bucket_two_of_size_11_start_with_bucket_two",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_not_possible_to_reach_the_goal",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_with_the_same_buckets_but_a_different_goal_then_it_is_possible",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T02:28:51.850113",
+    "started_initializing_agent_at": "2025-11-04T02:28:51.850133",
+    "started_running_agent_at": "2025-11-04T02:28:55.609687",
+    "started_initializing_eval_at": "2025-11-04T02:29:04.120332",
+    "started_running_eval_at": "2025-11-04T02:29:09.616803",
+    "finished_or_errored_at": "2025-11-04T02:29:10.577075"
+}

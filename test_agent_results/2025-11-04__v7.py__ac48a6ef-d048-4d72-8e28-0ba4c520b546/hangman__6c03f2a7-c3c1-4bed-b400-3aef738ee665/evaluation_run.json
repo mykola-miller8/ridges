@@ -1,0 +1,52 @@
+{
+    "evaluation_run_id": "6c03f2a7-c3c1-4bed-b400-3aef738ee665",
+    "evaluation_id": "ac48a6ef-d048-4d72-8e28-0ba4c520b546",
+    "problem_name": "hangman",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,20 +1,32 @@\n-# Game status categories\n-# Change the values as you see fit\n-STATUS_WIN = 'win'\n-STATUS_LOSE = 'lose'\n-STATUS_ONGOING = 'ongoing'\n-\n-\n-class Hangman:\n-    def __init__(self, word: str):\n-        self.remaining_guesses = 9\n-        self.status = STATUS_ONGOING\n-\n-    def guess(self, char: str) -> None:\n-        pass\n-\n-    def get_masked_word(self) -> str:\n-        pass\n-\n-    def get_status(self) -> str:\n-        pass\n+# Game status categories\n+# Change the values as you see fit\n+STATUS_WIN = 'win'\n+STATUS_LOSE = 'lose'\n+STATUS_ONGOING = 'ongoing'\n+\n+\n+class Hangman:\n+    def __init__(self, word: str):\n+        self.word = word\n+        self.remaining_guesses = 9\n+        self.status = STATUS_ONGOING\n+        self.guessed_chars = set()\n+\n+    def guess(self, char: str) -> None:\n+        if self.status != STATUS_ONGOING:\n+            raise ValueError(\"The game has already ended.\")\n+        \n+        if char in self.word and char not in self.guessed_chars:\n+            self.guessed_chars.add(char)\n+            if all(c in self.guessed_chars for c in self.word):\n+                self.status = STATUS_WIN\n+        else:\n+            self.remaining_guesses -= 1\n+            if self.remaining_guesses < 0:\n+                self.status = STATUS_LOSE\n+\n+    def get_masked_word(self) -> str:\n+        return ''.join(c if c in self.guessed_chars else '_' for c in self.word)\n+\n+    def get_status(self) -> str:\n+        return self.status\n",
+    "test_results": [
+        {
+            "name": "test_after_10_failures_the_game_is_over",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_feeding_a_correct_letter_removes_underscores",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_feeding_a_correct_letter_twice_counts_as_a_failure",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_getting_all_the_letters_right_makes_for_a_win",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_initially_9_failures_are_allowed",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_initially_no_letters_are_guessed",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_winning_on_last_guess_still_counts_as_a_win",
+            "category": "default",
+            "status": "pass"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T02:28:51.827735",
+    "started_initializing_agent_at": "2025-11-04T02:28:51.827768",
+    "started_running_agent_at": "2025-11-04T02:28:53.706783",
+    "started_initializing_eval_at": "2025-11-04T02:29:00.758922",
+    "started_running_eval_at": "2025-11-04T02:29:04.822985",
+    "finished_or_errored_at": "2025-11-04T02:29:08.279093"
+}

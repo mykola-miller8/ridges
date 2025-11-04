@@ -1,0 +1,102 @@
+{
+    "evaluation_run_id": "7cc64db5-a591-4ff3-b2ef-874693a2d8ba",
+    "evaluation_id": "ac48a6ef-d048-4d72-8e28-0ba4c520b546",
+    "problem_name": "scale-generator",
+    "status": "finished",
+    "patch": "diff --git a/main.py b/main.py\nindex 0000000..1111111 100644\n--- a/main.py\n+++ b/main.py\n@@ -1,9 +1,49 @@\n-class Scale:\n-    def __init__(self, tonic: str):\n-        pass\n-\n-    def chromatic(self) -> list[str]:\n-        pass\n-\n-    def interval(self, intervals: str) -> list[str]:\n-        pass\n+class Scale:\n+    def __init__(self, tonic: str):\n+        self.tonic = tonic.capitalize()\n+        # Define the chromatic scales with sharps and flats\n+        self.sharp_chromatic = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']\n+        self.flat_chromatic = ['A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab']\n+        \n+        # Determine whether to use sharps or flats based on the tonic\n+        sharp_keys = {'G', 'D', 'A', 'E', 'B', 'F#', 'e', 'b', 'f#', 'c#', 'g#', 'd#'}\n+        flat_keys = {'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'd', 'g', 'c', 'f', 'bb', 'eb'}\n+        \n+        if self.tonic in sharp_keys:\n+            self.scale_notes = self.sharp_chromatic\n+        elif self.tonic in flat_keys:\n+            self.scale_notes = self.flat_chromatic\n+        else:\n+            # For C, a, use sharps when ascending\n+            self.scale_notes = self.sharp_chromatic\n+            \n+        # Find the starting index in the chromatic scale\n+        try:\n+            self.start_index = self.scale_notes.index(self.tonic)\n+        except ValueError:\n+            # If not found, try with lowercase for minor keys\n+            self.start_index = self.scale_notes.index(self.tonic.lower().capitalize())\n+\n+    def chromatic(self) -> list[str]:\n+        # Return the chromatic scale starting with the tonic\n+        result = []\n+        for i in range(12):\n+            index = (self.start_index + i) % 12\n+            result.append(self.scale_notes[index])\n+        return result\n+\n+    def interval(self, intervals: str) -> list[str]:\n+        result = [self.scale_notes[self.start_index]]\n+        current_index = self.start_index\n+        \n+        for interval in intervals:\n+            if interval == 'm':  # minor second (1 semitone)\n+                current_index = (current_index + 1) % 12\n+            elif interval == 'M':  # major second (2 semitones)\n+                current_index = (current_index + 2) % 12\n+            elif interval == 'A':  # augmented second (3 semitones)\n+                current_index = (current_index + 3) % 12\n+            \n+            result.append(self.scale_notes[current_index])\n+            \n+        return result\n",
+    "test_results": [
+        {
+            "name": "test_chromatic_scale_with_flats",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_chromatic_scale_with_sharps",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_dorian_mode",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_enigmatic",
+            "category": "default",
+            "status": "pass"
+        },
+        {
+            "name": "test_harmonic_minor",
+            "category": "default",
+            "status": "fail"
+        },
+        {
+            "name": "test_hexatonic",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_locrian_mode",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_lydian_mode",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_major_scale_with_flats",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_major_scale_with_sharps",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_minor_scale_with_flats",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_minor_scale_with_sharps",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_mixolydian_mode",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_octatonic",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_pentatonic",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_phrygian_mode",
+            "category": "default",
+            "status": "skip"
+        },
+        {
+            "name": "test_simple_major_scale",
+            "category": "default",
+            "status": "skip"
+        }
+    ],
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2025-11-04T02:28:51.836566",
+    "started_initializing_agent_at": "2025-11-04T02:28:51.836609",
+    "started_running_agent_at": "2025-11-04T02:28:54.882722",
+    "started_initializing_eval_at": "2025-11-04T02:29:03.857681",
+    "started_running_eval_at": "2025-11-04T02:29:09.616597",
+    "finished_or_errored_at": "2025-11-04T02:29:10.496091"
+}
