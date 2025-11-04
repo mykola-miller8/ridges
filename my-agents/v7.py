@@ -101,13 +101,38 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
     return patch
 
 
+def _normalize_candidate(src: str) -> str:
+    """Normalize candidate text into a clean Python source string.
+
+    - Remove stray backticks fences
+    - Strip BOM and surrounding whitespace
+    - Ensure trailing newline
+    """
+    if not isinstance(src, str):
+        return ""
+    s = src.strip()
+    # Remove leading/trailing fenced blocks if present
+    if s.startswith("```") and s.endswith("```"):
+        s = s[3:-3]
+    # Remove common language tags that might remain
+    s = re.sub(r"^\s*(python|py)\s*\n", "", s, flags=re.IGNORECASE)
+    # Remove an accidental '# main.py' header line kept by extractor
+    s = re.sub(r"^\s*#\s*main\.py\s*\n", "", s)
+    # Strip UTF-8 BOM
+    s = s.lstrip("\ufeff")
+    if not s.endswith("\n"):
+        s += "\n"
+    return s
+
+
 def _extract_main_py(response: str) -> str:
     """Extract a complete main.py code block from an LLM response.
 
     Priority:
     1) ```python\n# main.py\n...\n```
-    2) First ```python``` block
+    2) First ```python``` block (case-insensitive, allows ```py)
     3) Any ```\n...\n``` block (language-agnostic)
+    4) If no fences but response looks like Python (has 'def' or 'class'), use full text
     """
     _verbose_log("EXTRACT", "Extracting main.py from LLM response", {
         "response_length": len(response) if response else 0
@@ -116,18 +141,18 @@ def _extract_main_py(response: str) -> str:
         _verbose_log("EXTRACT", "Empty response, returning empty string")
         return ""
     # Prefer explicitly headed block
-    m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*?)\n```", response, re.DOTALL)
+    m = re.findall(r"```python\s*\n#\s*main\.py\n([\s\S]*?)\n```", response, re.IGNORECASE | re.DOTALL)
     if m and m[0].strip():
-        extracted = m[0].strip()
+        extracted = _normalize_candidate(m[0])
         _verbose_log("EXTRACT", "Extracted using strict headered python block", {
             "extracted_length": len(extracted),
             "method": "strict_headered_python"
         })
         return extracted
-    # Any python block
-    m2 = re.findall(r"```python\s*\n([\s\S]*?)\n```", response, re.DOTALL)
+    # Any python/py block
+    m2 = re.findall(r"```(?:python|py)\s*\n([\s\S]*?)\n```", response, re.IGNORECASE | re.DOTALL)
     if m2 and m2[0].strip():
-        extracted = m2[0].strip()
+        extracted = _normalize_candidate(m2[0])
         _verbose_log("EXTRACT", "Extracted using python block", {
             "extracted_length": len(extracted),
             "method": "python_block"
@@ -136,10 +161,18 @@ def _extract_main_py(response: str) -> str:
     # Any fenced block
     m3 = re.findall(r"```\s*\n([\s\S]*?)\n```", response, re.DOTALL)
     if m3 and m3[0].strip():
-        extracted = m3[0].strip()
+        extracted = _normalize_candidate(m3[0])
         _verbose_log("EXTRACT", "Extracted using generic fenced block", {
             "extracted_length": len(extracted),
             "method": "generic_fenced"
+        })
+        return extracted
+    # Fenceless but looks like python source
+    if re.search(r"\bdef\s+\w+\s*\(|\bclass\s+\w+\s*\(", response):
+        extracted = _normalize_candidate(response)
+        _verbose_log("EXTRACT", "Extracted using fenceless heuristic", {
+            "extracted_length": len(extracted),
+            "method": "fenceless"
         })
         return extracted
     _verbose_log("EXTRACT", "No code block found in response", {
@@ -148,33 +181,62 @@ def _extract_main_py(response: str) -> str:
     return ""
 
 
-def _parse_api_signatures(src: str) -> Tuple[List[Tuple[str, int]], List[str]]:
-    """Return (functions[name,argcount], classes[name]) from module source without underscored names."""
-    _verbose_log("PARSE", "Parsing API signatures from source", {"source_length": len(src) if src else 0})
-    funcs: List[Tuple[str, int]] = []
+def _required_positional_count(fn: "ast.FunctionDef") -> int:
+    """Compute count of required positional parameters, excluding 'self'/'cls'."""
+    import ast
+    count = 0
+    args = list(fn.args.posonlyargs) + list(fn.args.args)
+    # Remove 'self' or 'cls' if present as first arg (for methods)
+    if args and isinstance(args[0], ast.arg) and args[0].arg in {"self", "cls"}:
+        args = args[1:]
+    # Number of args without defaults at the end
+    num_defaults = len(fn.args.defaults)
+    num_non_kwonly = len(args)
+    num_required = max(0, num_non_kwonly - num_defaults)
+    # kwonlyargs that are required (without defaults) also count
+    num_kwonly_required = sum(1 for d in fn.args.kw_defaults if d is None)
+    return num_required + num_kwonly_required
+
+
+def _parse_public_api(src: str) -> Tuple[Dict[str, int], List[str], Dict[Tuple[str, str], int]]:
+    """Parse public API of a module.
+
+    Returns:
+    - module_funcs: name -> required positional count
+    - classes: list of class names
+    - methods: (class_name, method_name) -> required positional count
+    Private names (starting with underscore) are ignored.
+    """
+    _verbose_log("PARSE", "Parsing public API signatures from source", {"source_length": len(src) if src else 0})
+    module_funcs: Dict[str, int] = {}
     classes: List[str] = []
+    methods: Dict[Tuple[str, str], int] = {}
     try:
         import ast
-        tree = ast.parse(src)
+        tree = ast.parse(src or "")
         for node in tree.body:
             if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
-                arg_count = len([a for a in node.args.args])
-                funcs.append((node.name, arg_count))
+                module_funcs[node.name] = _required_positional_count(node)
             elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
                 classes.append(node.name)
-        _verbose_log("PARSE", "Successfully parsed API signatures", {
-            "functions": funcs,
+                for child in node.body:
+                    if isinstance(child, ast.FunctionDef) and not child.name.startswith("_"):
+                        methods[(node.name, child.name)] = _required_positional_count(child)
+        _verbose_log("PARSE", "Successfully parsed public API signatures", {
+            "module_funcs": module_funcs,
             "classes": classes,
-            "total_functions": len(funcs),
-            "total_classes": len(classes)
+            "methods": list(methods.keys()),
+            "total_functions": len(module_funcs),
+            "total_classes": len(classes),
+            "total_methods": len(methods)
         })
     except Exception as e:
-        _verbose_log("PARSE", "Failed to parse API signatures", {
+        _verbose_log("PARSE", "Failed to parse public API signatures", {
             "error": str(e),
             "error_type": type(e).__name__
         })
-        return [], []
-    return funcs, classes
+        return {}, [], {}
+    return module_funcs, classes, methods
 
 
 def _syntax_valid(src: str) -> Tuple[bool, str]:
@@ -253,6 +315,14 @@ def _scan_policy_violations(src: str) -> List[str]:
     # Randomness without control can cause flaky behavior
     if re.search(r"\brandom\.", src):
         issues.append("avoid random-based nondeterminism; implement deterministic logic instead")
+    # Discourage top-level execution blocks
+    if re.search(r"if\s+__name__\s*==\s*['\"]__main__['\"]\s*:", src):
+        issues.append("remove top-level execution blocks and keep pure functions")
+    # Discourage unimplemented stubs
+    if re.search(r"^\s*pass\s*$", src, flags=re.MULTILINE):
+        issues.append("replace 'pass' statements with full implementations")
+    if re.search(r"NotImplementedError\s*\(", src):
+        issues.append("do not raise NotImplementedError; implement the logic")
     # Over-broad imports
     if re.search(r"^\s*from\s+\S+\s+import\s+\*", src, flags=re.MULTILINE):
         issues.append("avoid star-imports; import explicit names")
@@ -263,14 +333,15 @@ def _scan_policy_violations(src: str) -> List[str]:
     return issues
 
 
-def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240) -> str:
+def _call_llm(messages: List[Dict[str, str]], run_id: str, attempt: int, timeout_s: int = 240, temperature: float = 0.0, top_p: float = 1.0) -> str:
     url = f"{DEFAULT_PROXY_URL.rstrip('/')}/api/inference"
     headers = {"Content-Type": "application/json"}
     model = AGENT_MODELS[attempt % len(AGENT_MODELS)]
     body = {
         "run_id": run_id,
         "messages": messages,
-        "temperature": 0.0,
+        "temperature": float(temperature),
+        "top_p": float(top_p),
         "agent_id": "agent-v7",
         "model": model,
     }
@@ -380,10 +451,11 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
     # Capture skeleton API from existing main.py to enforce preservation in candidates
     skeleton_main = _read("main.py")
-    sk_funcs, sk_classes = _parse_api_signatures(skeleton_main)
+    sk_module_funcs, sk_classes, sk_methods = _parse_public_api(skeleton_main)
     _verbose_log("AGENT", "Skeleton API parsed", {
-        "skeleton_functions": sk_funcs,
+        "skeleton_functions": sk_module_funcs,
         "skeleton_classes": sk_classes,
+        "skeleton_methods": list(sk_methods.keys()),
         "skeleton_main_length": len(skeleton_main)
     })
 
@@ -400,6 +472,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "Validate inputs rigorously (types, arity/shape, bounds) and raise precise exceptions per spec.",
         "Ensure deterministic behavior: avoid I/O, sleeps, global mutable state, or randomness.",
         "Prefer pure functions and canonicalized outputs; avoid relying on dict/set iteration order.",
+        "Do not leave stubs (no pass, ellipsis, or NotImplementedError).",
         "Do not include any tests or prose in the answer.",
     ]
     rules_text = "\n- " + "\n- ".join(strict_rules)
@@ -415,17 +488,39 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
             "trimmed_bytes": original_problem_length - trimmed_problem_length
         })
 
+    # Summarize skeleton API to guide the model
+    try:
+        import ast
+        sk_tree = ast.parse(skeleton_main or "")
+        sig_lines: List[str] = []
+        for node in sk_tree.body:
+            if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+                args = [a.arg for a in list(node.args.posonlyargs) + list(node.args.args)]
+                sig_lines.append(f"def {node.name}({', '.join(args)}): ...")
+            elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+                sig_lines.append(f"class {node.name}:")
+                for child in node.body:
+                    if isinstance(child, ast.FunctionDef) and not child.name.startswith("_"):
+                        args = [a.arg for a in list(child.args.posonlyargs) + list(child.args.args)]
+                        sig_lines.append(f"  def {child.name}({', '.join(args)}): ...")
+        api_summary = "\n".join(sig_lines)
+    except Exception:
+        api_summary = ""
+
     system_msg = (
         "You are a senior Python engineer.\n"
         + ("Do not modify tests.py; only change main.py.\n" if mode == "tests_available" else "")
         + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
         "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
-        "No prose. Deterministic code. Be careful not to be stuck in an infinite loop."
+        "No prose. Deterministic code. Avoid I/O, sleeps, randomness, network, environment access.\n"
+        "Implement all public skeleton APIs fully (no stubs)."
     )
     user_msg = (
         f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
         f"Repository Summary:\n{summary}\n\n"
-        "Implement strictly so all tests (if present) pass."
+        + (f"Skeleton API to preserve (names and arity hints):\n{api_summary}\n\n" if api_summary else "")
+        + (f"Exception contracts to match exactly (if any):\n{contracts_text}\n\n" if contracts_text else "")
+        + "Implement strictly so all tests (if present) pass."
     )
     messages = [
         {"role": "system", "content": system_msg},
@@ -454,7 +549,10 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                 "model": AGENT_MODELS[(attempt + round_idx) % len(AGENT_MODELS)]
             })
             try:
-                resp = _call_llm(messages, run_id, attempt + round_idx, 300)
+                # Temperature schedule: increase slightly with rounds for diversity
+                temp = min(0.3, 0.1 * round_idx)
+                top_p = 0.95 if round_idx >= 2 else 1.0
+                resp = _call_llm(messages, run_id, attempt + round_idx, 300, temperature=temp, top_p=top_p)
                 candidate = _extract_main_py(resp)
                 if not candidate:
                     _verbose_log("AGENT", "No candidate extracted from response, continuing to next attempt")
@@ -479,27 +577,43 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                     messages.append({"role": "user", "content": repair_note})
                     continue
                 _verbose_log("AGENT", "Syntax validation passed, checking API preservation")
-                # Enforce preservation of skeleton public API names (best-effort, generic)
-                if sk_funcs or sk_classes:
-                    cand_funcs, cand_classes = _parse_api_signatures(candidate)
-                    cand_func_names = {n for (n, _a) in cand_funcs}
-                    missing_funcs = [n for (n, _a) in sk_funcs if n not in cand_func_names]
+                # Enforce preservation of skeleton public API (names and arity)
+                if sk_module_funcs or sk_classes or sk_methods:
+                    cand_module_funcs, cand_classes, cand_methods = _parse_public_api(candidate)
+                    missing_funcs = [n for n in sk_module_funcs.keys() if n not in cand_module_funcs]
                     missing_classes = [c for c in sk_classes if c not in set(cand_classes)]
-                    if missing_funcs or missing_classes:
+                    missing_methods = [f"{c}.{m}" for (c, m) in sk_methods.keys() if (c, m) not in cand_methods]
+
+                    arity_mismatches: List[str] = []
+                    for n, req in sk_module_funcs.items():
+                        cand_req = cand_module_funcs.get(n)
+                        if cand_req is not None and cand_req > req:
+                            # Candidate requires more args than skeleton; this can break calls
+                            arity_mismatches.append(f"function {n}: requires {cand_req}, expected <= {req}")
+                    for (c, m), req in sk_methods.items():
+                        cand_req = cand_methods.get((c, m))
+                        if cand_req is not None and cand_req > req:
+                            arity_mismatches.append(f"method {c}.{m}: requires {cand_req}, expected <= {req}")
+
+                    if missing_funcs or missing_classes or missing_methods or arity_mismatches:
                         _verbose_log("AGENT", "API preservation check failed", {
                             "missing_functions": missing_funcs,
                             "missing_classes": missing_classes,
-                            "candidate_functions": cand_funcs,
-                            "candidate_classes": cand_classes
+                            "missing_methods": missing_methods,
+                            "arity_mismatches": arity_mismatches,
                         })
-                        miss_text = "".join(
-                            [f"- function: {n}\n" for n in missing_funcs]
-                            + [f"- class: {n}\n" for n in missing_classes]
-                        )
+                        miss_parts = []
+                        if missing_funcs:
+                            miss_parts.append("Missing functions:\n" + "".join(f"- {n}\n" for n in missing_funcs))
+                        if missing_classes:
+                            miss_parts.append("Missing classes:\n" + "".join(f"- {c}\n" for c in missing_classes))
+                        if missing_methods:
+                            miss_parts.append("Missing methods:\n" + "".join(f"- {nm}\n" for nm in missing_methods))
+                        if arity_mismatches:
+                            miss_parts.append("Arity mismatches (too many required args):\n" + "".join(f"- {d}\n" for d in arity_mismatches))
                         repair_note = (
-                            "Preserve all public API from the skeleton main.py. The following names are missing in your answer:\n"
-                            f"{miss_text}"
-                            "Return a corrected complete main.py with these names implemented."
+                            "Preserve all public API from the skeleton main.py. Fix the following issues and return a corrected complete main.py:\n"
+                            + "\n".join(miss_parts)
                         )
                         messages.append({"role": "assistant", "content": f"```python\n# main.py\n{candidate}\n```"})
                         messages.append({"role": "user", "content": repair_note})
@@ -525,6 +639,36 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                         ),
                     })
                     continue
+                # Detect unimplemented stubs via AST (pass/ellipsis/NotImplementedError)
+                try:
+                    import ast
+                    tree = ast.parse(candidate)
+                    unimplemented: List[str] = []
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.FunctionDef):
+                            body = node.body or []
+                            if len(body) == 1:
+                                stmt = body[0]
+                                if isinstance(stmt, ast.Pass) or (
+                                    isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant) and stmt.value.value is Ellipsis
+                                ) or (
+                                    isinstance(stmt, ast.Raise) and isinstance(getattr(stmt, "exc", None), ast.Call) and getattr(stmt.exc.func, "id", "") == "NotImplementedError"
+                                ):
+                                    unimplemented.append(node.name)
+                    if unimplemented:
+                        _verbose_log("AGENT", "Found unimplemented stubs, requesting completion", {"functions": unimplemented})
+                        messages.append({"role": "assistant", "content": f"```python\n# main.py\n{candidate}\n```"})
+                        messages.append({
+                            "role": "user",
+                            "content": (
+                                "Some functions appear unimplemented (stubs). Replace stubs with full logic and return complete main.py:\n"
+                                + "\n".join(f"- {n}" for n in unimplemented)
+                            ),
+                        })
+                        continue
+                except Exception:
+                    # If AST walk fails, skip this extra check
+                    pass
                 # Candidate passes syntax and basic API checks
                 _verbose_log("AGENT", "Candidate passed all checks, building patch", {
                     "round": round_idx + 1,
