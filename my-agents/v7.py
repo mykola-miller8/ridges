@@ -71,6 +71,137 @@ def _build_single_file_patch(filename: str, new_content: str) -> str:
     return "\n".join(header + body) + "\n"
 
 
+def _extract_required_api_from_stub(stub_src: str) -> Dict[str, Any]:
+    """Parse the existing main.py stub to discover required public API.
+
+    Returns a dict with keys:
+    - functions: List[Dict{name: str, params: List[str]}]
+    - classes: List[Dict{name: str, init_params: List[str]}]
+    """
+    api: Dict[str, Any] = {"functions": [], "classes": []}
+    if not stub_src:
+        return api
+    try:
+        tree = ast.parse(stub_src)
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+                params = [a.arg for a in (node.args.args or [])]
+                api["functions"].append({"name": node.name, "params": params})
+            elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+                init_params: List[str] = []
+                for n in node.body:
+                    if isinstance(n, ast.FunctionDef) and n.name == "__init__":
+                        init_params = [a.arg for a in (n.args.args or [])]
+                        break
+                api["classes"].append({"name": node.name, "init_params": init_params})
+    except Exception:
+        # Best-effort; if parsing fails, we just return what we have
+        return api
+    return api
+
+
+def _format_required_api_for_prompt(api: Dict[str, Any]) -> str:
+    if not api:
+        return ""
+    lines: List[str] = []
+    funcs = api.get("functions") or []
+    clss = api.get("classes") or []
+    if funcs:
+        lines.append("Required top-level functions (preserve names and parameters):")
+        for f in funcs:
+            params = ", ".join(f.get("params") or [])
+            lines.append(f"- def {f.get('name', 'func')}({params}): ...")
+    if clss:
+        lines.append("Required classes (preserve names; if __init__ exists, preserve its parameters):")
+        for c in clss:
+            ip = ", ".join(c.get("init_params") or [])
+            if ip:
+                lines.append(f"- class {c.get('name', 'Class')}:  def __init__({ip}): ...")
+            else:
+                lines.append(f"- class {c.get('name', 'Class')}: ...")
+    return "\n".join(lines)
+
+
+def _validate_required_api(code: str, api: Dict[str, Any]) -> Tuple[bool, str]:
+    """Ensure generated code defines the required functions/classes and preserves parameters.
+
+    We ignore leading '# main.py' header and parameter annotations/defaults; we check only names and order.
+    For classes, only __init__ parameters (including 'self') are validated if present in the stub.
+    """
+    if not api:
+        return True, ""
+    try:
+        src = re.sub(r"^#\s*main\.py\s*\n", "", code)
+        tree = ast.parse(src)
+    except Exception as e:
+        return False, f"Cannot parse generated code for API validation: {e}"
+
+    # Build lookup maps from generated code
+    gen_funcs: Dict[str, List[str]] = {}
+    gen_classes_inits: Dict[str, List[str]] = {}
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef):
+            gen_funcs[node.name] = [a.arg for a in (node.args.args or [])]
+        elif isinstance(node, ast.ClassDef):
+            init_params: List[str] = []
+            for n in node.body:
+                if isinstance(n, ast.FunctionDef) and n.name == "__init__":
+                    init_params = [a.arg for a in (n.args.args or [])]
+                    break
+            gen_classes_inits[node.name] = init_params
+
+    # Validate required functions
+    for f in (api.get("functions") or []):
+        name = f.get("name")
+        need_params = f.get("params") or []
+        if name not in gen_funcs:
+            return False, f"Missing required function: {name}"
+        have_params = gen_funcs.get(name, [])
+        if have_params != need_params:
+            return False, f"Function '{name}' parameters mismatch. Expected ({', '.join(need_params)}), got ({', '.join(have_params)})."
+
+    # Validate required classes
+    for c in (api.get("classes") or []):
+        cname = c.get("name")
+        if cname not in gen_classes_inits and cname not in [n for n in gen_funcs.keys()]:
+            # ensure class exists (ignore functions shadowing the name)
+            return False, f"Missing required class: {cname}"
+        need_ip = c.get("init_params") or []
+        if need_ip:
+            have_ip = gen_classes_inits.get(cname, [])
+            if have_ip != need_ip:
+                return False, f"Class '{cname}' __init__ parameters mismatch. Expected ({', '.join(need_ip)}), got ({', '.join(have_ip)})."
+
+    return True, ""
+
+
+def _repair_api(run_id: str, bad_code: str, error_text: str, required_api: Dict[str, Any], attempt_index: int) -> str:
+    """Ask the LLM to adjust code to satisfy required API without changing behavior intent."""
+    rules = (
+        "You are a Python refactoring assistant.\n"
+        "Task: Adjust ONLY the module's public API to match the required signatures below (names and parameters).\n"
+        "Preserve semantics and logic as much as possible; do not add tests; do not add I/O.\n"
+        "Return EXACTLY one code block formatted as:\n"
+        "```python\n# main.py\n[complete file]\n```\n"
+        "No prose. Deterministic output."
+    )
+    api_text = _format_required_api_for_prompt(required_api)
+    user = (
+        "The current file violates the required API. Fix only the signatures and definitions to match.\n\n"
+        f"API validation error:\n{error_text}\n\n"
+        f"Required API:\n{api_text}\n\n"
+        "Current file:\n```python\n# main.py\n" + bad_code.strip() + "\n```\n"
+    )
+    messages = [{"role": "system", "content": rules}, {"role": "user", "content": user}]
+    try:
+        _log(f"Requesting API repair (attempt_index={attempt_index})")
+        resp = _call_llm(messages, run_id, attempt_index, 180)
+        fixed = _extract_main_py(resp)
+        return fixed or ""
+    except Exception:
+        return ""
+
+
 def _strip_code_fences(text: str) -> str:
     """Remove a single surrounding triple-backtick code fence from text, preserving content."""
     if not isinstance(text, str):
@@ -214,12 +345,17 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
 
     # Compact repository summary for context (generic, no problem-specific assumptions)
     parts: List[str] = []
+    main_stub = _read("main.py")
     for name in ("main.py", "tests.py"):
         content = _read(name)
         if content:
             parts.append(f"### {name}\n```python\n{content[:8000]}\n```")
     summary = "\n\n".join(parts)
     _log(f"Repository summary included files: {', '.join([p.split()[1] for p in parts]) if parts else 'none'}")
+
+    # Extract required API from the current stub
+    required_api = _extract_required_api_from_stub(main_stub)
+    api_prompt = _format_required_api_for_prompt(required_api)
 
     system_msg = (
         "You are a senior Python engineer.\n"
@@ -232,6 +368,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "- Precise input validation and clear exceptions consistent with the spec.\n"
         "- Type hints and concise docstrings for public functions/classes.\n"
         "- Keep code readable and minimal; avoid unnecessary abstractions.\n"
+        + ("\nRequired public API (must be implemented exactly as listed):\n" + api_prompt + "\n" if api_prompt else "")
     )
     user_msg = (
         f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
@@ -258,8 +395,20 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                 continue
             ok, err = _validate_python(main_src)
             if ok:
-                _log("Generated code parsed successfully on first try")
-                return _build_single_file_patch("main.py", main_src)
+                api_ok, api_err = _validate_required_api(main_src, required_api)
+                if api_ok:
+                    _log("Generated code parsed successfully and satisfies required API")
+                    return _build_single_file_patch("main.py", main_src)
+                # Attempt one API repair on syntactically valid code
+                _log("Generated code violates required API; attempting API repair")
+                fixed_api = _repair_api(f"{run_id}-apifix-{attempt_pos}", main_src, api_err, required_api, model_idx)
+                if fixed_api:
+                    okf, errf = _validate_python(fixed_api)
+                    if okf:
+                        api_ok2, _ = _validate_required_api(fixed_api, required_api)
+                        if api_ok2:
+                            _log("API repair succeeded; returning patch")
+                            return _build_single_file_patch("main.py", fixed_api)
             # Try up to 2 syntax repairs
             repaired = main_src
             for fix_round in range(2):
@@ -270,8 +419,19 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                     break
                 ok2, err2 = _validate_python(fixed)
                 if ok2:
-                    _log("Repair produced syntactically valid code")
-                    return _build_single_file_patch("main.py", fixed)
+                    api_ok2, api_err2 = _validate_required_api(fixed, required_api)
+                    if api_ok2:
+                        _log("Repair produced syntactically valid code that satisfies required API")
+                        return _build_single_file_patch("main.py", fixed)
+                    _log("Repaired code violates required API; attempting API repair")
+                    fixed2 = _repair_api(f"{run_id}-apifix{attempt_pos}-{fix_round+1}", fixed, api_err2, required_api, model_idx)
+                    if fixed2:
+                        ok3, err3 = _validate_python(fixed2)
+                        if ok3:
+                            api_ok3, _ = _validate_required_api(fixed2, required_api)
+                            if api_ok3:
+                                _log("API repair after syntax repair succeeded; returning patch")
+                                return _build_single_file_patch("main.py", fixed2)
                 repaired, err = fixed, err2
         except Exception:
             _log("Model attempt raised exception; continuing with next model")
