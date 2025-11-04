@@ -289,7 +289,7 @@ def _extract_exception_contracts(text: str) -> List[Tuple[str, str]]:
     return out
 
 
-def _scan_policy_violations(src: str) -> List[str]:
+def _scan_policy_violations(src: str, spec_text: str | None = None) -> List[str]:
     """Detect generic anti-patterns that often break evaluations.
 
     Used to request a corrected candidate from the model.
@@ -323,6 +323,17 @@ def _scan_policy_violations(src: str) -> List[str]:
         issues.append("replace 'pass' statements with full implementations")
     if re.search(r"NotImplementedError\s*\(", src):
         issues.append("do not raise NotImplementedError; implement the logic")
+    # Avoid stripping whitespace unless explicitly requested in the spec
+    spec_mentions_strip = False
+    if isinstance(spec_text, str) and re.search(r"\b(strip|trim|whitespace)\b", spec_text, flags=re.IGNORECASE):
+        spec_mentions_strip = True
+    if not spec_mentions_strip:
+        if re.search(r"\.strip\s*\(", src):
+            issues.append("avoid strip(); preserve whitespace unless the spec requires trimming explicitly")
+        if re.search(r"\.rstrip\s*\(", src):
+            issues.append("avoid rstrip(); trailing spaces may be significant")
+        if re.search(r"\.lstrip\s*\(", src):
+            issues.append("avoid lstrip(); leading spaces may be significant")
     # Over-broad imports
     if re.search(r"^\s*from\s+\S+\s+import\s+\*", src, flags=re.MULTILINE):
         issues.append("avoid star-imports; import explicit names")
@@ -434,7 +445,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         content = _read(name)
         if content:
             original_length = len(content)
-            trimmed_length = 6000
+            trimmed_length = 10000
             if original_length > trimmed_length:
                 _verbose_log("AGENT", f"Content trimmed for {name}", {
                     "original_length": original_length,
@@ -442,7 +453,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                     "trimmed_bytes": original_length - trimmed_length
                 })
             # Trim to keep token usage reasonable
-            parts.append(f"### {name}\n```python\n{content[:6000]}\n```")
+            parts.append(f"### {name}\n```python\n{content[:trimmed_length]}\n```")
     summary = "\n\n".join(parts)
     _verbose_log("AGENT", "Repository summary built", {
         "summary_length": len(summary),
@@ -473,6 +484,8 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "Ensure deterministic behavior: avoid I/O, sleeps, global mutable state, or randomness.",
         "Prefer pure functions and canonicalized outputs; avoid relying on dict/set iteration order.",
         "Do not leave stubs (no pass, ellipsis, or NotImplementedError).",
+        "Preserve significant whitespace (including trailing spaces); do not trim unless explicitly required by the spec.",
+        "When output order is not specified, use a deterministic order (e.g., lexicographic).",
         "Do not include any tests or prose in the answer.",
     ]
     rules_text = "\n- " + "\n- ".join(strict_rules)
@@ -513,7 +526,8 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         + "Return ONLY one code block containing the complete main.py with a '# main.py' header.\n"
         "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
         "No prose. Deterministic code. Avoid I/O, sleeps, randomness, network, environment access.\n"
-        "Implement all public skeleton APIs fully (no stubs)."
+        "Implement all public skeleton APIs fully (no stubs).\n"
+        "Before output, perform an internal self-review against the strict rules and common edge cases; output only the final code."
     )
     user_msg = (
         f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
@@ -623,7 +637,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                 else:
                     _verbose_log("AGENT", "No skeleton API to preserve (empty skeleton)")
                 # Policy violations (I/O, randomness, etc.)
-                violations = _scan_policy_violations(candidate)
+                violations = _scan_policy_violations(candidate, problem_statement)
                 if violations:
                     _verbose_log("AGENT", "Policy violations found, adding repair hint", {
                         "violations": violations,
