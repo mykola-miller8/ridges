@@ -53,8 +53,8 @@ def _load_problem_set(name: str) -> List[str]:
     return [name]
 
 
-def _run_single_problem(inference_url: str, problem_name: str) -> str:
-    """Run test_agent for a single problem; return the results directory path used for this run."""
+def _run_problem_set(inference_url: str, problem_set_name: str) -> str:
+    """Run test_agent for a problem set; return the results directory path used for this run."""
     cmd = [
         sys.executable,
         TEST_AGENT_CLI,
@@ -62,8 +62,8 @@ def _run_single_problem(inference_url: str, problem_name: str) -> str:
         inference_url,
         "--agent-path",
         AGENT_PATH,
-        "test-problem",
-        problem_name,
+        "test-problem-set",
+        problem_set_name,
     ]
     print(f"[RUN] {' '.join(cmd)}")
     subprocess.run(cmd, check=False)
@@ -82,6 +82,28 @@ def _find_problem_run_dir(eval_dir: str, problem_name: str) -> str:
         return ""
     subdirs = sorted(glob.glob(f"{eval_dir}/{problem_name}__*"), key=os.path.getmtime)
     return subdirs[-1] if subdirs else ""
+
+
+def _find_all_problem_run_dirs(eval_dir: str) -> List[Tuple[str, str]]:
+    """Find all problem run directories in the eval_dir.
+    
+    Returns list of (problem_name, run_dir_path) tuples.
+    """
+    if not eval_dir or not os.path.exists(eval_dir):
+        return []
+    
+    problem_dirs = []
+    for item in os.listdir(eval_dir):
+        item_path = os.path.join(eval_dir, item)
+        if not os.path.isdir(item_path):
+            continue
+        
+        # Extract problem name from directory name (format: problem_name__timestamp)
+        if "__" in item:
+            problem_name = item.split("__")[0]
+            problem_dirs.append((problem_name, item_path))
+    
+    return problem_dirs
 
 
 def _aggregate_results(run_dir: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
@@ -108,6 +130,32 @@ def _aggregate_results(run_dir: str) -> Tuple[Dict[str, Any], List[Dict[str, Any
         else:
             metrics["skip"] += 1
     return metrics, failures
+
+
+def _aggregate_all_results(problem_run_dirs: List[Tuple[str, str]]) -> Tuple[Dict[str, Any], Dict[str, Dict[str, Any]]]:
+    """Aggregate results from all problem run directories.
+    
+    Returns:
+        (total_metrics, problem_results) where:
+        - total_metrics: aggregated metrics across all problems
+        - problem_results: dict mapping problem_name to {"metrics": ..., "failures": ..., "run_dir": ...}
+    """
+    total_metrics = {"pass": 0, "fail": 0, "skip": 0}
+    problem_results: Dict[str, Dict[str, Any]] = {}
+    
+    for problem_name, run_dir in problem_run_dirs:
+        metrics, failures = _aggregate_results(run_dir)
+        total_metrics["pass"] += metrics["pass"]
+        total_metrics["fail"] += metrics["fail"]
+        total_metrics["skip"] += metrics["skip"]
+        
+        problem_results[problem_name] = {
+            "metrics": metrics,
+            "failures": failures,
+            "run_dir": run_dir,
+        }
+    
+    return total_metrics, problem_results
 
 
 def _read_agent_logs_tail(run_dir: str, max_chars: int = 8000) -> str:
@@ -372,7 +420,7 @@ def _add_followup_with_failure_context(
 
 
 def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
-    """Evolve v7 by running problems and using Cursor agent follow-ups for improvements."""
+    """Evolve v7 by running all problems at once and using Cursor agent follow-ups for improvements."""
     if not CURSOR_API_URL or not CURSOR_API_KEY:
         print("[BUILDER] Cursor API not configured (CURSOR_API_URL/KEY missing)")
         sys.exit(1)
@@ -401,55 +449,102 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
     # Launch initial agent
     agent_id = _launch_initial_cursor_agent(client)
     
-    problem_names = _load_problem_set(PROBLEM_SET)
-    if not problem_names:
-        print("No problems found.")
-        sys.exit(1)
-    
-    for idx, name in enumerate(problem_names):
-        print(f"\n=== Problem {idx+1}/{len(problem_names)}: {name} ===")
-        
-        attempts = 0
-        while attempts < max_attempts_per_problem:
-            attempts += 1
-            print(f"[LOOP] Attempt {attempts}/{max_attempts_per_problem}")
+    attempts = 0
+    while attempts < max_attempts_per_problem:
+        attempts += 1
+        print(f"\n=== Attempt {attempts}/{max_attempts_per_problem} (all problems) ===")
 
-            # delete test_agent_results directory
-            subprocess.run(["rm", "-rf", f"{ROOT}/test_agent_results"], cwd=ROOT, check=False)
+        # delete test_agent_results directory
+        subprocess.run(["rm", "-rf", f"{ROOT}/test_agent_results"], cwd=ROOT, check=False)
+        
+        # Run all problems at once
+        print(f"[RUN] Running test-problem-set all-polyglot...")
+        eval_dir = _run_problem_set(INFERENCE_URL, "all-polyglot")
+        
+        # Commit test results so agent can have access
+        try:
+            subprocess.run(["git", "add", "."], cwd=ROOT, check=False)
+            subprocess.run(
+                ["git", "commit", "-m", f"auto-evolve: test results for all-polyglot attempt {attempts}"],
+                cwd=ROOT,
+                check=False,
+            )
+            subprocess.run(["git", "push"], cwd=ROOT, check=False)
+            print("[GIT] Test results committed and pushed")
+        except Exception as e:
+            print(f"[WARN] Git operations failed: {e}")
+        
+        # NEW STEP: Checkout to remote TARGET_BRANCH and pull from remote SOURCE_BRANCH
+        # This allows cursor agent to be able to read the logs
+        print(f"[GIT] Checking out to {TARGET_BRANCH} and pulling from {SOURCE_BRANCH}...")
+        try:
+            # Fetch latest from remote
+            fetch_result = subprocess.run(
+                ["git", "fetch", "origin"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if fetch_result.returncode != 0:
+                print(f"[WARN] Failed to fetch from origin: {fetch_result.stderr}")
             
-            # Run the problem
-            eval_dir = _run_single_problem(INFERENCE_URL, name)
-            
-            # Commit test results so agent can have access
-            try:
-                subprocess.run(["git", "add", "."], cwd=ROOT, check=False)
-                subprocess.run(
-                    ["git", "commit", "-m", f"auto-evolve: test results for {name} attempt {attempts}"],
+            # Checkout to TARGET_BRANCH (create local branch if it doesn't exist, tracking remote)
+            checkout_result = subprocess.run(
+                ["git", "checkout", "-B", TARGET_BRANCH, f"origin/{TARGET_BRANCH}"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if checkout_result.returncode != 0:
+                print(f"[WARN] Failed to checkout to {TARGET_BRANCH}: {checkout_result.stderr}")
+            else:
+                # Pull from SOURCE_BRANCH into current branch (TARGET_BRANCH)
+                pull_result = subprocess.run(
+                    ["git", "pull", "origin", SOURCE_BRANCH],
                     cwd=ROOT,
-                    check=False,
+                    capture_output=True,
+                    text=True,
+                    check=False
                 )
-                subprocess.run(["git", "push"], cwd=ROOT, check=False)
-            except Exception as e:
-                print(f"[WARN] Git operations failed: {e}")
-            
-            run_dir = _find_problem_run_dir(eval_dir, name)
-            metrics, failures = _aggregate_results(run_dir)
-            print(f"[METRICS] pass={metrics['pass']} fail={metrics['fail']} skip={metrics['skip']}")
-            
-            # Success - move to next problem
-            if metrics["fail"] == 0 and metrics["pass"] > 0:
-                print("[OK] All tests passed; moving to next problem")
-                break
-            
-            # Failure - add follow-up to Cursor agent with full context
-            print("[EVOLVE] Tests failed; adding follow-up to Cursor agent...")
+                if pull_result.returncode != 0:
+                    print(f"[WARN] Failed to pull from origin/{SOURCE_BRANCH}: {pull_result.stderr}")
+                else:
+                    print(f"[GIT] Successfully checked out to {TARGET_BRANCH} and pulled from {SOURCE_BRANCH}")
+        except Exception as e:
+            print(f"[WARN] Git checkout/pull operations failed: {e}")
+        
+        # Get all problem run directories
+        problem_run_dirs = _find_all_problem_run_dirs(eval_dir)
+        total_metrics, problem_results = _aggregate_all_results(problem_run_dirs)
+        
+        print(f"[METRICS] Total - pass={total_metrics['pass']} fail={total_metrics['fail']} skip={total_metrics['skip']}")
+        print(f"[METRICS] Problems processed: {len(problem_run_dirs)}")
+        
+        # Success - all problems passed
+        if total_metrics["fail"] == 0 and total_metrics["pass"] > 0:
+            print("[OK] All tests passed for all problems; evolution complete")
+            break
+        
+        # Find failed problems
+        failed_problems = []
+        for problem_name, problem_data in problem_results.items():
+            if problem_data["metrics"]["fail"] > 0:
+                failed_problems.append((problem_name, problem_data))
+        
+        print(f"[EVOLVE] {len(failed_problems)} problems failed; adding follow-ups to Cursor agent...")
+        
+        # Add follow-up for each failed problem
+        for problem_name, problem_data in failed_problems:
+            print(f"[EVOLVE] Processing failed problem: {problem_name}")
             
             # Get problem directory path
             problem_dir_path = ""
             polyglot_path = f"{ROOT}/evaluator/datasets/polyglot"
             potential_dirs = [
-                os.path.join(polyglot_path, name),
-                os.path.join(polyglot_path, name, "repo"),
+                os.path.join(polyglot_path, problem_name),
+                os.path.join(polyglot_path, problem_name, "repo"),
             ]
             for prob_dir in potential_dirs:
                 if os.path.exists(prob_dir):
@@ -460,74 +555,73 @@ def evolve_over_problems(max_attempts_per_problem: int = 50) -> None:
             _add_followup_with_failure_context(
                 client=client,
                 agent_id=agent_id,
-                problem_name=name,
+                problem_name=problem_name,
                 problem_dir=problem_dir_path,
-                run_dir=run_dir,
-                metrics=metrics,
-                failures=failures,
+                run_dir=problem_data["run_dir"],
+                metrics=problem_data["metrics"],
+                failures=problem_data["failures"],
+            )
+        
+        # After all follow-ups complete, checkout agent file from target_branch and apply it
+        print(f"[CHECKOUT] All follow-ups completed; fetching and checking out {AGENT_PATH} from branch '{TARGET_BRANCH}'...")
+        try:
+            # First fetch to get latest remote branches
+            fetch_result = subprocess.run(
+                ["git", "fetch", "origin"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if fetch_result.returncode != 0:
+                print(f"[WARN] Failed to fetch from origin: {fetch_result.stderr}")
+            
+            # Get the file from remote branch
+            agent_rel_path = os.path.relpath(AGENT_PATH, ROOT)
+            result = subprocess.run(
+                ["git", "show", f"origin/{TARGET_BRANCH}:{agent_rel_path}"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False
             )
             
-            # After follow-up completes, checkout agent file from target_branch and apply it
-            print(f"[CHECKOUT] Follow-up completed; fetching and checking out {AGENT_PATH} from branch '{TARGET_BRANCH}'...")
-            try:
-                # First fetch to get latest remote branches
-                fetch_result = subprocess.run(
-                    ["git", "fetch", "origin"],
-                    cwd=ROOT,
-                    capture_output=True,
-                    text=True,
-                    check=False
-                )
-                if fetch_result.returncode != 0:
-                    print(f"[WARN] Failed to fetch from origin: {fetch_result.stderr}")
-                
-                # Get the file from remote branch
-                agent_rel_path = os.path.relpath(AGENT_PATH, ROOT)
-                result = subprocess.run(
-                    ["git", "show", f"origin/{TARGET_BRANCH}:{agent_rel_path}"],
-                    cwd=ROOT,
-                    capture_output=True,
-                    text=True,
-                    check=False
-                )
-                
-                if result.returncode != 0:
-                    print(f"[WARN] Failed to checkout from branch 'origin/{TARGET_BRANCH}'")
-                    if result.stderr:
-                        print(f"[WARN] Error details: {result.stderr}")
-                    break
-                
-                proposal = result.stdout
-            except Exception as e:
-                print(f"[WARN] Error during checkout: {e}; stopping evolution for this problem")
+            if result.returncode != 0:
+                print(f"[WARN] Failed to checkout from branch 'origin/{TARGET_BRANCH}'")
+                if result.stderr:
+                    print(f"[WARN] Error details: {result.stderr}")
                 break
             
-            if not proposal:
-                print("[WARN] No proposal available; stopping evolution for this problem")
-                break
-            
-            # is_valid, reason = _genericity_checks(proposal)
-            # if not is_valid:
-            #     print(f"[REJECT] Proposed v7 contains non-generic/problem-specific content: {reason}")
-            #     break
-            
-            # Apply the proposal
-            _write(AGENT_PATH, proposal)
-            current_v7 = proposal  # Update for next iteration
-            
-            try:
-                subprocess.run(["git", "add", AGENT_PATH], cwd=ROOT, check=False)
-                subprocess.run(
-                    ["git", "commit", "-m", f"auto-evolve v7 for {name} attempt {attempts}"],
-                    cwd=ROOT,
-                    check=False,
-                )
-                subprocess.run(["git", "push"], cwd=ROOT, check=False)
-            except Exception:
-                pass
+            proposal = result.stdout
+        except Exception as e:
+            print(f"[WARN] Error during checkout: {e}; stopping evolution")
+            break
+        
+        if not proposal:
+            print("[WARN] No proposal available; stopping evolution")
+            break
+        
+        # is_valid, reason = _genericity_checks(proposal)
+        # if not is_valid:
+        #     print(f"[REJECT] Proposed v7 contains non-generic/problem-specific content: {reason}")
+        #     break
+        
+        # Apply the proposal
+        _write(AGENT_PATH, proposal)
+        
+        try:
+            subprocess.run(["git", "add", AGENT_PATH], cwd=ROOT, check=False)
+            subprocess.run(
+                ["git", "commit", "-m", f"auto-evolve v7 for all-polyglot attempt {attempts}"],
+                cwd=ROOT,
+                check=False,
+            )
+            subprocess.run(["git", "push"], cwd=ROOT, check=False)
+        except Exception:
+            pass
 
-        else:
-            print("[STOP] Reached attempt cap; moving to next problem")
+    else:
+        print("[STOP] Reached attempt cap")
 
 
 def main() -> None:
