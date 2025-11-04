@@ -1,0 +1,16 @@
+{
+    "evaluation_run_id": "8df2d545-e630-4c6b-be31-e5f96bf0a03d",
+    "evaluation_id": "77a9ea95-4270-4bc4-88f2-fbc86cf5d2b9",
+    "problem_name": "connect",
+    "status": "error",
+    "patch": null,
+    "test_results": null,
+    "error_code": 1000,
+    "error_message": "The agent raised an exception while being run: name 'Tuple' is not defined\n\nTraceback:\nTraceback (most recent call last):\n  File \"/sandbox/AGENT_RUNNER.py\", line 24, in main\n    spec.loader.exec_module(agent_module)\n  File \"<frozen importlib._bootstrap_external>\", line 940, in exec_module\n  File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed\n  File \"/sandbox/agent.py\", line 151, in <module>\n    def _parse_api_signatures(src: str) -> Tuple[List[Tuple[str, int]], List[str]]:\n                                           ^^^^^\nNameError: name 'Tuple' is not defined\n",
+    "created_at": "2025-11-04T03:41:48.955494",
+    "started_initializing_agent_at": "2025-11-04T03:41:48.955834",
+    "started_running_agent_at": "2025-11-04T03:41:50.242049",
+    "started_initializing_eval_at": null,
+    "started_running_eval_at": null,
+    "finished_or_errored_at": "2025-11-04T03:41:54.186767"
+}
