@@ -136,15 +136,23 @@ class CursorAPIClient:
             requests.RequestException: If the API request fails
         """
         url = f"{self.api_url}/v0/agents/{agent_id}"
-        resp = requests.get(url, headers=self._headers(), timeout=30)
         
-        if resp.status_code not in (200, 201):
+        while True:
+            resp = requests.get(url, headers=self._headers(), timeout=30)
+            
+            if resp.status_code in (200, 201):
+                return resp.json()
+            
+            # If 503 error, wait 30 seconds and retry
+            if resp.status_code == 503:
+                time.sleep(30)
+                continue
+            
+            # For other errors, raise exception
             error_msg = resp.text[:500] if resp.text else "Unknown error"
             raise requests.exceptions.RequestException(
                 f"Failed to get agent status: HTTP {resp.status_code} - {error_msg}"
             )
-        
-        return resp.json()
     
     def poll_until_complete(
         self,
