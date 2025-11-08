@@ -142,6 +142,24 @@ def _extract_main_py(response: str) -> str:
             "method": "generic_fenced"
         })
         return extracted
+    # Fallback: try to capture content following a '# main.py' header without fences
+    m4 = re.search(r"#\s*main\.py\n([\s\S]+)$", response)
+    if m4 and m4.group(1).strip():
+        extracted = m4.group(1).strip()
+        _verbose_log("EXTRACT", "Extracted using header fallback", {
+            "extracted_length": len(extracted),
+            "method": "header_fallback"
+        })
+        return extracted
+    # Last resort: if the response looks like Python code (heuristic), return it trimmed
+    looks_like_code = bool(re.search(r"\b(def|class|import|from)\b", response))
+    if looks_like_code:
+        extracted = response.strip()
+        _verbose_log("EXTRACT", "Extracted using heuristic fallback", {
+            "extracted_length": len(extracted),
+            "method": "heuristic_fallback"
+        })
+        return extracted
     _verbose_log("EXTRACT", "No code block found in response", {
         "response_preview": response[:500] if response else ""
     })
@@ -253,6 +271,17 @@ def _scan_policy_violations(src: str) -> List[str]:
     # Randomness without control can cause flaky behavior
     if re.search(r"\brandom\.", src):
         issues.append("avoid random-based nondeterminism; implement deterministic logic instead")
+    # Top-level execution guards are unnecessary in library-style tasks
+    if re.search(r"if __name__\s*==\s*['\"]__main__['\"]\s*:", src):
+        issues.append("avoid __main__ execution blocks; implement pure functions only")
+    # Dangerous dynamic evaluation
+    if re.search(r"\b(eval|exec)\s*\(", src):
+        issues.append("avoid eval/exec; implement logic directly")
+    # Over-broad exception catching
+    if re.search(r"except\s*:\s*\n", src):
+        issues.append("avoid bare except; catch specific exceptions")
+    if re.search(r"except\s+Exception\s*:\s*\n", src):
+        issues.append("avoid catching broad Exception; catch specific exceptions")
     # Over-broad imports
     if re.search(r"^\s*from\s+\S+\s+import\s+\*", src, flags=re.MULTILINE):
         issues.append("avoid star-imports; import explicit names")
@@ -422,10 +451,22 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "Format exactly as:\n```python\n# main.py\n[complete code]\n```\n"
         "No prose. Deterministic code. Be careful not to be stuck in an infinite loop."
     )
+    # Provide explicit API and contracts context to increase faithfulness
+    api_lines: List[str] = []
+    if sk_funcs:
+        api_lines.append("Functions to preserve (name, param_count):")
+        for n, a in sk_funcs:
+            api_lines.append(f"- {n}({a} params)")
+    if sk_classes:
+        api_lines.append("Classes to preserve:")
+        for c in sk_classes:
+            api_lines.append(f"- {c}")
+    contracts_section = ("\nExact exception contracts from spec (type and exact message):\n" + contracts_text) if contracts_text else ""
+    api_section = ("\nPublic API from skeleton to preserve strictly:\n" + "\n".join(api_lines)) if api_lines else ""
     user_msg = (
         f"Problem Statement (trimmed if long):\n{problem_statement[:12000]}\n\n"
         f"Repository Summary:\n{summary}\n\n"
-        "Implement strictly so all tests (if present) pass."
+        f"Implement strictly so all tests (if present) pass.{contracts_section}{api_section}"
     )
     messages = [
         {"role": "system", "content": system_msg},
@@ -444,6 +485,7 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
         "models": AGENT_MODELS,
         "total_attempts": max_rounds * len(AGENT_MODELS)
     })
+    best_viable_candidate: str = ""
     for round_idx in range(max_rounds):
         _verbose_log("AGENT", f"Starting round {round_idx + 1}/{max_rounds}")
         for attempt in range(len(AGENT_MODELS)):
@@ -479,27 +521,37 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                     messages.append({"role": "user", "content": repair_note})
                     continue
                 _verbose_log("AGENT", "Syntax validation passed, checking API preservation")
-                # Enforce preservation of skeleton public API names (best-effort, generic)
+                # Enforce preservation of skeleton public API names and param counts (best-effort, generic)
                 if sk_funcs or sk_classes:
                     cand_funcs, cand_classes = _parse_api_signatures(candidate)
-                    cand_func_names = {n for (n, _a) in cand_funcs}
-                    missing_funcs = [n for (n, _a) in sk_funcs if n not in cand_func_names]
+                    cand_func_map = {n: a for (n, a) in cand_funcs}
+                    missing_funcs = []
+                    mismatched_funcs: List[Tuple[str, Tuple[int, int]]] = []
+                    for (n, a) in sk_funcs:
+                        if n not in cand_func_map:
+                            missing_funcs.append(n)
+                        else:
+                            ca = cand_func_map.get(n, -1)
+                            if ca != a:
+                                mismatched_funcs.append((n, (a, ca)))
                     missing_classes = [c for c in sk_classes if c not in set(cand_classes)]
-                    if missing_funcs or missing_classes:
+                    if missing_funcs or missing_classes or mismatched_funcs:
                         _verbose_log("AGENT", "API preservation check failed", {
                             "missing_functions": missing_funcs,
                             "missing_classes": missing_classes,
+                            "mismatched_functions": mismatched_funcs,
                             "candidate_functions": cand_funcs,
                             "candidate_classes": cand_classes
                         })
                         miss_text = "".join(
                             [f"- function: {n}\n" for n in missing_funcs]
+                            + [f"- function signature mismatch: {n} expected {exp} param(s) but got {got}\n" for n, (exp, got) in mismatched_funcs]
                             + [f"- class: {n}\n" for n in missing_classes]
                         )
                         repair_note = (
                             "Preserve all public API from the skeleton main.py. The following names are missing in your answer:\n"
                             f"{miss_text}"
-                            "Return a corrected complete main.py with these names implemented."
+                            "Return a corrected complete main.py with these names and exact parameter counts implemented."
                         )
                         messages.append({"role": "assistant", "content": f"```python\n# main.py\n{candidate}\n```"})
                         messages.append({"role": "user", "content": repair_note})
@@ -515,6 +567,9 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                         "violations": violations,
                         "current_messages_count": len(messages)
                     })
+                    # Keep as best-so-far if no prior viable candidate
+                    if not best_viable_candidate:
+                        best_viable_candidate = candidate
                     messages.append({"role": "assistant", "content": f"```python\n# main.py\n{candidate}\n```"})
                     messages.append({
                         "role": "user",
@@ -547,6 +602,12 @@ def agent_main(input_dict: Dict[str, Any], repo_dir: str = "repo", test_mode: bo
                 # Try next attempt/model
                 continue
 
+    # If we have a best-so-far viable candidate (syntax-valid), return it as a patch
+    if best_viable_candidate:
+        _verbose_log("AGENT", "All rounds exhausted; returning best viable candidate", {
+            "candidate_length": len(best_viable_candidate)
+        })
+        return _build_single_file_patch("main.py", best_viable_candidate)
     _verbose_log("AGENT", "All rounds exhausted, returning empty patch", {
         "total_rounds_attempted": max_rounds,
         "total_attempts": max_rounds * len(AGENT_MODELS)
